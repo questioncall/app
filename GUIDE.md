@@ -1,444 +1,547 @@
-# MOBILE_APP_HANDOFF
+# QuestionCall Mobile — Developer Handoff
+> **Source of truth** for the React Native (Expo) mobile app. Combines the original product spec with a reviewed, corrected build plan. Read this entire document before writing a single line of code.
 
-This document serves as the absolute source of truth for the React Native (Expo) mobile app development team. It provides an exhaustive, feature-by-feature breakdown of the **QuestionCall ** platform, ensuring zero ambiguity in replicating the web platform's functionality, business logic, security constraints, and UI/UX flows.
+---
 
-⚠️ **SECURITY CRITICAL:** This is a real-money platform involving financial transactions, wallet balances, and strict role-based access. Compliance, security, and parity are non-negotiable.
+## ⚠️ Pre-Read: Known Issues Fixed in This Doc
 
+The original handoff had several gaps corrected here:
 
-The legitimate ways to save builds:
-Fix bugs using EAS Update (JavaScript changes = no new build needed)
-Test on Expo Go during development, only build when truly needed
-Make sure the app is properly tested before triggering a build
-Pro tip to save builds: Use EAS Update for JavaScript-only changes — it lets you push updates to users without creating a new build at all. So bug fixes and UI tweaks? No build needed. Only rebuild when you change native code
+| # | Issue | Where Fixed |
+|---|-------|-------------|
+| 1 | Two "Section 3"s (Tech Stack + Backend) | Renumbered below |
+| 2 | "Phase 1/2/3" used for both nav states and dev phases | Dev phases renamed Sprint 0–8 |
+| 3 | Folder structure conflict between Section 2 and Section 14 | Use Section 2's flat version |
+| 4 | JWT refresh strategy missing — no token expiry, no 401 interceptor | Added in Sprint 1 |
+| 5 | No offline/network-loss strategy | Message retry queue added in Sprint 4 |
+| 6 | Quiz anti-cheat false positives (phone calls, biometric prompts) | Grace period added in Sprint 6 |
+| 7 | Apple IAP risk understated — eSewa/Khalti likely rejected on iOS | Blocking decision in Sprint 0 |
+| 8 | No crash reporting plan | Sentry added in Sprint 0 |
+| 9 | Biometric gate: no fallback if device has no biometrics | Password fallback added in Sprint 5 |
+| 10 | PlatformConfig has no TTL/invalidation | Refresh-on-foreground policy added in Sprint 1 |
+| 11 | Withdrawal approval notification not specified | Push notification wired in Sprint 5 |
+| 12 | No accessibility section | Added in Sprint 8 |
+| 13 | iOS screenshot prevention claim is technically wrong | Corrected in Sprint 5 |
+
+---
+
+## Table of Contents
+
+1. [Project Overview](#1-project-overview)
+2. [App Navigation & Screen Architecture](#2-app-navigation--screen-architecture)
+3. [Mobile Tech Stack](#3-mobile-tech-stack)
+4. [Backend & API Integration](#4-backend--api-integration)
+5. [Authentication & Security](#5-authentication--security)
+6. [Feature Parity Checklist](#6-feature-parity-checklist)
+7. [Money & Transaction Handling](#7-money--transaction-handling)
+8. [Data Models & TypeScript Types](#8-data-models--typescript-types)
+9. [Design System & UI Guidelines](#9-design-system--ui-guidelines)
+10. [Push Notifications, Deep Links & Background Tasks](#10-push-notifications-deep-links--background-tasks)
+11. [Environment Variables & Config](#11-environment-variables--config)
+12. [Testing & QA Requirements](#12-testing--qa-requirements)
+13. [Build, Release & Store Submission](#13-build-release--store-submission)
+14. [Known Pitfalls (Web → Mobile)](#14-known-pitfalls-web--mobile)
+15. [Sprint-by-Sprint Build Plan (Sprints 0–8)](#15-sprint-by-sprint-build-plan-sprints-08)
+16. [Final Launch Checklist](#16-final-launch-checklist)
+
 ---
 
 ## 1. Project Overview
 
-**QuestionCall ()** is a dynamic, dual-portal educational platform connecting students with verified expert teachers.
+**QuestionCall** is a dual-portal educational platform connecting students with verified expert teachers.
 
-- **Target Users:** Students (seeking academic help) and Teachers (providing answers, creating courses, and earning money).
-- **Core Value Proposition:** 15-minute timed response system for fast doubt resolution, real-time 1-on-1 video/audio/chat, structured video courses, live sessions, AI quizzes, and an internal economy for teachers to monetize expertise.
-- **Why It's a Real-Money App:** Teachers earn real money (tracked as "points" internally, converted to NPR at a configurable rate) into an internal wallet by answering questions, selling courses, or through referrals. They can withdraw this balance to actual bank accounts/wallets (eSewa, Khalti). Students can also earn points via quizzes and withdraw them.
-- **Currency System:** The platform uses an internal "points" unit. Points convert to Nepalese Rupees (NPR) at a configurable `pointToNprRate` set in `PlatformConfig`. Teachers see their `pointBalance`, students see `points`. The mobile app must always display the NPR equivalent alongside the raw point value.
-- **Web Tech Stack:** Next.js 14 (App Router), MongoDB (Mongoose), NextAuth.js, Pusher (real-time chat), LiveKit (video calls), Mux/Cloudinary (video streaming), Zod (validation), Redux Toolkit (state), Tailwind CSS + Shadcn (UI). Backend hosted on Vercel.
+- **Target users:** Students (seeking academic help) and Teachers (providing answers, creating courses, earning money)
+- **Core value proposition:** 15-minute timed response system, real-time 1-on-1 video/audio/chat, structured video courses, live sessions, AI quizzes, and an internal economy for teacher monetization
+- **This is a real-money app.** Teachers earn NPR (tracked as "points" internally) by answering questions, selling courses, and referrals. They withdraw to eSewa/Khalti. Students earn points via quizzes and can also withdraw. Security and compliance are non-negotiable.
+- **Currency system:** Internal "points" unit. Points convert to Nepalese Rupees at a configurable `pointToNprRate` stored in `PlatformConfig`. Always display NPR equivalent alongside raw point value.
 
----
-
-## 2. Mobile App Tech Stack (Recommended)
-
-To maintain parity and maximize code sharing where possible, the mobile application MUST adhere to the following stack:
-
-- **Framework:** React Native + Expo (SDK 51+ recommended)
-- **Routing/Navigation:** `expo-router` (file-based routing, directly mirrors Next.js App Router mentality).
-- **State Management:** `@reduxjs/toolkit` and `react-redux` (Matches the web platform's exact state logic). The web has 6 Redux slices: `auth`, `channel` (single active workspace), `channels` (list of all channels), `feed` (question feed), `upload` (file upload state), `user` (profile data). Mirror all 6.
-- **Secure Storage:** `expo-secure-store` (Mandatory for JWT/Session tokens. **NEVER** use `AsyncStorage` for auth or financial tokens).
-- **Real-Time Communication:** `pusher-js` (for WebSockets/chat) and `@livekit/components-react-native` (for video calls).
-- **Video Playback:** `expo-video` or standard React Native video players optimized for HLS (Mux streams).
-- **Required Expo Modules:**
-  - `expo-notifications` (FCM/APNs push notifications)
-  - `expo-local-authentication` (Biometric login for wallet withdrawals)
-  - `expo-camera` / `expo-image-picker` (For uploading homework images and payment screenshots)
-  - `expo-linking` (Deep linking)
-  - `expo-document-picker` (For file attachments in chat)
+### Web Tech Stack (for reference)
+Next.js 14 (App Router), MongoDB (Mongoose), NextAuth.js, Pusher (real-time), LiveKit (video calls), Mux/Cloudinary (video), Zod (validation), Redux Toolkit, Tailwind CSS + Shadcn. Backend hosted on Vercel.
 
 ---
 
-## 3. Backend & API Integration
+## 2. App Navigation & Screen Architecture
 
-The Vercel-deployed Next.js backend will be reused entirely.
+### Three-Phase Navigation Model
 
-- **Base URL:** The URL of the Vercel deployment (e.g., `https://[production-domain].com/api`).
-- **Communication:** Client will make REST API calls to `/api/...`.
-- **CORS & Headers:**
-  - Ensure the backend's `next.config.ts` or middleware allows CORS requests from the mobile app's origin if needed, although mobile apps generally bypass standard browser CORS policies.
-  - Required headers: `Content-Type: application/json` and `Authorization: Bearer <token>` (if adapting NextAuth to mobile).
-  - For manual payment screenshot uploads, use `Content-Type: multipart/form-data`.
-- **Real-Time:**
-  - **Pusher:** Used for live chat (`channels`), feed syncing, notifications, and admin real-time updates. Mobile networks drop WebSockets frequently — implement aggressive reconnect logic.
-  - **LiveKit:** Used for 1-on-1 video/audio calls. You will request a token from the backend (`/api/calls/token`) and use it to connect to the LiveKit server.
+```
+App Launch
+│
+├── [No JWT] → Phase 1: Landing Screen
+│   ├── "Sign Up" → Phase 2: Auth (Register mode)
+│   └── "Sign In" → Phase 2: Auth (Login mode)
+│       └── Success → Phase 3: Home [clear auth stack]
+│
+└── [Valid JWT] → Phase 3: Home (directly)
+```
 
-### PlatformConfig — The Single Source of Truth
+### Phase 1 — Landing Screen (Unauthenticated)
 
-⚠️ **CRITICAL:** Nearly every business constant (answer durations, points per format, rating bonuses/penalties, quiz settings, commission percentages, subscription pricing, withdrawal minimums, etc.) is stored in the `PlatformConfig` MongoDB collection and is admin-configurable. The mobile app **MUST fetch config on startup** via the platform API and cache it. **NEVER hardcode these values.**
+First screen a new user sees. Design: clean, centered, premium feel similar to ChatGPT's welcome screen.
+
+- QuestionCall logo + short tagline (e.g. *"Get expert answers in 15 minutes"*)
+- Optional: subtle background animation or gradient
+- Optional: 2–3 value prop icons above the CTAs (⏱️ 15-Min Answers, 🎥 Live Calls, 💰 Earn by Teaching)
+- Two CTAs at bottom: **"Sign Up"** (primary/filled) and **"Sign In"** (secondary/outlined)
+- No bottom tabs, no nav bars — pure full-screen
+- **Skip entirely** if valid JWT exists in `expo-secure-store` → go straight to Phase 3
+
+### Phase 2 — Auth Screen
+
+**Sign Up flow:**
+1. Collect: `name`, `email`, `password`, `role` (STUDENT or TEACHER toggle)
+2. Optional referral code field (pre-filled if deep link `questioncall://register?ref=CODE`)
+3. `POST /api/auth/register`
+4. Email verification prompt → user verifies via email link (deep link back to app)
+5. After verification → auto-login → navigate to Phase 3
+
+**Sign In flow:**
+1. Collect `email` + `password`
+2. Authenticate via NextAuth JWT bridge endpoint
+3. Store JWT in `expo-secure-store`
+4. Navigate to Phase 3
+
+**Google Sign-In:** `expo-auth-session` with Google provider. On success → same JWT flow.
+
+**Sign in with Apple:** Mandatory on iOS if Google Sign-In is present (Apple policy). Include both.
+
+**Additional screens:** Forgot Password, Email Verification Pending.
+
+**Key behavior:** Back from Auth → returns to Landing. Successful auth → clear Landing/Auth from nav stack.
+
+### Phase 3 — Home (Authenticated, Bottom Tab Navigator)
+
+5-tab layout:
+
+| Tab | Icon | Label | Who Sees It |
+|-----|------|-------|-------------|
+| 1 | 📋 | **Feed** | Default tab. Teachers: live question feed. Students: My Questions. |
+| 2 | 📢 | **Channels** | Active conversations |
+| 3 | ➕ | **Ask / Actions** | Center, elevated button. Students: post question. Teachers: quick actions hub. |
+| 4 | 📚 | **Courses** | Course library |
+| 5 | ☰ | **Menu** | Catch-all: profile, wallet, settings, services |
+
+**Tab 3 center button** must be visually distinct — larger, elevated, accent-colored (like Instagram's post button). Label changes: "Ask" for students, "Actions" for teachers.
+
+**Tab 5 — Menu sections:**
+
+- **Profile:** Avatar, name, role badge, Edit Profile, My Activity
+- **Wallet & Transactions:** Balance (prominent), Withdraw (teachers, biometric-gated), Transaction History, Daily Target Tracker (teachers)
+- **Services:** Course Studio (teachers), AI Quizzes, Leaderboard, Referrals, Notices
+- **Account:** Subscription Plans, Notifications, Call Settings, Onboarding Videos, Terms of Use, Privacy Policy, Change Password, Theme toggle
+- **Danger Zone:** Sign Out, Delete Account
+
+### expo-router File Structure
+
+```
+/app
+├── index.tsx                    # Landing (Phase 1) — redirects if JWT exists
+├── (auth)/
+│   ├── login.tsx
+│   ├── register.tsx
+│   ├── forgot-password.tsx
+│   └── verify-email.tsx
+├── (tabs)/
+│   ├── _layout.tsx              # 5-tab config (role-based labels, elevated Tab 3)
+│   ├── feed.tsx                 # Tab 1
+│   ├── channels.tsx             # Tab 2
+│   ├── ask.tsx                  # Tab 3
+│   ├── courses.tsx              # Tab 4
+│   └── menu.tsx                 # Tab 5
+├── workspace/
+│   └── [channelId].tsx          # Chat workspace (pushed from Channels)
+├── call/
+│   └── [roomId].tsx             # LiveKit call screen
+├── course/
+│   ├── index.tsx
+│   └── [id].tsx                 # Detail + video player
+├── quiz/
+│   ├── index.tsx
+│   └── [topicId].tsx
+├── studio/
+│   └── index.tsx                # Course creation (teacher)
+├── payment/
+│   ├── gateway.tsx              # eSewa/Khalti WebView
+│   ├── manual.tsx               # Manual payment + screenshot
+│   └── plans.tsx
+├── profile/
+│   ├── edit.tsx
+│   └── activity.tsx
+├── settings/
+│   ├── call-settings.tsx
+│   ├── notifications.tsx
+│   └── theme.tsx
+├── legal/
+│   ├── terms.tsx                # Dynamic from DB
+│   └── privacy.tsx              # Dynamic from DB
+├── referral.tsx
+├── leaderboard.tsx
+├── notices.tsx
+├── onboarding.tsx
+└── suspended.tsx                # Full-screen suspension blocker
+```
+
+---
+
+## 3. Mobile Tech Stack
+
+| Concern | Library | Notes |
+|---------|---------|-------|
+| Framework | React Native + Expo SDK 51+ | |
+| Routing | `expo-router` | File-based, mirrors Next.js App Router |
+| State | `@reduxjs/toolkit` + `react-redux` | Mirror all 6 web slices + add `config` slice |
+| Secure storage | `expo-secure-store` | **ONLY** for JWT and financial tokens. Never AsyncStorage for auth. |
+| Real-time chat | `pusher-js` | Aggressive reconnect required |
+| Video calls | `@livekit/components-react-native` | |
+| Video playback | `expo-video` | HLS/Mux streams |
+| Push notifications | `expo-notifications` | FCM (Android) + APNs (iOS) |
+| Biometrics | `expo-local-authentication` | Wallet/withdrawal gate |
+| Camera/images | `expo-camera`, `expo-image-picker` | Homework images, payment screenshots |
+| Deep linking | `expo-linking` | Payment callbacks, referral codes |
+| File picker | `expo-document-picker` | Chat attachments |
+| Crash reporting | Sentry | Configure in Sprint 0, before any other code |
+| Builds | EAS Build | dev / staging / production profiles |
+| Styling | NativeWind (Tailwind for RN) | Map CSS variables from `globals.css` |
+
+---
+
+## 4. Backend & API Integration
+
+Backend is the existing Vercel-deployed Next.js app. No separate mobile backend required — only a JWT bridge endpoint and FCM/APNs token support need to be added.
+
+**Base URL:** `https://[production-domain].com/api`
+
+**Auth headers:** `Authorization: Bearer <token>` on every request, `Content-Type: application/json` (or `multipart/form-data` for screenshot uploads).
+
+### PlatformConfig — Critical
+
+Nearly every business constant (answer durations, points per format, rating bonuses/penalties, quiz settings, commission %, subscription pricing, withdrawal minimums, etc.) lives in the `PlatformConfig` MongoDB collection. **Never hardcode these values.** Fetch via `GET /api/platform` on launch, cache in Redux, refresh every hour and on every cold start + foreground if stale. Consider subscribing to a Pusher `platform-config` channel for instant invalidation when admin changes values.
 
 ### Complete API Route Map
 
 **Auth:**
-- `POST /api/auth/register` — Email/password signup
-- `POST /api/auth/[...nextauth]` — NextAuth login (needs mobile JWT bridge)
-- `POST /api/auth/forgot-password` — Password reset request
-- `POST /api/auth/verify-email` — Email verification
+- `POST /api/auth/register`
+- `POST /api/auth/[...nextauth]` — needs mobile JWT bridge (`/api/mobile/login`, `/api/mobile/refresh`)
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/verify-email`
 
 **Questions:**
-- `GET /api/questions/feed` — Live question feed for teachers (excludes suspended users)
-- `POST /api/questions` — Post a question (enforces plan question limits)
-- `GET /api/questions/[id]` — Get question details
-- `DELETE /api/questions/[id]` — Delete question (decrements `questionsAsked`)
-- `POST /api/questions/[id]/accept` — Teacher accepts a question
-- `POST /api/questions/[id]/react` — Add reaction to question
+- `GET /api/questions/feed` — teacher feed
+- `POST /api/questions` — post question (enforces plan limits)
+- `GET /api/questions/[id]`
+- `DELETE /api/questions/[id]` — decrements `questionsAsked`
+- `POST /api/questions/[id]/accept`
+- `POST /api/questions/[id]/react`
 
-**Channels / Workspace:**
-- `GET /api/channels` — List user's channels
-- `GET /api/channels/[id]` — Get channel details
-- `POST /api/channels/[id]/close` — Close/resolve a channel (triggers rating, potential reset, point rewards)
-
-**Answers/Chat:**
-- `POST /api/answers` — Submit answer
-- Pusher-based real-time messaging within channels
+**Channels:**
+- `GET /api/channels`
+- `GET /api/channels/[id]`
+- `POST /api/channels/[id]/close` — triggers rating, point rewards, potential question reset
 
 **Calls:**
-- `POST /api/calls/initiate` — Start a call
-- `POST /api/calls/accept` — Accept incoming call
-- `POST /api/calls/reject` — Reject incoming call
+- `POST /api/calls/initiate`
+- `POST /api/calls/accept`
+- `POST /api/calls/reject`
 
-**Wallet & Money:**
-- `GET /api/wallet` — Full wallet summary (balance, history, `pointToNprRate`, pending withdrawal)
-- `POST /api/wallet/withdraw` — Request withdrawal (atomic Mongo transaction)
-
-**Payments:**
-- `POST /api/payments/esewa/initiate` — Start eSewa payment flow
-- `GET /api/payments/esewa/verify` — Verify eSewa payment (redirect-based callback)
-- `GET /api/payments/esewa/course-verify` — Verify eSewa course purchase
-- `GET /api/payments/khalti/course-verify` — Verify Khalti course purchase
-- `POST /api/payments/manual` — Submit manual payment (FormData with screenshot)
+**Wallet & Payments:**
+- `GET /api/wallet`
+- `POST /api/wallet/withdraw` — atomic Mongo transaction
+- `POST /api/payments/esewa/initiate`
+- `GET /api/payments/esewa/verify`
+- `GET /api/payments/esewa/course-verify`
+- `GET /api/payments/khalti/course-verify`
+- `POST /api/payments/manual` — FormData with screenshot
 
 **Courses:**
-- `GET /api/courses` — List courses
-- `POST /api/courses` — Create course (teacher/admin)
-- `GET /api/courses/[id]` — Course details
-- `POST /api/courses/[id]/enroll` — Enroll in course
+- `GET /api/courses`
+- `POST /api/courses`
+- `GET /api/courses/[id]`
+- `POST /api/courses/[id]/enroll`
 
-**Quiz:**
-- `GET /api/quiz` — Quiz endpoints
-- Quiz session management with anti-cheat tracking
+**Quiz:** `GET /api/quiz` — quiz endpoints + session management
 
 **Other:**
-- `GET /api/profile-questions` — User's question history
-- `GET /api/ratings` — Rating endpoints
-- `POST /api/referral` — Referral system
-- `GET /api/search` — Search
-- `GET /api/teachers/top-rated` — Top teachers list
-- `GET /api/notices` — Platform-wide admin announcements
-- `POST /api/push` — Push notification subscription
-- `GET /api/legal` — Dynamic Terms of Use / Privacy Policy from DB
-- `GET /api/platform` — Platform config for client
-- `POST /api/upload` — File uploads (Cloudinary)
-- `GET /api/notifications` — User notifications
-- `GET /api/onboarding-video` — Role-specific onboarding videos
+- `GET /api/profile-questions`
+- `GET /api/ratings`
+- `POST /api/referral`
+- `GET /api/teachers/top-rated`
+- `GET /api/notices`
+- `POST /api/push` — push notification subscription (add `platform` field: web/ios/android)
+- `GET /api/legal`
+- `GET /api/platform` — PlatformConfig
+- `POST /api/upload` — Cloudinary file upload
+- `GET /api/notifications`
+- `GET /api/onboarding-video`
 
-**Admin (if building admin panel in mobile):**
-- `/api/admin/users` — User management
-- `/api/admin/users/[id]/suspend` — Suspend/unsuspend user
-- `/api/admin/withdrawals` — Process withdrawals
+**Admin (if building mobile admin panel):**
+- `GET /api/admin/users`
+- `POST /api/admin/users/[id]/suspend`
+- `GET /api/admin/withdrawals`
 
-**Cron Jobs (server-side, but mobile must handle side-effects):**
-- `POST /api/cron/expire-calls` — Auto-ends stale calls (mobile: handle sudden call termination)
-- `POST /api/cron/expire-channels` — Closes timed-out workspaces (mobile: handle channel closing mid-chat)
-- `POST /api/cron/monthly-rewards` — Awards monthly bonus to high-rated teachers (mobile: handle surprise wallet credit notification)
+**Cron side-effects to handle gracefully:**
+- `expire-calls` → sudden call termination while app is open
+- `expire-channels` → channel closes mid-chat
+- `monthly-rewards` → surprise wallet credit notification
 
 ---
 
-## 4. Authentication & Security
+## 5. Authentication & Security
 
-⚠️ **SECURITY CRITICAL:** Because this app handles real money and payments, auth is heavily scrutinized.
+### JWT Bridge
+NextAuth uses HTTP-only session cookies — React Native cannot use these. The backend must expose:
+- `POST /api/mobile/login` — accepts credentials, returns `{ accessToken, refreshToken }`
+- `POST /api/mobile/refresh` — accepts refresh token, returns new access token
 
-### Auth Flow
-- **Current Web Auth:** NextAuth.js (Session Cookies, JWT).
-- **Mobile Adaptation:** Since React Native doesn't handle cookies like a browser, you must intercept the NextAuth JWT or create a dedicated mobile-login endpoint on the backend that returns a raw JWT token. Store this token using `expo-secure-store`.
-- **Registration Flow:**
-  1. `POST /api/auth/register` with `name`, `email`, `password`, `role` (STUDENT or TEACHER)
-  2. Optional: Referral code applied at signup → awards `bonusQuestions` to both referrer and referee
-  3. Email verification via `/api/auth/verify-email`
-- **Login Flow:**
-  1. Login with Email/Password
-  2. Receive JWT, store securely via `expo-secure-store`
-  3. Attach `Authorization: Bearer <token>` to all subsequent Axios/Fetch requests
-- **Password Reset:** `POST /api/auth/forgot-password` → email with reset link → deep link back to app
+Recommended token lifetimes: access token 15 min, refresh token 30 days. Store **both** in `expo-secure-store`.
+
+### Axios Interceptor (Required)
+Write an Axios interceptor that:
+1. Attaches `Authorization: Bearer <accessToken>` to every request
+2. On 401 response: attempts one silent refresh via `POST /api/mobile/refresh`
+3. If refresh succeeds: retries the original request with the new token
+4. If refresh fails: clears all tokens from `expo-secure-store` and navigates user to Landing screen
 
 ### Role-Based Access
-The token contains the `role` field (`STUDENT`, `TEACHER`, `ADMIN`). The UI must conditionally render based on this role:
-- **Students:** See "My Questions", quiz portal, course library, wallet (points from quizzes)
-- **Teachers:** See "Question Feed", answer workspace, course studio, wallet (pointBalance from answers)
-- **Admins:** See admin dashboard, user management, withdrawal processing
+JWT payload contains `role`: `STUDENT`, `TEACHER`, or `ADMIN`. Gate all UI and API calls accordingly:
+- **Students:** My Questions, quiz portal, course library, wallet (quiz points)
+- **Teachers:** Question Feed, answer workspace, course studio, wallet (pointBalance from answers)
+- **Admins:** Admin dashboard, user management, withdrawal processing
 
 ### Account Suspension
-The `User.isSuspended` flag can be set by admins. When suspended:
-- Teacher is excluded from question feed
-- Cannot earn rewards or monthly bonuses
-- Cannot make withdrawals
-- The mobile app MUST check `isSuspended` on app launch and show a **full-screen "Account Suspended" screen** that blocks all functionality. Check this on every auth token refresh.
+On every app foreground and immediately after login, fetch `GET /api/users/me` and check `isSuspended`. If `true`:
+- Navigate to `suspended.tsx` — full-screen blocker, cannot be dismissed
+- Only two options: "Contact Support" and "Sign Out"
+- Teacher is excluded from feed, cannot earn, cannot withdraw
 
-### Teacher Qualification & Monetization
-- New teachers start with `teacherModeVerified: false` and `isMonetized: false`
-- They must answer `qualificationThreshold` (configurable, default varies) test questions correctly
-- Once verified, `isMonetized` flips to `true` and they begin earning points
-- Mobile must show qualification progress and restrict wallet features until monetized
+### Teacher Qualification Gate
+- New teachers: `teacherModeVerified: false`, `isMonetized: false`
+- Must correctly answer `qualificationThreshold` test questions
+- Once verified: `isMonetized` flips to `true`, wallet features unlock
+- Show qualification progress; disable wallet until monetized
 
-### Security Protections
-- **Biometric Login:** Require Face ID / Fingerprint (`expo-local-authentication`) before users can access the Wallet tab, view transaction history, or request a withdrawal.
-- Jailbreak/Root detection is highly recommended (`expo-dev-client` plugins or third-party libraries).
-- Screenshot prevention on the Wallet/Withdrawal screens.
-
----
-
-## 5. Feature-by-Feature Parity Checklist
-
-### 5.1 Question Feed (Teachers) & Question Posting (Students)
-
-**Student Posting Flow:**
-1. Student taps "Ask Question"
-2. Fills: title (6–180 chars), body (max 5000 chars), images (via `expo-image-picker`), subject, stream, level
-3. Selects `answerFormat`: `TEXT`, `PHOTO`, `VIDEO`, or `ANY`
-4. Selects `answerVisibility`: `PUBLIC` or `PRIVATE`
-5. Backend checks question limits before accepting (see 5.1.1)
-6. Question appears in live feed via Pusher
-
-**Question Limit Enforcement (CRITICAL):**
-- Each student has a `planSlug` (free/go/plus/pro/max) with a `maxQuestions` quota
-- `questionsAsked` tracks usage in current subscription period
-- `bonusQuestions` from referrals add to the effective limit
-- If `questionsAsked >= effectiveLimit`, the backend returns 403 with remaining count
-- If subscription is expired, backend resets `subscriptionStatus` and `questionsAsked`
-- Deleting a question decrements `questionsAsked` (gives back quota)
-- **Mobile must show:** remaining question count, "Upgrade Plan" CTA when limit reached
-
-**Teacher Feed:**
-- Questions sorted by `resetCount` (descending) then `createdAt` (descending) — reset questions get priority
-- Feed excludes questions from suspended teachers
-- Teacher taps "Accept" → strict countdown starts (duration depends on `answerFormat`, configurable per format in `PlatformConfig`)
-
-**Question Reset / Re-Queue:**
-- When a question gets a low rating (1-star), it can be re-opened for other teachers
-- `resetCount` increments (up to `maxQuestionResetCount` from config)
-- Reset questions appear higher in the feed
-- Mobile UI should show "Attempt X of Y" badge on reset questions
-
-### 5.2 Live Chat / Workspace (Answers)
-- **Flow:** Both users enter a chat room. Powered by Pusher.
-- **Features:** Text, image attachments, "Mark as Solved" button.
-- **Mobile UX:** WhatsApp-style chat interface. Inverse scrolling (FlatList `inverted={true}`).
-- **Channel close** triggers rating flow → points awarded/deducted based on rating
-
-### 5.3 Video & Audio Calls
-- **Flow:** User taps "Call" → Backend creates LiveKit room → Push notification wakes up the other user's app → Other user accepts → Connect to LiveKit room.
-- **Tech:** `@livekit/components-react-native`.
-- **Mobile UX:** Full-screen incoming call overlay (similar to WhatsApp/System calls).
-- **Call Settings (user-configurable):**
-  - `silentIncomingCalls` (boolean) — mute incoming call ringtone
-  - `incomingRingtone` / `outgoingRingtone` — selectable from an enum of tones
-  - Mobile needs a Settings screen for these preferences
-- **Cron Side-Effect:** `expire-calls` cron auto-ends stale calls. Handle sudden call termination gracefully.
-
-### 5.4 Video Courses & Live Sessions
-- **Flow:** Students browse courses, pay via Wallet/Gateway, and watch videos.
-- **Course Pricing Models:** `FREE`, `SUBSCRIPTION_INCLUDED` (requires active subscription), `PAID` (one-time NPR price)
-- **Rule:** 90% watch time requirement (`courseProgressCompletionThreshold` from config) for section completion. Tracking must be implemented via intervals sent to the backend.
-- **Tech:** Mux video player integration.
-- **Course Sale Credits:** When a student buys a paid course, the instructor receives points (minus `coursePurchaseCommissionPercent` commission). This creates a `COURSE_SALE_CREDIT` transaction.
-- **Live Sessions:** Redirect to Zoom app via Deep Link (`zoomus://`) or embed Zoom Mobile SDK.
-- **Enrollment Access Types:** `FREE`, `SUBSCRIPTION`, `COUPON`, `PURCHASE` — each shows different badges in UI and determines if access persists when subscription expires.
-
-**Course Coupon System:**
-- Coupons have types: `FULL_ACCESS` (100% off) or `PERCENTAGE` (X% off)
-- Scopes: `COURSE` (specific course) or `GLOBAL` (all paid courses)
-- Have usage limits, expiry dates, case-insensitive unique codes
-- Mobile needs a "Apply Coupon" input field on course purchase screens
-
-### 5.5 AI Quizzes
-
-**Flow:** User selects topic → Backend generates quiz via multi-LLM (Gemini/Groq/Mistral) → User answers → Gets score.
-
-**Quiz Types:**
-- `FREE` — limited daily sessions (`freeQuizDailySessionLimit`), lower rewards (`freeQuizPointReward`)
-- `PREMIUM` — higher daily limits based on plan (`premiumQuizDailySessionLimitGo/Plus/Pro/Max`), higher rewards (`premiumQuizPointReward`)
-
-**Quiz Config (all from PlatformConfig):**
-- `quizQuestionCount` — number of questions per session
-- `quizTimeLimitSeconds` — time limit
-- `quizRepeatResetDays` — cooldown before retaking same topic
-- `freeQuizPassPercent` / `premiumQuizPassPercent` — minimum score to earn points
-- `quizViolationWarningLimit` — max anti-cheat violations before auto-submit
-
-**Anti-Cheat System (CRITICAL for mobile):**
-The web tracks these violation events:
-- `FULLSCREEN_EXIT`, `TAB_HIDDEN`, `WINDOW_BLUR`, `PAGE_HIDE`, `BEFORE_UNLOAD`, `BACK_NAVIGATION`, `DUPLICATE_TAB`
-
-**Mobile equivalents you MUST implement:**
-- `TAB_HIDDEN` → App goes to background (`AppState` listener)
-- `WINDOW_BLUR` → App loses focus
-- `BACK_NAVIGATION` → Hardware back button during quiz
-- `FULLSCREEN_EXIT` → N/A on mobile (ignore)
-- `DUPLICATE_TAB` → N/A on mobile (ignore)
-
-When `violationCount >= violationWarningLimit`, the quiz is auto-submitted with `submitReason: "ANTI_CHEAT"`.
-
-### 5.6 Teacher-Student Anti-Cheat System
-Separate from quiz anti-cheat. The `AntiCheatAlert` model tracks when the same teacher-student pair repeatedly collaborates (`consecutiveCount`). If threshold is exceeded (`antiCheatConsecutiveThreshold` from config), the teacher can be auto-suspended for `antiCheatSuspensionDays`. Mobile should display if user is flagged.
-
-### 5.7 Peer Comments
-Teachers above a configurable point threshold (`peerCommentPointThreshold`) can leave comments on other teachers' answers. They earn between `peerCommentMinPointReward` and `peerCommentMaxPointReward` points for helpful peer reviews.
-
-### 5.8 Referral System
-- Each user gets a unique `referralCode` (uppercase, unique)
-- Sharing flow: generate a deep link `questioncall://register?ref=CODE`
-- On signup with referral code:
-  - **Referee** gets `referralBonusQuestions` bonus questions
-  - **Referrer** gets `referrerBonusQuestions` bonus questions
-- `bonusQuestions` add to the student's effective question quota
-- Referral status: `COMPLETED` or `REVOKED`
-- `User.referralHistory[]` tracks all referrals with points earned and dates
-- Mobile needs a "Share Referral" screen with code + deep link share sheet
-
-### 5.9 Notice System / Admin Broadcasts
-Admins can push platform-wide announcements via the `Notice` model. `User.seenNotices[]` tracks which notices a user has dismissed. Mobile needs a banner/modal for unseen notices on app launch.
-
-### 5.10 Onboarding Videos
-`PlatformConfig.onboardingVideos` stores role-specific onboarding videos (title, description, videoUrl, thumbnailUrl). `User.seenOnboardingRoles[]` tracks which onboarding was watched. Mobile needs a first-run video experience per role.
+### Security Requirements
+- **Biometric gate:** Face ID / Fingerprint (`expo-local-authentication`) required before Wallet, Transaction History, or Withdrawal. If device has no biometrics enrolled → fallback to requiring account password re-entry (not a separate PIN).
+- **Screenshot prevention:** On Android, apply `FLAG_SECURE` to genuinely block screenshots on wallet/withdrawal screens. On iOS, you **cannot block** screenshots — you can only detect them via `UIApplicationUserDidTakeScreenshotNotification` and log/warn. Do not promise iOS screenshot blocking to users.
+- **Jailbreak/root detection** recommended but not blocking for v1.
 
 ---
 
-## 6. Money / Transaction Handling
+## 6. Feature Parity Checklist
 
-⚠️ **SECURITY CRITICAL**
+### 6.1 Question Feed & Posting
 
-### Internal Currency System
-- **Teachers** earn `pointBalance` (from answering questions, course sales, bonuses)
-- **Students** earn `points` (from quiz rewards)
-- Both convert to NPR at `pointToNprRate` (configurable in PlatformConfig)
-- The mobile wallet screen must show: `pointBalance × pointToNprRate = NPR equivalent`
+**Student posting:**
+1. Title (6–180 chars), body (≤5000 chars), images via `expo-image-picker`
+2. `answerFormat`: TEXT / PHOTO / VIDEO / ANY
+3. `answerVisibility`: PUBLIC / PRIVATE
+4. Subject, stream, level selectors
 
-### Earning Mechanisms (Teachers)
-| Source | Points Earned | Config Field |
-|--------|--------------|--------------|
-| Text answer | Configurable | `pointsPerTextAnswer` |
-| Photo answer | Configurable | `pointsPerPhotoAnswer` |
-| Video answer | Configurable | `pointsPerVideoAnswer` |
-| 2-star rating bonus | Configurable | `bonusPointsFor2Star` |
-| 3-star rating bonus | Configurable | `bonusPointsFor3Star` |
-| 4-star rating bonus | Configurable | `bonusPointsFor4Star` |
-| 5-star rating bonus | Configurable | `bonusPointsFor5Star` |
-| Low rating (1-star) penalty | Negative | `penaltyPointsForLowRating` |
-| Monthly high-rating bonus | Configurable | `monthlyHighScoreBonusPoints` |
-| Daily target bonuses | Tiered | `dailyTargets[]` array |
-| Course sale credit | Price minus commission | `coursePurchaseCommissionPercent` |
+**Quota enforcement (critical):**
+- `effectiveLimit = maxQuestions + bonusQuestions`
+- If `questionsAsked >= effectiveLimit` → replace submit with "Upgrade Plan" CTA
+- Deleting a question decrements `questionsAsked` (restores quota)
+- Add optimistic UI: show question immediately in "My Questions" with "Posting..." badge, reconcile on API response
+
+**Teacher feed:**
+- Sort by `resetCount` desc, then `createdAt` desc
+- Show "Attempt X of Y" badge on reset questions
+- Accept button → confirmation modal showing countdown duration based on `answerFormat`
+- Real-time inserts via Pusher `questions-feed` channel
+
+### 6.2 Live Chat / Workspace
+- WhatsApp-style FlatList with `inverted={true}`
+- Text + image attachments (`expo-image-picker`, `expo-document-picker`)
+- Pusher channel: `channel-${channelId}` — events: `channel:message`, `message:marked`, `message:deleted`
+- Close Channel → 5-star rating modal (student) → submit → points awarded/deducted
+- **Message retry queue:** If offline, queue messages in Redux + AsyncStorage, show "Sending..." state, retry on network return. Non-negotiable on Nepali mobile networks.
+
+### 6.3 Video & Audio Calls
+- Teacher taps "Call" → `POST /api/calls/initiate`
+- Pusher broadcasts `call:incoming` → high-priority push notification wakes app
+- Full-screen incoming call UI with ringtone (even when backgrounded)
+- Accept → fetch LiveKit token (`/api/calls/token`) → connect to room
+- **MVP approach:** High-priority push + in-app full-screen UI (simpler). Full CallKit/ConnectionService integration recommended for v1.1.
+- Handle `expire-calls` cron: graceful sudden termination
+
+**Call settings (user-configurable):**
+- `silentIncomingCalls` toggle
+- `incomingRingtone` / `outgoingRingtone` selection
+
+### 6.4 Video Courses & Live Sessions
+
+**Courses:**
+- Pricing models: FREE, SUBSCRIPTION_INCLUDED, PAID
+- 90% watch time required (`courseProgressCompletionThreshold`) for section completion
+- Track watch time: ping backend every 10s, pause on AppState background or video pause
+- Enrollment access types: FREE, SUBSCRIPTION, COUPON, PURCHASE — distinct badges for each
+- Course sale: instructor receives points minus `coursePurchaseCommissionPercent`
+
+**Coupon system:**
+- Types: FULL_ACCESS (100% off) or PERCENTAGE (X% off)
+- Scopes: COURSE or GLOBAL
+- Show "Apply Coupon" input on purchase screens
+
+**Live sessions:** Deep-link to Zoom via `zoomus://` with HTTPS fallback if Zoom not installed.
+
+### 6.5 AI Quizzes
+
+**Quiz types:**
+- FREE: limited daily sessions (`freeQuizDailySessionLimit`), lower rewards (`freeQuizPointReward`)
+- PREMIUM: higher daily limits per plan, higher rewards (`premiumQuizPointReward`)
+
+**All quiz config comes from PlatformConfig — never hardcode:**
+- `quizQuestionCount`, `quizTimeLimitSeconds`, `quizRepeatResetDays`
+- `freeQuizPassPercent` / `premiumQuizPassPercent`
+- `quizViolationWarningLimit`
+
+**Anti-cheat (mobile equivalents):**
+
+| Web Event | Mobile Implementation |
+|-----------|----------------------|
+| `TAB_HIDDEN` | `AppState` → background or inactive |
+| `WINDOW_BLUR` | App loses focus |
+| `BACK_NAVIGATION` | Hardware back button (Android) → intercept, log violation |
+| `FULLSCREEN_EXIT` | N/A — skip |
+| `DUPLICATE_TAB` | N/A — skip |
+
+**Critical false-positive guard (not in original doc):** Add a 2-second grace window. Biometric prompts, system permission dialogs, incoming-call screens, and push notification previews all legitimately background the app momentarily. If the app returns to active within 2 seconds, do NOT log a violation. Also ignore the first background event within 500ms of quiz start (spurious lifecycle events on some devices).
+
+When `violationCount >= violationWarningLimit`: auto-submit with `submitReason: "ANTI_CHEAT"`. Show a clear warning modal at every violation so users are not surprised.
+
+### 6.6 Teacher-Student Anti-Cheat
+`AntiCheatAlert` model tracks repeated teacher-student collaboration (`consecutiveCount`). If threshold exceeded (`antiCheatConsecutiveThreshold`), teacher may be auto-suspended for `antiCheatSuspensionDays`. Display flag status in UI.
+
+### 6.7 Peer Comments
+Teachers above `peerCommentPointThreshold` can comment on other teachers' answers. Rewards: between `peerCommentMinPointReward` and `peerCommentMaxPointReward` points.
+
+### 6.8 Referral System
+- Each user has a unique `referralCode`
+- Share flow: generate deep link `questioncall://register?ref=CODE` via native share sheet
+- On signup with code: referee gets `referralBonusQuestions`, referrer gets `referrerBonusQuestions`
+- `bonusQuestions` add to effective question quota
+- Show referral history with status badges (COMPLETED / REVOKED)
+
+### 6.9 Notice System
+Admins push platform-wide announcements via `Notice` model. On every foreground, fetch unseen notices and show a dismissible modal for the highest-priority one. Mark seen via `User.seenNotices`.
+
+### 6.10 Onboarding Videos
+`PlatformConfig.onboardingVideos` stores role-specific videos. `User.seenOnboardingRoles[]` tracks what was watched. Show first-run video experience per role. Allow re-watch from Menu.
+
+---
+
+## 7. Money & Transaction Handling
+
+> ⚠️ Security Critical — Atomic transactions, no client-side balance math, ever.
+
+### Internal Currency
+- Teachers: `pointBalance` (answers, course sales, bonuses)
+- Students: `points` (quiz rewards)
+- Both: `pointBalance × pointToNprRate = NPR equivalent` — always show both
+
+### Teacher Earning Mechanisms
+
+| Source | Config Field |
+|--------|-------------|
+| Text/Photo/Video answer | `pointsPerTextAnswer`, `pointsPerPhotoAnswer`, `pointsPerVideoAnswer` |
+| 2–5 star rating bonus | `bonusPointsFor2Star` → `bonusPointsFor5Star` |
+| 1-star penalty | `penaltyPointsForLowRating` |
+| Monthly high-rating bonus | `monthlyHighScoreBonusPoints` |
+| Daily target tiers | `dailyTargets[]` array |
+| Course sale | Price minus `coursePurchaseCommissionPercent` |
 
 ### Daily Target Bonus System
-Teachers have daily answer targets with tiered bonuses (default):
-| Target (answers/day) | Bonus Points |
-|----------------------|-------------|
-| 20 | 5 |
-| 40 | 10 |
-| 80 | 20 |
-| 100 | 25 |
 
-- `dailyAnswersCount` tracks today's answers (resets daily via `lastAnsweredDate`)
-- `dailyTargetsAchieved[]` tracks which tiers were already claimed today
-- Mobile needs a **progress tracker widget** in the teacher dashboard
+Teachers have tiered daily answer targets (defaults configurable via PlatformConfig):
 
-### Wallet History Events
-The `WalletHistoryEvent` model logs all balance changes with types:
-`ANSWER_REWARD`, `AUTO_CLOSE_REWARD`, `LOW_RATING_PENALTY`, `TIMEOUT_PENALTY`, `MONTHLY_BONUS`, `DAILY_TARGET_BONUS`
+| Answers/day | Bonus |
+|-------------|-------|
+| 20 | 5 pts |
+| 40 | 10 pts |
+| 80 | 20 pts |
+| 100 | 25 pts |
 
-### Transaction Types
-The `Transaction` model tracks payment-level events:
-`CREDIT`, `DEBIT`, `WITHDRAWAL`, `SUBSCRIPTION_MANUAL`, `COURSE_PURCHASE`, `COURSE_SALE_CREDIT`
+`dailyAnswersCount` resets daily. Show progress tracker widget in teacher dashboard.
 
 ### Withdrawal Flow
 
-⚠️ **SECURITY CRITICAL — Atomic Transaction**
+> ⚠️ This is an atomic Mongo transaction — do not attempt partial implementations.
 
-1. User enters amount to withdraw + eSewa number
+1. User enters withdrawal amount + eSewa number
 2. Backend runs inside `mongoose.startSession()` + `withTransaction()`:
-   - Checks no existing PENDING withdrawal (partial unique index enforces this)
-   - Atomically deducts from user's balance (`pointBalance` for teachers, `points` for students)
+   - Checks no existing PENDING withdrawal
+   - Atomically deducts from balance
    - Creates `WithdrawalRequest` with `pointsReserved: true`
-   - Calculates `nprEquivalent = pointsRequested × pointToNprRate` (locked at time of request)
-3. Notifies all admins via Pusher + in-app notification + email to master admins
-4. Admin manually processes via eSewa, fills `transactionId`, `amountSent`, marks COMPLETED/REJECTED
-5. If REJECTED, points are refunded
+   - Locks `nprEquivalent = pointsRequested × pointToNprRate` at request time
+3. Notifies all admins via Pusher + push + email
+4. Admin processes manually, marks COMPLETED or REJECTED
+5. If REJECTED → points refunded
 
-**Mobile MUST:**
-- Show "You already have a pending request" and disable withdraw button when one exists
-- Handle the duplicate error (HTTP 400 or Mongo 11000 error code) gracefully
-- Show the locked NPR rate on pending withdrawals
-- Never attempt client-side balance math
-- Enforce minimum withdrawal: `minWithdrawalPoints` from config
+**Mobile must:**
+- Show "pending request exists" state and disable withdraw button proactively
+- Handle HTTP 400 / Mongo 11000 duplicate error gracefully
+- Show the locked NPR rate on the pending card
+- Enforce `minWithdrawalPoints` from config
 - Allow saving eSewa number (`saveEsewaNumber` flag)
+- Send push notification when withdrawal is approved/rejected (`withdrawal:processed` event)
 
 ### Payment Gateways
 
-**eSewa (redirect-based):**
-1. `POST /api/payments/esewa/initiate` — returns redirect URL
-2. User completes payment in eSewa app/WebView
-3. eSewa redirects to success URL → `GET /api/payments/esewa/verify`
-4. For courses: `GET /api/payments/esewa/course-verify`
-- **Mobile:** Open a secure WebView, intercept the success redirect deep link
+**eSewa & Khalti (redirect-based):**
+1. Initiate → backend returns redirect URL
+2. Open in `react-native-webview`
+3. Intercept success/failure redirect by matching URL pattern
+4. Deep link fallback: `questioncall://payment/success`
+5. **Always verify on backend before showing success** — never trust client-side redirect URLs alone
 
-**Khalti (redirect-based):**
-1. Similar redirect flow
-2. `GET /api/payments/khalti/course-verify` for course purchases
-- **Mobile:** Same WebView + deep link interception pattern
-
-**Manual Payment (eSewa transfer + screenshot):**
-1. Mobile shows admin's eSewa number + QR code (from `PlatformConfig.manualPaymentQrCodeUrl`)
-2. User transfers money outside the app
-3. User submits via `POST /api/payments/manual` with FormData:
-   - `transactionId` (string) — the eSewa transaction ID
-   - `transactorName` (string) — name on the eSewa account
-   - `planSlug` (string) — which plan they're paying for
-   - `screenshot` (File, optional) — proof of payment uploaded to Cloudinary
-4. **Smart Typo Fix:** Re-submitting same `transactionId` from same user just updates the PENDING record (doesn't create duplicate)
-5. **Duplicate Check:** If same `transactionId` is already COMPLETED, returns 409 Conflict
-6. Admin reviews and approves/rejects
+**Manual payment:**
+1. Show admin's eSewa number + QR code from `PlatformConfig.manualPaymentQrCodeUrl`
+2. User transfers outside app, then submits via `POST /api/payments/manual` (FormData):
+   - `transactionId`, `transactorName`, `planSlug`, optional `screenshot`
+3. Same `transactionId` from same user = update existing PENDING (not duplicate)
+4. Same `transactionId` already COMPLETED = 409 Conflict → clear message to user
 
 ### Subscription Plans
 
-| Plan | Price (NPR) | Questions | Duration | Quiz Limit |
-|------|------------|-----------|----------|-----------|
-| Free (Trial) | 0 | Configurable | Configurable days | Free quizzes only |
-| Go | Configurable | Configurable | Configurable days | Per-plan premium limit |
-| Plus | Configurable | Configurable + 10 free | Configurable days | Per-plan premium limit |
-| Pro | Configurable | Configurable + 20 free | Configurable days | Per-plan premium limit |
-| Max | Configurable | Configurable + 50 free | Configurable days | Per-plan premium limit |
+All pricing and limits come from PlatformConfig. Never hardcode. Plans: Free, Go, Plus, Pro, Max.
 
-All pricing, limits, and durations are admin-configurable via `PlatformConfig`. Fetch via API.
+**Apple IAP note:** Apple guideline 3.1.1 requires IAP for digital goods consumed in-app. eSewa/Khalti will likely be rejected for course purchases on iOS. Decide in Sprint 0: (a) hide iOS course purchases, route to web; (b) integrate RevenueCat + Apple IAP for iOS only; (c) reclassify (risky). This decision changes Sprint 7 architecture.
 
 ---
 
-## 7. Data Models & TypeScript Types
+## 8. Data Models & TypeScript Types
 
-The web platform heavily utilizes Mongoose schemas and Zod. The mobile app MUST use the exact same TypeScript interfaces.
+Copy the entire `types/` folder from the web repo into the mobile codebase. Set up a sync script or git submodule to keep types aligned. Key files: `types/channel.ts`, `types/question.ts`, `types/quiz.ts`, `types/next-auth.d.ts`.
 
-**All Models (34 total) — export types from backend:**
+**All 34 models:**
 
-| Model | Key Fields | Money-Related |
-|-------|-----------|---------------|
+| Model | Key Fields | Money? |
+|-------|-----------|--------|
 | `User` | role, points, pointBalance, subscriptionStatus, planSlug, questionsAsked, bonusQuestions, isSuspended, isMonetized, teacherModeVerified, dailyAnswersCount, dailyTargetsAchieved, esewaNumber, callSettings | ✅ |
 | `Question` | askerId, title, body, images, answerFormat, answerVisibility, status (OPEN/ACCEPTED/SOLVED), resetCount, acceptedById, acceptedAt | |
 | `Answer` | questionId, teacherId, content | |
 | `Channel` | participants, question reference | |
 | `Message` | channelId, senderId, content, attachments | |
 | `CallSession` | channelId, roomName, teacherId, studentId, mode (AUDIO/VIDEO), status (CREATED/RINGING/ACTIVE/ENDED/REJECTED/MISSED) | |
-| `Transaction` | userId, type, amount, status (PENDING/COMPLETED/FAILED), gateway (ESEWA/INTERNAL/MANUAL/KHALTI), transactionId, planSlug, screenshotUrl | ✅ |
+| `Transaction` | userId, type, amount, status (PENDING/COMPLETED/FAILED), gateway, transactionId, planSlug, screenshotUrl | ✅ |
 | `WithdrawalRequest` | teacherId, pointsRequested, nprEquivalent, esewaNumber, status (PENDING/COMPLETED/REJECTED), pointsReserved, transactionId, amountSent, processedBy | ✅ |
 | `WalletHistoryEvent` | userId, type, title, pointsDelta, occurredAt | ✅ |
-| `Course` | title, slug, pricingModel (FREE/SUBSCRIPTION_INCLUDED/PAID), price, currency (NPR), status, instructorId | ✅ |
-| `CourseEnrollment` | courseId, studentId, accessType (FREE/SUBSCRIPTION/COUPON/PURCHASE), pricePaid, overallProgressPercent | ✅ |
+| `Course` | title, slug, pricingModel, price, currency (NPR), status, instructorId | ✅ |
+| `CourseEnrollment` | courseId, studentId, accessType, pricePaid, overallProgressPercent | ✅ |
 | `CourseVideo` | courseId, sectionId, title, duration | |
 | `CourseSection` | courseId, title, order | |
-| `CourseCoupon` | code, type (FULL_ACCESS/PERCENTAGE), scope (COURSE/GLOBAL), discountPercentage, usageLimit, expiryDate | ✅ |
+| `CourseCoupon` | code, type, scope, discountPercentage, usageLimit, expiryDate | ✅ |
 | `CourseCouponRedemption` | couponId, studentId, courseId | |
 | `LiveSession` | courseId, title, zoomLink, scheduledAt | |
-| `QuizSession` | studentId, quizType (FREE/PREMIUM), topicId, answers, score, pointsAwarded, violationCount, violationEvents, configSnapshot, submitReason (MANUAL/TIME_EXPIRED/ANTI_CHEAT) | ✅ |
+| `QuizSession` | studentId, quizType, topicId, answers, score, pointsAwarded, violationCount, violationEvents, configSnapshot, submitReason (MANUAL/TIME_EXPIRED/ANTI_CHEAT) | ✅ |
 | `QuizQuestion` | question, options, correctIndex | |
 | `QuizTopic` | subject, topic, level | |
 | `Referral` | referrerId, refereeId, referralCode, bonusAwarded, status (COMPLETED/REVOKED) | ✅ |
 | `Notification` | userId, type, message, href, isRead | |
 | `PeerComment` | answerId, commenterId, content | |
 | `AntiCheatAlert` | teacherId, studentId, consecutiveCount, status (WARNING/SUSPENDED) | |
-| `Notice` | title, content (admin broadcasts) | |
-| `PlatformConfig` | ~50+ configurable fields (see Section 3) | ✅ |
-| `PushSubscription` | userId, subscription endpoint | |
+| `Notice` | title, content | |
+| `PlatformConfig` | 50+ configurable fields | ✅ |
+| `PushSubscription` | userId, subscription endpoint, **platform** (web/ios/android) | |
 | `VideoProgress` | userId, videoId, watchedPercent | |
 | `ErrorLog` | error tracking | |
 | `ApiRequestLog` | request logging | |
@@ -448,73 +551,73 @@ The web platform heavily utilizes Mongoose schemas and Zod. The mobile app MUST 
 | `VerificationToken` | email verification | |
 | `QuizGenerationLog` | quiz generation tracking | |
 
-**Type files to sync from web repo:**
-- `types/channel.ts` — Channel-related interfaces
-- `types/question.ts` — Question-related interfaces
-- `types/quiz.ts` — Quiz-related interfaces
-- `types/next-auth.d.ts` — Session type augmentation
+---
 
-*Copy the entire `types/` folder from the web repository into the React Native codebase.*
+## 9. Design System & UI Guidelines
+
+- **Aesthetic:** Premium, glassmorphism-heavy, subtle animations, dark/light mode
+- **Color palette:** Extract CSS variables from `globals.css`, map to NativeWind theme tokens
+- **Component mappings:**
+
+| Web (Shadcn/Radix) | Mobile |
+|---------------------|--------|
+| Modals/dialogs | `@gorhom/bottom-sheet` |
+| Toasts (`sonner`) | `react-native-toast-message` |
+| Dropdowns (Radix) | `@react-native-picker/picker` or bottom sheet |
+| Accordions | `react-native-collapsible` or custom animated view |
+| Dark/Light (`next-themes`) | `useColorScheme()` from React Native |
+
+**Key screens to build:**
+
+- Suspended account screen (full-screen blocker, no dismissal)
+- Onboarding video player (first-run per role)
+- Question quota indicator badge
+- Daily target progress widget (teacher)
+- Referral sharing screen
+- Manual payment screen (QR code + screenshot upload)
+- Pending withdrawal status card
+- Admin notice banner/modal
 
 ---
 
-## 8. Design System & UI Guidelines
-
-- **Aesthetics:** The web app uses a premium, glassmorphism-heavy design with subtle animations and dark/light modes.
-- **Color Palette & Typography:** Extract CSS variables from `globals.css` and map them to a mobile theme object.
-- **Recommended Library:** `NativeWind` (Tailwind for React Native) to easily migrate web classes, OR a customized `Restyle` / `Tamagui` setup.
-- **Components:**
-  - Web `Shadcn` Modals → React Native Bottom Sheets (`@gorhom/bottom-sheet`).
-  - Web Toasts (`sonner`) → `react-native-toast-message`.
-  - Web Dropdowns (`radix-ui`) → React Native `@react-native-picker/picker` or custom bottom sheets.
-  - Web Accordions (FAQ, course sections) → `react-native-collapsible` or custom animated views.
-- **Key Screens to Build:**
-  - Suspended account screen (full-screen blocker)
-  - Onboarding video player (per role, first-run)
-  - Question quota indicator (remaining questions badge)
-  - Daily target progress widget (teacher dashboard)
-  - Referral sharing screen (code + deep link)
-  - Manual payment screen (QR code display + screenshot upload)
-  - Pending withdrawal status card
-  - Admin notice banner/modal
-
----
-
-## 9. Push Notifications, Deep Links & Background Tasks
+## 10. Push Notifications, Deep Links & Background Tasks
 
 ### Push Notifications
-- The web uses VAPID / Web Push. The mobile app MUST use Firebase Cloud Messaging (FCM) for Android and APNs for iOS via `expo-notifications`.
-- **Backend Update Required:** The push logic (`/api/push/...`) and `PushSubscription` model will need to support FCM device tokens alongside/instead of VAPID web push subscriptions. Add a `platform` field (`web` / `ios` / `android`) to the `PushSubscription` model.
-- **Notification Types to Handle:**
-  - New question in feed (teacher)
-  - Question accepted (student)
-  - Incoming call (full-screen call UI)
-  - Withdrawal processed (wallet update)
-  - Monthly bonus awarded
-  - Daily target achieved
-  - Admin notice/broadcast
-  - Course live session starting soon
+Use `expo-notifications` for FCM (Android) + APNs (iOS). Backend `PushSubscription` model needs `platform` field added (web/ios/android).
 
-### Deep Links
-Configure `expo-linking` to handle these schemes:
-- `questioncall://course/[id]` → Course detail screen
-- `questioncall://workspace/[channelId]` → Chat workspace
-- `questioncall://wallet` → Wallet screen
-- `questioncall://quiz/[topicId]` → Quiz session
-- `questioncall://register?ref=CODE` → Signup with referral code
-- `questioncall://payment/success` → Payment verification callback
-- `questioncall://payment/failure` → Payment failure handler
+**Notification types to handle:**
+
+| Event | Trigger | Deep Link |
+|-------|---------|-----------|
+| New question in feed | Teacher | Feed tab |
+| Question accepted | Student | Channel |
+| Incoming call | Any | Full-screen call UI |
+| Withdrawal processed | Teacher/Student | Wallet |
+| Monthly bonus awarded | Teacher | Wallet |
+| Daily target achieved | Teacher | Wallet |
+| Admin broadcast | Any | Notices screen |
+| Course live session soon | Student | Course detail |
+
+### Deep Link Schemes (configure via `expo-linking`)
+
+```
+questioncall://course/[id]           → Course detail
+questioncall://workspace/[channelId] → Chat workspace
+questioncall://wallet                → Wallet screen
+questioncall://quiz/[topicId]        → Quiz session
+questioncall://register?ref=CODE     → Signup with referral
+questioncall://payment/success       → Payment verification callback
+questioncall://payment/failure       → Payment failure handler
+```
 
 ### Background Tasks
-- If a question timer is running, use local notifications to alert the teacher when time is almost up, even if the app is backgrounded.
-- Quiz sessions: detect app backgrounding via `AppState` API and report as violation event.
-- Video watch tracking: pause progress tracking when app goes to background or phone is locked.
+- **Answer timer:** Use local notifications to alert teacher when time is almost up (even backgrounded)
+- **Quiz anti-cheat:** `AppState` API detects backgrounding → log violation
+- **Video tracking:** Pause progress pings on AppState background or phone lock
 
 ---
 
-## 10. Environment Variables & Config
-
-Mobile `.env` (managed via `expo-env` or `react-native-dotenv`):
+## 11. Environment Variables & Config
 
 ```env
 EXPO_PUBLIC_API_URL=https://[production-domain].com/api
@@ -523,171 +626,305 @@ EXPO_PUBLIC_PUSHER_CLUSTER=[your_pusher_cluster]
 EXPO_PUBLIC_LIVEKIT_URL=[your_livekit_url]
 EXPO_PUBLIC_ESEWA_MERCHANT_ID=[esewa_merchant_id]
 EXPO_PUBLIC_KHALTI_PUBLIC_KEY=[khalti_public_key]
-# DO NOT bundle NextAuth secrets, DB URIs, or API keys in the mobile app.
+# DO NOT bundle NextAuth secrets, DB URIs, or any server-side secrets.
 # All sensitive operations happen server-side via API calls.
 ```
 
-**Switching Environments:**
-- Use EAS Build profiles (`development`, `staging`, `production`) with separate `.env` files
-- `eas.json` should define environment-specific `EXPO_PUBLIC_API_URL` values
+Use EAS Build profiles (`development`, `staging`, `production`) with separate `.env` files. Define `EXPO_PUBLIC_API_URL` per profile in `eas.json`.
 
 ---
 
-## 11. Testing & QA Requirements
+## 12. Testing & QA Requirements
 
-**Critical User Journeys (CUJs) to test:**
+**Critical User Journeys:**
 
 | # | Journey | Priority |
 |---|---------|----------|
-| 1 | Post question → Accept → Chat → Solve → Rating → Wallet Credit | 🔴 Critical |
-| 2 | Withdrawal request → Admin approval → Balance update | 🔴 Critical |
-| 3 | Manual payment with screenshot → Admin verification → Subscription active | 🔴 Critical |
-| 4 | eSewa/Khalti payment flow and WebView redirect return | 🔴 Critical |
+| 1 | Post question → Accept → Chat → Solve → Rating → Wallet credit | 🔴 Critical |
+| 2 | Withdrawal request → Admin approval → Balance update + push notification | 🔴 Critical |
+| 3 | Manual payment with screenshot → Admin verify → Subscription active | 🔴 Critical |
+| 4 | eSewa/Khalti WebView payment + redirect return | 🔴 Critical |
 | 5 | Token refresh & session persistence on app restart | 🔴 Critical |
 | 6 | Suspended account → blocked from all features | 🔴 Critical |
 | 7 | Question limit reached → upgrade CTA shown | 🟡 Important |
-| 8 | Quiz anti-cheat: backgrounding triggers violation | 🟡 Important |
-| 9 | Video call connection on cellular vs. Wi-Fi | 🟡 Important |
+| 8 | Quiz anti-cheat: backgrounding triggers violation, grace period works | 🟡 Important |
+| 9 | Video call on cellular vs. Wi-Fi | 🟡 Important |
 | 10 | Course purchase with coupon code | 🟡 Important |
-| 11 | Referral code signup → bonus questions awarded | 🟡 Important |
+| 11 | Referral code signup → bonus questions awarded on both sides | 🟡 Important |
 | 12 | Daily target progress → bonus awarded at threshold | 🟡 Important |
 | 13 | Duplicate withdrawal attempt → proper error shown | 🟡 Important |
 | 14 | Onboarding video shown on first login per role | 🟢 Minor |
 | 15 | Admin notice displayed and dismissible | 🟢 Minor |
 
-**Tools:** `Jest` for unit testing Redux slices, `Maestro` or `Detox` for E2E testing flows.
+**Tools:** Jest for unit testing Redux slices, Maestro (preferred) or Detox for E2E. Write E2E tests for journeys 1–5 minimum.
+
+**Stress tests:** Toggle airplane mode mid-chat to verify Pusher reconnect. Test on the cheapest available Android device — that is most of the user base.
 
 ---
 
-## 12. Build, Release & Store Submission
+## 13. Build, Release & Store Submission
 
-- **Build:** Use EAS Build (`eas build --profile production --platform all`).
-- **Store Policies (CRITICAL):**
-  - Because users earn money, Apple and Google will heavily scrutinize the app.
-  - You must clearly outline the business model (who pays who) in the review notes.
-  - Ensure digital purchases (like buying a course) comply with Apple/Google In-App Purchase rules (you may need to use RevenueCat for iOS if Apple rejects third-party gateways for digital goods, or classify it as a physical/real-world service).
-  - The app handles real NPR currency. Clearly disclose this is an educational platform with teacher compensation, NOT gambling.
-  - Include Terms of Use and Privacy Policy (fetched dynamically from `PlatformConfig.termsOfUseContent` / `privacyPolicyContent`). These are admin-editable markdown — render them dynamically, do NOT bundle static text.
+**Build command:** `eas build --profile production --platform all`
+
+**Store review notes to write (verbatim clarity required):**
+> "This is an educational tutoring marketplace. Teachers earn compensation in NPR for tutoring services rendered. The platform takes a commission. This is not gambling, not a financial product, and not user-to-user money transfer."
+
+**Provide test accounts for reviewers:**
+- One student with funded balance
+- One teacher with pending withdrawal
+- One admin
+
+**iOS-specific risks:**
+- Apple guideline 3.1.1: must use IAP for digital goods consumed in-app. Resolve in Sprint 0.
+- Sign in with Apple is required if Google Sign-In is offered.
+- Screenshot blocking is not possible — update all documentation accordingly.
+
+**Compliance checklist:**
+- Terms of Use and Privacy Policy rendered dynamically from `PlatformConfig` (never bundled static text)
+- App Privacy questionnaire completed with accurate data collection disclosure
+- IAP integrated (if Sprint 0 decision was option b)
 
 ---
 
-## 13. Known Pitfalls & Gotchas
+## 14. Known Pitfalls (Web → Mobile)
 
-| Web Pattern | Mobile Equivalent | Notes |
-|------------|-------------------|-------|
-| `httpOnly` cookies (NextAuth) | Bearer JWT via `expo-secure-store` | Must build a JWT bridge endpoint on backend |
-| `localStorage` / `sessionStorage` | `AsyncStorage` (non-sensitive) / `expo-secure-store` (sensitive) | Never store tokens in AsyncStorage |
+| Web Pattern | Mobile Solution | Watch Out |
+|-------------|----------------|-----------|
+| `httpOnly` cookies (NextAuth) | Bearer JWT via `expo-secure-store` | Must build JWT bridge endpoint |
+| `localStorage` / `sessionStorage` | `AsyncStorage` (non-sensitive) / `expo-secure-store` (sensitive) | NEVER store tokens in AsyncStorage |
 | `window.location.href` redirects | `expo-linking` / `expo-router` navigation | Payment callbacks especially |
-| `document.fullscreenElement` | N/A on mobile | Quiz anti-cheat: skip this check |
-| `document.hidden` / `visibilitychange` | `AppState` API (`active`/`background`/`inactive`) | Quiz anti-cheat: map to TAB_HIDDEN |
-| `window.onbeforeunload` | `AppState` change to `background` | Map to BEFORE_UNLOAD violation |
-| `setInterval` for video tracking | `setInterval` + `AppState` pause | Must pause when backgrounded |
-| Pusher WebSockets | Same library, aggressive reconnect | Mobile networks drop sockets frequently |
-| Cloudinary upload (server-side) | Same API, but screenshots use FormData from mobile | Manual payment screenshot upload |
-| `next-themes` (dark/light mode) | `useColorScheme()` from React Native | Map CSS variables to theme object |
-| Web Push (VAPID) | FCM (Android) + APNs (iOS) via `expo-notifications` | Backend needs to support both |
-| `PlatformConfig` server-side cache | Fetch on app launch + cache in Redux | Never hardcode configurable values |
+| `document.fullscreenElement` | N/A on mobile | Skip this quiz anti-cheat check |
+| `document.hidden` / `visibilitychange` | `AppState` API (`active`/`background`/`inactive`) | Maps to TAB_HIDDEN violation |
+| `window.onbeforeunload` | `AppState` change to `background` | Maps to BEFORE_UNLOAD violation |
+| `setInterval` for video tracking | `setInterval` + AppState pause | Must pause when backgrounded |
+| Pusher WebSockets | Same library | Aggressive reconnect — mobile drops sockets constantly |
+| Cloudinary upload (server-side) | Same API, FormData from mobile | Manual payment screenshot upload |
+| `next-themes` (dark/light) | `useColorScheme()` from React Native | Map CSS variables to theme object |
+| Web Push (VAPID) | FCM + APNs via `expo-notifications` | Backend needs platform field on PushSubscription |
+| `PlatformConfig` server-side cache | Fetch on launch + cache in Redux with TTL | Never hardcode. Refresh on foreground if stale. |
 | `sonner` toasts | `react-native-toast-message` | Same UX patterns |
-| Shadcn modals/dialogs | `@gorhom/bottom-sheet` | Bottom sheets feel more native on mobile |
+| Shadcn modals/dialogs | `@gorhom/bottom-sheet` | More native feel |
+| Screenshot prevention | Android: `FLAG_SECURE` works. iOS: detection only, cannot block. | Do not tell iOS users screenshots are blocked |
 
 ---
 
-## 14. Folder Structure Recommendation
+## 15. Sprint-by-Sprint Build Plan (Sprints 0–8)
 
-```text
-/mobile-app
-├── src/
-│   ├── app/                    # expo-router file-based routing
-│   │   ├── (auth)/             # Login, signup, forgot-password
-│   │   ├── (tabs)/             # Bottom tab navigator
-│   │   │   ├── feed/           # Question feed (teachers)
-│   │   │   ├── my-questions/   # Student's questions
-│   │   │   ├── courses/        # Course library
-│   │   │   ├── wallet/         # Wallet, transactions, withdrawal
-│   │   │   ├── profile/        # User profile, settings
-│   │   ├── workspace/          # Chat workspace, LiveKit rooms
-│   │   ├── quiz/               # Quiz sessions
-│   │   ├── course/[id]/        # Course detail, video player
-│   │   ├── payment/            # Payment WebViews, manual payment
-│   │   ├── studio/             # Course creation (teacher/admin)
-│   │   ├── admin/              # Admin panel (if included)
-│   │   ├── suspended.tsx       # Suspension blocker screen
-│   │   ├── onboarding.tsx      # Role-based onboarding video
-│   ├── components/             # Reusable UI (Buttons, Bottom Sheets, Cards)
-│   │   ├── shared/             # Cross-feature components
-│   │   ├── wallet/             # Wallet-specific components
-│   │   ├── quiz/               # Quiz-specific components
-│   │   ├── chat/               # Chat message components
-│   ├── store/                  # Redux Toolkit
-│   │   ├── store.ts            # Store configuration
-│   │   ├── hooks.ts            # Typed useAppSelector/useAppDispatch
-│   │   ├── features/
-│   │   │   ├── auth/           # Auth state, token management
-│   │   │   ├── user/           # User profile, settings
-│   │   │   ├── feed/           # Question feed state
-│   │   │   ├── channel/        # Active workspace state
-│   │   │   ├── channels/       # All channels list
-│   │   │   ├── upload/         # File upload state
-│   │   │   ├── config/         # PlatformConfig cache
-│   ├── hooks/                  # Custom hooks
-│   │   ├── usePusher.ts        # Pusher connection + reconnect
-│   │   ├── useLiveKit.ts       # LiveKit room management
-│   │   ├── useAppState.ts      # App foreground/background detection
-│   │   ├── useBiometrics.ts    # Biometric auth for wallet
-│   ├── services/               # API layer
-│   │   ├── api.ts              # Axios instance with Bearer token interceptor
-│   │   ├── auth.ts             # Auth API calls
-│   │   ├── wallet.ts           # Wallet/payment API calls
-│   │   ├── questions.ts        # Question API calls
-│   │   ├── courses.ts          # Course API calls
-│   │   ├── quiz.ts             # Quiz API calls
-│   │   ├── notifications.ts    # Push notification setup
-│   ├── types/                  # Exact copy of backend TS interfaces
-│   ├── theme/                  # Colors, typography, spacing (from globals.css)
-│   ├── constants/              # App-wide constants
-│   ├── utils/                  # Helpers (formatting, validation)
-├── app.json                    # Expo config (bundle ID, permissions)
-├── eas.json                    # EAS Build profiles (dev/staging/prod)
-├── .env
-├── .env.staging
-├── .env.production
-```
+Each sprint is roughly 1–2 weeks for a single mid-level React Native developer. Each sprint ends with a demo-able, testable build.
 
 ---
 
-## Final Handoff Checklist for Mobile Dev
+### Sprint 0 — Pre-Flight Decisions & Project Bootstrap
+**Duration:** 3–5 days  
+**Goal:** Resolve all blocking product/legal/architecture decisions before any feature code is written.
+
+#### Blocking Decisions (Must Resolve Before Sprint 1)
+
+**Decision 1: Apple IAP strategy for paid courses**
+Apple guideline 3.1.1 requires IAP for digital goods consumed in-app. eSewa/Khalti will likely be rejected on iOS for course purchases. Choose one:
+- (a) Hide iOS course purchases entirely, route users to web browser to purchase
+- (b) Integrate RevenueCat + Apple IAP for iOS only; keep eSewa/Khalti for Android
+- (c) Reclassify as access to real-world tutoring (risky, Apple scrutinizes)
+
+This decision changes Sprint 7 architecture. Do not skip it.
+
+**Decision 2: JWT lifetime + refresh strategy**
+Recommend: access token 15 min, refresh token 30 days. Backend must expose `/api/mobile/login` and `/api/mobile/refresh` before Sprint 1 starts.
+
+**Decision 3: Withdrawal currency lock semantics**
+Confirm with backend team: is `nprEquivalent` locked at request creation time or recomputed at admin approval? Doc says locked — verify before building withdrawal UI.
+
+**Decision 4: Sign in with Apple scope**
+Apple requires Sign in with Apple if any other third-party social login (e.g. Google) is offered. Confirm it is in scope — it is required, not optional.
+
+#### Bootstrap Tasks
+- `npx create-expo-app` with `expo-router` + TypeScript
+- Configure NativeWind + extract/map theme tokens from `globals.css`
+- Set up Redux Toolkit with 7 slices: `auth`, `user`, `feed`, `channel`, `channels`, `upload`, `config`
+- Install and configure Sentry for crash + error reporting. Wire up before any other code.
+- Configure EAS with `development`, `staging`, `production` profiles
+- Set up `.env` per profile
+- Add ESLint + Prettier + Husky pre-commit hook
+- Copy `types/` folder from web repo, set up sync mechanism
+
+**Definition of Done:** App boots to blank screen, theme tokens render correctly, Sentry receives a test crash, EAS build succeeds on both platforms.
+
+---
+
+### Sprint 1 — Auth, Session & Suspended-Account Gate
+**Goal:** Users can sign up, sign in, sign out, and the app correctly gates suspended accounts.
+
+- Build Phase 1 (Landing) and Phase 2 (Auth) screens
+- Implement JWT bridge: `POST /api/mobile/login`, `POST /api/mobile/register`, `POST /api/mobile/refresh`
+- Store access + refresh tokens in `expo-secure-store`
+- Write Axios interceptor: attach Bearer token, handle 401 with one silent refresh attempt, force logout on refresh failure
+- Implement Google Sign-In (`expo-auth-session`) and Sign in with Apple
+- Add deep-link handler for email verification and password reset
+- Fetch `GET /api/platform` (PlatformConfig) on launch → store in Redux `config` slice with 1-hour TTL
+- Refresh PlatformConfig on every cold start and on foreground if cache is stale
+- Show blocking splash until first PlatformConfig load completes
+- On every foreground and immediately after login: fetch `/api/users/me`, check `isSuspended` → if true, navigate to `suspended.tsx`
+
+**Definition of Done:** Sign up → email verify → log in → see empty home. Suspend a test user via admin panel → app shows full-screen blocker on next foreground.
+
+---
+
+### Sprint 2 — Navigation Shell, Profile, Menu & Onboarding
+**Goal:** All five tabs navigable, profile editable, menu populated, first-run onboarding shown.
+
+- Build bottom tab navigator: 5 tabs with correct icons, labels, role-based Tab 3 label swap
+- Style Tab 3 center button as elevated/accent-colored
+- Build Menu tab with all sections (Profile, Wallet, Services, Account, Danger Zone)
+- Build Profile Edit screen and Activity stats screen
+- Implement onboarding video screen: fetch from `/api/onboarding-video`, play once per role, mark `seenOnboardingRoles` on completion, allow re-watch from Menu
+- Admin notice banner: on every foreground, fetch unseen notices, show dismissible modal, mark seen
+- Wire global Pusher connection with exponential backoff reconnect (max 30s), reconnect on `AppState` change to active
+- Subscribe to `user-${userId}` Pusher channel for user-scoped notifications
+
+**Definition of Done:** All 5 tabs render, profile editable, onboarding video shown on first login per role, admin notices display and dismiss correctly.
+
+---
+
+### Sprint 3 — Question Posting & Live Feed
+**Goal:** End-to-end question lifecycle from student post to teacher view.
+
+- **Student (Ask tab):** Build question form with all validations (title 6–180, body ≤5000, image picker, format/visibility/subject/level/stream selectors). Show remaining quota badge computed from `effectiveLimit`. When quota zero → replace submit with "Upgrade Plan" CTA deep-linking to plans screen.
+- **Optimistic UI:** Show question immediately in "My Questions" with "Posting..." badge. Reconcile when API responds. Do not make users wait for a spinner.
+- **Teacher (Feed tab):** FlatList with pull-to-refresh, infinite scroll, Pusher-driven real-time inserts. Sort `resetCount` desc, `createdAt` desc. Show "Attempt X of Y" badge on reset questions. Accept button → confirmation modal showing countdown duration from `answerFormat` config.
+- **Local notification:** When teacher accepts a question, schedule a local notification at T-60s warning that the timer is almost up (fires even when app is backgrounded).
+
+**Definition of Done:** Student posts question → appears in teacher's feed within 2 seconds via Pusher → teacher accepts → countdown starts.
+
+---
+
+### Sprint 4 — Channels, Chat Workspace & Rating Flow
+**Goal:** Full real-time chat with attachments, close flow, and rating.
+
+- **Channels tab:** List with last-message preview, unread badges, channel status
+- **Workspace screen:** FlatList `inverted={true}`, custom message renderer (text, image, system messages), send text/image/file
+- **Pusher:** Subscribe to `channel-${channelId}` — bind `channel:message`, `message:marked`, `message:deleted`
+- **Message retry queue:** Queue failed messages in Redux + AsyncStorage, show "Sending..." state, retry on network return. This is not optional.
+- **Close Channel flow:** Confirmation → mark solved → 5-star rating modal (student) → submit → handle channel disappearing from active list gracefully (question may reappear in teacher feed if reset)
+
+**Definition of Done:** Two test accounts chat in real time, send images, close channel, rate, see point balances update.
+
+---
+
+### Sprint 5 — Wallet, Subscriptions & Manual Payments
+**Goal:** Wallet access gated by biometrics, withdrawal flow, subscription plans, manual payments.
+
+- **Wallet screen:** Gate with `expo-local-authentication`. If no biometrics enrolled → require account password re-entry. Show point balance, NPR equivalent, transaction history with type badges and filters, pending withdrawal status card.
+- **Withdrawal flow:** Enforce `minWithdrawalPoints`, block if PENDING request exists (both proactive UI and backend 400/11000 error), allow saving eSewa number, show locked NPR rate on confirmation screen.
+- **Subscription Plans screen:** Compare all plans with current quota usage. Upgrade flow.
+- **Manual Payment flow:** Show admin eSewa number + QR from `PlatformConfig.manualPaymentQrCodeUrl`, capture transaction ID + transactor name + optional screenshot, submit as `multipart/form-data`. Handle 409 (duplicate completed) with clear error.
+- **Screenshot policy:** Android `FLAG_SECURE` on wallet/withdrawal screens. iOS: detect only, log/warn, do not promise blocking.
+- **Push notifications:** Wire FCM/APNs in this sprint (needed for withdrawal alerts). Handle `withdrawal:processed`, `subscription:activated`, `monthly:bonus`, `daily:target` push types. Tap → deep link to wallet.
+
+**Definition of Done:** Go plan purchased via manual payment → admin approves → subscription active. Teacher requests withdrawal → sees pending status → admin approves → balance updates with push notification received.
+
+---
+
+### Sprint 6 — Gateway Payments, Courses & Quizzes
+**Goal:** eSewa/Khalti WebView flows, course playback with progress, quiz with corrected anti-cheat.
+
+- **eSewa and Khalti:** Open `react-native-webview`, intercept success/failure redirect via URL pattern matching and deep link fallback. Verify on backend before showing success — never trust client-side redirect.
+- **Courses tab:** Course library, course detail with sections + videos, `expo-video` for HLS/Mux, watch-time tracking (ping every 10s, pause on background/pause), enforce 90% threshold for section completion, coupon code input, distinct badges per access type.
+- **Live Sessions:** `zoomus://` deep link with HTTPS fallback.
+- **Quiz session:** Timer, question navigation, submission.
+- **Anti-cheat with grace period:**
+  - Log `TAB_HIDDEN` when `AppState` → background/inactive
+  - Log `BACK_NAVIGATION` on Android hardware back button intercept
+  - **Grace window:** If app returns to active within 2 seconds → do NOT log violation
+  - Ignore first background event within 500ms of quiz start (spurious lifecycle events)
+  - Skip `FULLSCREEN_EXIT` and `DUPLICATE_TAB` entirely
+  - Auto-submit with `submitReason: "ANTI_CHEAT"` only when `violationCount >= violationWarningLimit`
+  - Show warning modal at every violation
+
+**Definition of Done:** Khalti payment for course succeeds → enrollment created → video plays → 90% watched → section marked complete. Quiz session can be taken; backgrounding triggers warning; hitting limit auto-submits.
+
+---
+
+### Sprint 7 — Calls, Course Studio & Remaining Services
+**Goal:** Voice/video calls, teacher course studio view, referrals, leaderboard, peer comments, remaining menu items.
+
+- **LiveKit calls:** Install `@livekit/components-react-native`, configure permissions in `app.json`. Build full-screen incoming call UI triggered by high-priority push notification (`type: "incoming_call"`). Build active call UI: video tiles, mute, speaker, end call. Handle Call Settings in Menu.
+- **Course Studio (teacher):** For MVP, scope to "view my courses + sales". Allow course creation on web for v1. Expand in v1.1.
+- **Referrals:** Share screen with code + native share sheet (`questioncall://register?ref=CODE`). Show referral history with status badges. Verify deep-link signup awards bonuses on both sides.
+- Finish remaining Menu items: Leaderboard, Peer Comments, Notices history, Call Settings, Theme toggle, Change Password, Delete Account request.
+
+**Definition of Done:** Two devices complete a video call. Teacher views courses and sales. Referral signup awards bonuses correctly.
+
+---
+
+### Sprint 8 — Polish, Accessibility, Compliance & Store Submission
+**Goal:** Ship.
+
+- Run all 15 Critical User Journeys with logged test reports
+- Write Maestro E2E tests for journeys 1–5
+- Stress-test Pusher reconnect by toggling airplane mode mid-chat
+- Test on cheapest available Android device
+
+**Accessibility pass:**
+- Minimum 44pt touch targets on all interactive elements
+- Screen reader labels (`accessibilityLabel`) on all interactive elements
+- Sufficient contrast in both dark and light themes
+- Dynamic type support for at minimum wallet and chat screens
+
+**Compliance and store prep:**
+- Render Terms of Use and Privacy Policy dynamically from `PlatformConfig` (never bundled static)
+- Write App Store and Play Store review notes explaining business model clearly
+- Provide reviewer test accounts (student, teacher, admin)
+- Complete App Privacy questionnaire with accurate data disclosure
+- Add Apple IAP for iOS course purchases if Sprint 0 decision was option (b)
+
+**Definition of Done:** App approved on both App Store and Play Store. Production users onboarded.
+
+---
+
+## 16. Final Launch Checklist
 
 ### 🔴 Must-Have Before Launch
-- [ ] API Base URL configured and pointing to Vercel backend
-- [ ] Authentication successfully converted from Cookies to Bearer JWT
-- [ ] `isSuspended` check on app launch — shows blocker screen
-- [ ] Teacher qualification/monetization state correctly gates wallet features
-- [ ] Pusher sockets connecting with aggressive reconnect on mobile networks
+- [ ] API base URL configured → Vercel backend
+- [ ] Auth converted from cookies to Bearer JWT with refresh token flow
+- [ ] JWT bridge endpoints on backend (`/api/mobile/login`, `/api/mobile/refresh`)
+- [ ] 401 interceptor: silent refresh → retry → force logout
+- [ ] `isSuspended` check on every foreground → shows full-screen blocker
+- [ ] Teacher qualification/monetization state gates wallet features
+- [ ] PlatformConfig fetched on launch, cached with TTL, refreshed on foreground
+- [ ] Pusher connecting with exponential backoff reconnect
 - [ ] LiveKit audio/video permissions and connections working
-- [ ] Wallet balances match the website exactly (points × pointToNprRate = NPR)
-- [ ] Withdrawal flow: atomic, one-pending-at-a-time, minimum enforced
-- [ ] eSewa/Khalti payment via secure WebView with redirect interception
+- [ ] Wallet shows exact NPR equivalent (points × pointToNprRate)
+- [ ] Withdrawal: atomic, one-pending-at-a-time, minimum enforced, locked NPR rate shown
+- [ ] eSewa/Khalti via secure WebView + backend verification before success
 - [ ] Manual payment with screenshot upload working
-- [ ] Question posting respects plan limits (questionsAsked vs effectiveLimit)
-- [ ] Quiz anti-cheat: app backgrounding triggers violation event
-- [ ] All business constants fetched from PlatformConfig API (never hardcoded)
+- [ ] Question posting respects plan limits + optimistic UI
+- [ ] Quiz anti-cheat: backgrounding triggers violation, 2-second grace window in place
+- [ ] Message retry queue for offline sends
+- [ ] All business constants from PlatformConfig (zero hardcoding)
+- [ ] Sentry configured and receiving crashes
 
 ### 🟡 Must-Have Before App Store Review
-- [ ] Biometric auth required before wallet/withdrawal access
-- [ ] Screenshot prevention on wallet screens
-- [ ] Terms of Use and Privacy Policy rendered dynamically from DB
+- [ ] Biometric gate on wallet/withdrawal (password fallback if no biometrics)
+- [ ] Android `FLAG_SECURE` on wallet/withdrawal screens
+- [ ] iOS screenshot policy corrected in all user-facing copy
+- [ ] Terms of Use and Privacy Policy dynamic from DB
 - [ ] Deep links working for all payment callbacks and referral codes
 - [ ] Push notifications (FCM/APNs) delivering for all event types
-- [ ] Admin notice system showing unseen announcements
+- [ ] Withdrawal push notification on approval/rejection
+- [ ] Admin notice system showing and dismissing correctly
 - [ ] Onboarding video shown on first login per role
-- [ ] Call settings (ringtone, silent mode) configurable in settings
+- [ ] Call settings configurable in Menu
+- [ ] Sign in with Apple implemented (required on iOS if Google Sign-In present)
+- [ ] Apple IAP decision from Sprint 0 implemented
 
 ### 🟢 Should-Have for Feature Parity
 - [ ] Daily target progress tracker in teacher dashboard
 - [ ] Course coupon code input on purchase screens
 - [ ] Peer comment system for qualified teachers
-- [ ] Referral sharing screen with deep link generation
+- [ ] Referral sharing with deep link generation
 - [ ] Question reset badge showing "Attempt X of Y"
 - [ ] Subscription plan comparison with current quota display
-- [ ] All 6 Redux slices (auth, user, feed, channel, channels, upload) mirrored
-- [ ] Cron side-effects handled (sudden call end, channel close, surprise credits)
+- [ ] All 7 Redux slices mirrored (including `config`)
+- [ ] Cron side-effects handled gracefully (sudden call end, channel close, surprise credits)
+- [ ] Accessibility pass (touch targets, screen reader labels, contrast)
+- [ ] E2E tests for top 5 critical user journeys
