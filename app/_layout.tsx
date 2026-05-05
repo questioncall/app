@@ -77,13 +77,10 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
   async function fetchCurrentUser() {
     try {
-      // NOTE: web team must add GET /api/mobile/me returning full user object with isSuspended.
-      // This endpoint should use getAuthenticatedUser (Bearer token support).
-      // Using /api/wallet as a bearer-protected health check in the meantime.
-      await api.get("/wallet");
+      const res = await api.get("/mobile/me");
+      store.dispatch(setUser(res.data));
     } catch (err: any) {
       if (err?.response?.status === 403) {
-        // 403 from any bearer-protected endpoint → suspended
         router.replace("/suspended");
       }
     }

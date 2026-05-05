@@ -39,30 +39,41 @@ export default function LoginScreen() {
       await SecureStore.setItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN, refreshToken);
 
       dispatch(setTokens({ accessToken, refreshToken }));
-      // Login response returns: { id, name, email, role, isSuspended }
-      if (user) {
-        dispatch(
-          setUser({
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            isSuspended: user.isSuspended,
-            // defaults until full user data is fetched
-            points: 0,
-            pointBalance: 0,
-            subscriptionStatus: "INACTIVE",
-            planSlug: "free",
-            questionsAsked: 0,
-            bonusQuestions: 0,
-            maxQuestions: 0,
-            isMonetized: false,
-            teacherModeVerified: false,
-            dailyAnswersCount: 0,
-            dailyTargetsAchieved: [],
-            seenOnboardingRoles: [],
-          })
-        );
+
+      // Fetch full user profile now that we have a valid token
+      try {
+        const meRes = await api.get("/mobile/me");
+        dispatch(setUser(meRes.data));
+
+        if (meRes.data.isSuspended) {
+          router.replace("/suspended");
+          return;
+        }
+      } catch {
+        // Non-fatal: seed minimal data from login response so app can proceed
+        if (user) {
+          dispatch(
+            setUser({
+              _id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              isSuspended: user.isSuspended,
+              points: 0,
+              pointBalance: 0,
+              subscriptionStatus: "INACTIVE",
+              planSlug: "free",
+              questionsAsked: 0,
+              bonusQuestions: 0,
+              maxQuestions: 0,
+              isMonetized: false,
+              teacherModeVerified: false,
+              dailyAnswersCount: 0,
+              dailyTargetsAchieved: [],
+              seenOnboardingRoles: [],
+            })
+          );
+        }
       }
 
       router.replace("/(tabs)/feed");

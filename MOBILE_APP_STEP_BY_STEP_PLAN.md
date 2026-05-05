@@ -128,8 +128,8 @@
   - Cache in Redux `config` slice with 1-hour TTL
   - Refresh on every cold start + foreground if stale
   - Show blocking splash until first load completes
-- [x] **Suspension check:** On every foreground + after login (using /api/wallet as placeholder until web team adds `/api/mobile/me`)
-  - **⚠️ BLOCKED:** `GET /api/users/me` does NOT exist — web team must add `GET /api/mobile/me`
+- [x] **Suspension check:** On every foreground + after login:
+  - Call `GET /api/mobile/me` → hydrates full user in Redux, checks `isSuspended`
   - If 403 → navigate to `suspended.tsx` (full-screen blocker, cannot dismiss)
   - Only options: "Contact Support" and "Sign Out"
 - [ ] **Verify:** Sign up → verify email → log in → see empty home. Suspend test user → app shows blocker.
