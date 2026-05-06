@@ -121,7 +121,7 @@ export default function AskScreen() {
         {quotaExhausted ? (
           <View className="mx-4 bg-orange-950 border border-orange-800 rounded-2xl p-4 mb-4">
             <Text className="text-orange-300 text-sm text-center">
-              You've used all your questions for this plan.{"\n"}Upgrade to ask
+              You{"'"}ve used all your questions for this plan.{"\n"}Upgrade to ask
               more!
             </Text>
           </View>

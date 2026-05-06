@@ -65,10 +65,10 @@
 - [x] **Decision 3 — Withdrawal Lock:** ✅ `nprEquivalent` is locked at request creation time.
 - [x] **Decision 4 — Sign in with Apple:** ✅ NOT IN SCOPE. Google Sign-In only.
 - [x] **Decision 5 — Platform:** ✅ Android only for now. iOS at final stage.
-- [ ] **Decision 6 — Backend work needed (see TODO.md):** Web team must build these 2 endpoints FIRST:
+- [x] **Decision 6 — Backend work needed (see TODO.md):** Web team built these 2 endpoints FIRST:
   - `POST /api/mobile/login` → returns `{ accessToken, refreshToken }`
   - `POST /api/mobile/refresh` → returns new access token
-- [ ] **Decision 7 — Push platform field (see TODO.md):** Web team must add `platform` field (web/ios/android) to `PushSubscription` model
+- [x] **Decision 7 — Push platform field (see TODO.md):** Web team added `platform` field (web/ios/android) to `PushSubscription` model
 
 ---
 
@@ -77,8 +77,8 @@
 - [x] Run `npx create-expo-app` with `expo-router` + TypeScript
 - [x] Install & configure NativeWind, extract theme tokens from web `globals.css`
 - [x] Set up Redux Toolkit with **7 slices**: `auth`, `user`, `feed`, `channel`, `channels`, `upload`, `config`
-- [ ] Install & configure **Sentry** for crash reporting — TODO next
-- [ ] Configure EAS Build with 3 profiles: `development`, `staging`, `production`
+- [x] Install & configure **Sentry** for crash reporting (`EXPO_PUBLIC_SENTRY_DSN`)
+- [x] Configure EAS Build with 3 profiles: `development`, `staging`, `production`
 - [x] Set up `.env` files per profile:
   ```env
   EXPO_PUBLIC_API_URL=https://questioncall.com/api
@@ -109,7 +109,7 @@
   - Fields: `email`, `password`
   - Call `POST /api/mobile/login` → store tokens in `expo-secure-store`
   - Navigate to Phase 3, clear auth stack
-- [ ] Implement **Google Sign-In** via `expo-auth-session`
+- [x] Implement **Google Sign-In** via `expo-auth-session`
 - ~~Sign in with Apple~~ — **NOT IN SCOPE** (Android only, Google Sign-In only)
 - [x] Build **Forgot Password** screen → `POST /api/auth/forgot-password`
 - [x] Build **Email Verification Pending** screen with deep link handler
@@ -124,7 +124,7 @@
   3. If refresh works → retries original request with new token
   4. If refresh fails → clears all tokens → navigates to Landing
 - [x] Store both `accessToken` and `refreshToken` in `expo-secure-store` (NEVER AsyncStorage)
-- [x] Fetch **PlatformConfig** on launch: `GET /api/platform`
+- [x] Fetch **PlatformConfig** on launch: `GET /api/platform/config`
   - Cache in Redux `config` slice with 1-hour TTL
   - Refresh on every cold start + foreground if stale
   - Show blocking splash until first load completes
@@ -443,9 +443,9 @@ questioncall://payment/failure       → Payment failure
 > The mobile app **cannot be built** until the web team completes these backend tasks.
 > These tasks are tracked in **`web/TODO.md`** — the web assistant will handle them.
 
-- [ ] Build `POST /api/mobile/login` endpoint (returns JWT access + refresh tokens)
-- [ ] Build `POST /api/mobile/refresh` endpoint (refreshes access token)
-- [ ] Add `platform` field (`web` / `ios` / `android`) to `PushSubscription` model
-- [ ] Ensure all API routes accept `Authorization: Bearer <token>` header (not just cookies)
-- [ ] Verify `GET /api/users/me` works with Bearer token auth
+- [x] Build `POST /api/mobile/login` endpoint (returns JWT access + refresh tokens)
+- [x] Build `POST /api/mobile/refresh` endpoint (refreshes access token)
+- [x] Add `platform` field (`web` / `ios` / `android`) to `PushSubscription` model
+- [x] Ensure Sprint 1/core mobile routes and call routes accept `Authorization: Bearer <token>` header (not just cookies)
+- [x] Verify `GET /api/mobile/me` works with Bearer token auth
 - [ ] Provide Pusher keys, LiveKit URL, eSewa merchant ID, Khalti public key to app developer

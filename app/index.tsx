@@ -1,12 +1,14 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity, StatusBar } from "react-native";
+import { View, Text, TouchableOpacity, StatusBar, Image } from "react-native";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAppSelector } from "@/hooks/redux";
+import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 export default function LandingScreen() {
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const isLoading = useAppSelector((s) => s.auth.isLoading);
+  const { statusBarStyle, iconColor } = useAppTheme();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -17,64 +19,79 @@ export default function LandingScreen() {
   if (isLoading || isAuthenticated) return null;
 
   return (
-    <View className="flex-1 bg-black">
-      <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={["#0F172A", "#1E3A5F", "#0F172A"]}
-        className="flex-1"
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        {/* Top section — logo + tagline */}
-        <View className="flex-1 items-center justify-center px-8">
-          {/* Value props */}
-          <View className="flex-row gap-6 mb-12">
-            <ValueProp icon="⏱️" label="15-Min Answers" />
-            <ValueProp icon="🎥" label="Live Calls" />
-            <ValueProp icon="💰" label="Earn by Teaching" />
-          </View>
+    <View className="flex-1 justify-between bg-background px-6 pb-10 pt-20">
+      <StatusBar barStyle={statusBarStyle} />
 
-          {/* Logo placeholder */}
-          <View className="w-24 h-24 rounded-3xl bg-blue-500 items-center justify-center mb-6 shadow-2xl">
-            <Text className="text-white text-4xl font-bold">Q</Text>
-          </View>
-
-          <Text className="text-white text-4xl font-bold mb-3 tracking-tight">
+      <View className="items-center pt-10">
+        <View className="mb-5 rounded-2xl border border-border bg-card px-4 py-2">
+          <Text className="text-xs font-semibold uppercase tracking-[0px] text-muted-foreground">
             QuestionCall
           </Text>
-          <Text className="text-blue-200 text-lg text-center leading-relaxed max-w-xs">
-            Get expert answers in 15 minutes
+        </View>
+
+        <Image
+          source={require("../assets/images/logo.png")}
+          style={{ width: 72, height: 72, marginBottom: 18, borderRadius: 18 }}
+          resizeMode="contain"
+        />
+        <Text className="text-center text-[42px] font-bold tracking-tight text-foreground">
+          Ask. Answer. Grow.
+        </Text>
+        <Text className="mt-3 max-w-sm text-center text-[15px] leading-6 text-muted-foreground">
+          Students post academic questions, teachers accept them live, and the
+          private answer room opens without friction.
+        </Text>
+
+        <View className="mt-6 flex-row flex-wrap justify-center gap-2">
+          <View className="rounded-full border border-border bg-card px-4 py-2">
+            <Text className="text-xs font-semibold text-foreground">Student signup</Text>
+          </View>
+          <View className="rounded-full border border-border bg-card px-4 py-2">
+            <Text className="text-xs font-semibold text-foreground">Teacher signup</Text>
+          </View>
+          <View className="rounded-full border border-border bg-card px-4 py-2">
+            <Text className="text-xs font-semibold text-foreground">Google sign-in</Text>
+          </View>
+        </View>
+      </View>
+
+      <View className="gap-3">
+        <TouchableOpacity
+          className="flex-row items-center justify-center gap-2 rounded-full bg-primary py-4 shadow-lg"
+          activeOpacity={0.85}
+          onPress={() => router.push("/(auth)/login")}
+        >
+          <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+          <Text className="text-[16px] font-semibold text-primary-foreground">
+            Sign in with Email
           </Text>
-        </View>
+        </TouchableOpacity>
 
-        {/* Bottom CTAs */}
-        <View className="px-6 pb-12 gap-4">
-          <TouchableOpacity
-            className="bg-blue-500 rounded-2xl py-4 items-center shadow-lg"
-            activeOpacity={0.85}
-            onPress={() => router.push("/(auth)/register")}
-          >
-            <Text className="text-white text-lg font-semibold">Sign Up</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          className="flex-row items-center justify-center gap-2 rounded-full border border-border bg-card py-4 shadow-sm"
+          activeOpacity={0.85}
+          onPress={() => router.push("/(auth)/login")}
+        >
+          <Ionicons name="logo-google" size={19} color={iconColor} />
+          <Text className="text-[16px] font-semibold text-card-foreground">
+            Continue with Google
+          </Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            className="border border-blue-400 rounded-2xl py-4 items-center"
-            activeOpacity={0.85}
-            onPress={() => router.push("/(auth)/login")}
-          >
-            <Text className="text-blue-300 text-lg font-semibold">Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    </View>
-  );
-}
+        <TouchableOpacity
+          className="items-center justify-center py-2"
+          activeOpacity={0.85}
+          onPress={() => router.push("/(auth)/register")}
+        >
+          <Text className="text-[15px] font-semibold text-foreground">
+            Create account
+          </Text>
+        </TouchableOpacity>
 
-function ValueProp({ icon, label }: { icon: string; label: string }) {
-  return (
-    <View className="items-center gap-1">
-      <Text className="text-2xl">{icon}</Text>
-      <Text className="text-blue-200 text-xs font-medium">{label}</Text>
+        <Text className="px-4 pt-4 text-center text-[12px] leading-5 text-muted-foreground">
+          By continuing, you agree to our Terms of Service and Privacy Policy.
+        </Text>
+      </View>
     </View>
   );
 }

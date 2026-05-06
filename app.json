@@ -5,7 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "questioncall",
+    "scheme": [
+      "com.siddthecoder.qustioncall",
+      "questioncall"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -32,6 +35,7 @@
     },
     "plugins": [
       "expo-router",
+      "@sentry/react-native/expo",
       [
         "expo-splash-screen",
         {

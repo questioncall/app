@@ -5,40 +5,38 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary brand colors from web globals.css
+        background: "var(--background)",
+        foreground: "var(--foreground)",
         primary: {
-          DEFAULT: "#3B82F6",
-          foreground: "#FFFFFF",
-        },
-        background: {
-          DEFAULT: "#FFFFFF",
-          dark: "#0A0A0A",
-        },
-        foreground: {
-          DEFAULT: "#0A0A0A",
-          dark: "#FAFAFA",
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
         },
         card: {
-          DEFAULT: "#FFFFFF",
-          dark: "#111111",
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
         },
-        border: {
-          DEFAULT: "#E5E7EB",
-          dark: "#1F2937",
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
         },
         muted: {
-          DEFAULT: "#F3F4F6",
-          foreground: "#6B7280",
-          dark: "#1F2937",
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
         },
         accent: {
-          DEFAULT: "#3B82F6",
-          foreground: "#FFFFFF",
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
         },
         destructive: {
-          DEFAULT: "#EF4444",
-          foreground: "#FFFFFF",
+          DEFAULT: "var(--destructive)",
         },
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
       },
       fontFamily: {
         sans: ["System"],

@@ -884,13 +884,13 @@ Apple requires Sign in with Apple if any other third-party social login (e.g. Go
 ## 16. Final Launch Checklist
 
 ### 🔴 Must-Have Before Launch
-- [ ] API base URL configured → Vercel backend
-- [ ] Auth converted from cookies to Bearer JWT with refresh token flow
-- [ ] JWT bridge endpoints on backend (`/api/mobile/login`, `/api/mobile/refresh`)
-- [ ] 401 interceptor: silent refresh → retry → force logout
-- [ ] `isSuspended` check on every foreground → shows full-screen blocker
+- [x] API base URL configured → Vercel backend
+- [x] Auth converted from cookies to Bearer JWT with refresh token flow
+- [x] JWT bridge endpoints on backend (`/api/mobile/login`, `/api/mobile/refresh`)
+- [x] 401 interceptor: silent refresh → retry → force logout
+- [x] `isSuspended` check on every foreground → shows full-screen blocker
 - [ ] Teacher qualification/monetization state gates wallet features
-- [ ] PlatformConfig fetched on launch, cached with TTL, refreshed on foreground
+- [x] PlatformConfig fetched on launch, cached with TTL, refreshed on foreground
 - [ ] Pusher connecting with exponential backoff reconnect
 - [ ] LiveKit audio/video permissions and connections working
 - [ ] Wallet shows exact NPR equivalent (points × pointToNprRate)
@@ -901,7 +901,7 @@ Apple requires Sign in with Apple if any other third-party social login (e.g. Go
 - [ ] Quiz anti-cheat: backgrounding triggers violation, 2-second grace window in place
 - [ ] Message retry queue for offline sends
 - [ ] All business constants from PlatformConfig (zero hardcoding)
-- [ ] Sentry configured and receiving crashes
+- [x] Sentry configured (`EXPO_PUBLIC_SENTRY_DSN`; crash receipt still needs a device/build verification run)
 
 ### 🟡 Must-Have Before App Store Review
 - [ ] Biometric gate on wallet/withdrawal (password fallback if no biometrics)
@@ -914,7 +914,7 @@ Apple requires Sign in with Apple if any other third-party social login (e.g. Go
 - [ ] Admin notice system showing and dismissing correctly
 - [ ] Onboarding video shown on first login per role
 - [ ] Call settings configurable in Menu
-- [ ] Sign in with Apple implemented (required on iOS if Google Sign-In present)
+- [x] Sign in with Apple decision resolved: not in scope while Android-only
 - [ ] Apple IAP decision from Sprint 0 implemented
 
 ### 🟢 Should-Have for Feature Parity
@@ -924,7 +924,7 @@ Apple requires Sign in with Apple if any other third-party social login (e.g. Go
 - [ ] Referral sharing with deep link generation
 - [ ] Question reset badge showing "Attempt X of Y"
 - [ ] Subscription plan comparison with current quota display
-- [ ] All 7 Redux slices mirrored (including `config`)
+- [x] All 7 Redux slices mirrored (including `config`)
 - [ ] Cron side-effects handled gracefully (sudden call end, channel close, surprise credits)
 - [ ] Accessibility pass (touch targets, screen reader labels, contrast)
 - [ ] E2E tests for top 5 critical user journeys

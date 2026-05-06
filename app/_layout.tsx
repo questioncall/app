@@ -3,18 +3,30 @@ import { AppState, AppStateStatus } from "react-native";
 import { Stack, router } from "expo-router";
 import { Provider } from "react-redux";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Sentry from "@sentry/react-native";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import Toast from "react-native-toast-message";
+import { ThemeProvider } from "@react-navigation/native";
 import "../global.css";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { store } from "@/store";
 import { setTokens, setAuthLoading, clearAuth } from "@/store/slices/authSlice";
 import { setUser } from "@/store/slices/userSlice";
 import { setConfig } from "@/store/slices/configSlice";
-import { SECURE_STORE_KEYS } from "@/lib/api";
-import api from "@/lib/api";
+import api, { SECURE_STORE_KEYS } from "@/lib/api";
 
 SplashScreen.preventAutoHideAsync();
+
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    enableAutoSessionTracking: true,
+    tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+  });
+}
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -68,7 +80,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
   async function fetchPlatformConfig() {
     try {
-      const res = await api.get("/platform");
+      const res = await api.get("/platform/config");
       store.dispatch(setConfig(res.data));
     } catch {
       // Non-fatal — app can still work with stale config
@@ -89,41 +101,49 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function RootLayout() {
+function RootLayout() {
+  const { navigationTheme } = useAppTheme();
+  
   return (
-    <Provider store={store}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <AppInitializer>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="workspace/[channelId]" />
-            <Stack.Screen name="call/[roomId]" />
-            <Stack.Screen name="course/[id]" />
-            <Stack.Screen name="quiz/[topicId]" />
-            <Stack.Screen name="payment/gateway" />
-            <Stack.Screen name="payment/manual" />
-            <Stack.Screen name="payment/plans" />
-            <Stack.Screen name="profile/edit" />
-            <Stack.Screen name="profile/activity" />
-            <Stack.Screen name="settings/call-settings" />
-            <Stack.Screen name="settings/notifications" />
-            <Stack.Screen name="settings/theme" />
-            <Stack.Screen name="legal/terms" />
-            <Stack.Screen name="legal/privacy" />
-            <Stack.Screen name="referral" />
-            <Stack.Screen name="leaderboard" />
-            <Stack.Screen name="notices" />
-            <Stack.Screen name="onboarding" />
-            <Stack.Screen
-              name="suspended"
-              options={{ gestureEnabled: false }}
-            />
-          </Stack>
-          <Toast />
-        </AppInitializer>
-      </GestureHandlerRootView>
-    </Provider>
+    <ThemeProvider value={navigationTheme}>
+      <Provider store={store}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <AppInitializer>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="workspace/[channelId]" />
+              <Stack.Screen name="call/[roomId]" />
+              <Stack.Screen name="course/[id]" />
+              <Stack.Screen name="quiz/[topicId]" />
+              <Stack.Screen name="payment/gateway" />
+              <Stack.Screen name="payment/manual" />
+              <Stack.Screen name="payment/plans" />
+              <Stack.Screen name="profile/edit" />
+              <Stack.Screen name="profile/activity" />
+              <Stack.Screen name="settings/call-settings" />
+              <Stack.Screen name="settings/notifications" />
+              <Stack.Screen name="settings/theme" />
+              <Stack.Screen name="legal/terms" />
+              <Stack.Screen name="legal/privacy" />
+              <Stack.Screen name="referral" />
+              <Stack.Screen name="leaderboard" />
+              <Stack.Screen name="notices" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen
+                name="suspended"
+                options={{ gestureEnabled: false }}
+              />
+            </Stack>
+            <Toast />
+          </AppInitializer>
+        </GestureHandlerRootView>
+      </Provider>
+    </ThemeProvider>
   );
 }
+
+const AppRoot = sentryDsn ? Sentry.wrap(RootLayout) : RootLayout;
+
+export default AppRoot;
