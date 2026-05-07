@@ -98,6 +98,9 @@ const feedSlice = createSlice({
       state.error = action.payload;
       state.isLoading = false;
     },
+    clearFeedError(state) {
+      state.error = null;
+    },
   },
 });
 
@@ -114,5 +117,6 @@ export const {
   setHasMore,
   setPage,
   setFeedError,
+  clearFeedError,
 } = feedSlice.actions;
 export default feedSlice.reducer;

@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 type AuthNoticeTone = "error" | "success" | "info";
 
@@ -10,9 +11,9 @@ type AuthNoticeProps = {
 };
 
 const toneStyles: Record<AuthNoticeTone, string> = {
-  error: "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-200",
-  success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
-  info: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-200",
+  error: "border-rose-500/25 bg-rose-500/10",
+  success: "border-emerald-500/25 bg-emerald-500/10",
+  info: "border-sky-500/25 bg-sky-500/10",
 };
 
 const toneIcons: Record<AuthNoticeTone, string> = {
@@ -24,9 +25,24 @@ const toneIcons: Record<AuthNoticeTone, string> = {
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
 export function AuthNotice({ message, tone = "error" }: AuthNoticeProps) {
+  const { isDark } = useAppTheme();
+
   if (!message) {
     return null;
   }
+
+  const accentColor =
+    tone === "error"
+      ? isDark
+        ? "#FDA4AF"
+        : "#E11D48"
+      : tone === "success"
+        ? isDark
+          ? "#6EE7B7"
+          : "#059669"
+        : isDark
+          ? "#7DD3FC"
+          : "#0284C7";
 
   return (
     <View
@@ -35,10 +51,15 @@ export function AuthNotice({ message, tone = "error" }: AuthNoticeProps) {
       <Ionicons
         name={toneIcons[tone] as IoniconName}
         size={18}
-        color={tone === "error" ? "#E11D48" : tone === "success" ? "#059669" : "#0284C7"}
+        color={accentColor}
         style={{ marginTop: 1 }}
       />
-      <Text className="flex-1 text-sm font-medium leading-5">{message}</Text>
+      <Text
+        className="flex-1 text-sm font-medium leading-5"
+        style={{ color: accentColor }}
+      >
+        {message}
+      </Text>
     </View>
   );
 }

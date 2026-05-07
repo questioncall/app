@@ -1,77 +1,106 @@
-import { View, Text, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator } from "react-native";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { setQuestions, setFeedLoading, setFeedRefreshing } from "@/store/slices/feedSlice";
-import api from "@/lib/api";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { api } from "@/lib/api";
+import {
+  setQuestions,
+  setFeedLoading,
+  setFeedRefreshing,
+  setFeedError,
+  clearFeedError,
+} from "@/store/slices/feedSlice";
 
 export default function FeedScreen() {
   const dispatch = useAppDispatch();
   const userRole = useAppSelector((s) => s.user.data?.role);
+  const feedError = useAppSelector((s) => s.feed.error);
   const { questions, myQuestions, isLoading, isRefreshing } = useAppSelector(
-    (s) => s.feed
+    (s) => s.feed,
   );
+  const { statusBarStyle, backgroundColor, iconColor } = useAppTheme();
   const isTeacher = userRole === "TEACHER";
 
-  useEffect(() => {
-    loadFeed();
-  }, []);
-
-  async function loadFeed() {
+  const loadFeed = useCallback(async () => {
     dispatch(setFeedLoading(true));
+    dispatch(clearFeedError());
+
     try {
-      if (isTeacher) {
-        const res = await api.get("/questions/feed");
-        // API returns a plain array
-        dispatch(setQuestions(Array.isArray(res.data) ? res.data : []));
-      } else {
-        const res = await api.get("/questions");
-        dispatch(setQuestions(Array.isArray(res.data) ? res.data : []));
-      }
-    } catch {
+      const endpoint = isTeacher ? "/questions/feed" : "/questions";
+      const res = await api.get(endpoint);
+      dispatch(setQuestions(Array.isArray(res.data) ? res.data : []));
+    } catch (err: any) {
+      dispatch(
+        setFeedError(
+          err?.response?.data?.error ??
+            err?.response?.data?.message ??
+            "Unable to load questions right now.",
+        ),
+      );
+    } finally {
       dispatch(setFeedLoading(false));
     }
-  }
+  }, [dispatch, isTeacher]);
 
-  async function handleRefresh() {
+  useEffect(() => {
+    void loadFeed();
+  }, [loadFeed]);
+
+  const handleRefresh = useCallback(async () => {
     dispatch(setFeedRefreshing(true));
     await loadFeed();
     dispatch(setFeedRefreshing(false));
-  }
+  }, [dispatch, loadFeed]);
 
   const data = isTeacher ? questions : myQuestions.length ? myQuestions : questions;
 
   return (
-    <View className="flex-1 bg-slate-950">
-      {/* Header */}
-      <View className="px-4 pt-14 pb-4 flex-row items-center justify-between">
-        <View>
-          <Text className="text-white text-2xl font-bold">
-            {isTeacher ? "Question Feed" : "My Questions"}
-          </Text>
-          <Text className="text-slate-400 text-sm mt-0.5">
-            {isTeacher
-              ? "Pick a question to answer"
-              : "Track your posted questions"}
-          </Text>
-        </View>
+    <View className="flex-1 bg-background">
+      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+
+      <View className="px-6 pt-14 pb-4">
+        <Text className="text-[28px] font-bold tracking-tight text-foreground">
+          {isTeacher ? "Question Feed" : "My Questions"}
+        </Text>
+        <Text className="mt-1 text-sm leading-6 text-muted-foreground">
+          {isTeacher
+            ? "Pick a question to answer."
+            : "Track the questions you have posted."}
+        </Text>
+        {feedError ? <AuthNotice tone="error" message={feedError} /> : null}
       </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#3B82F6" size="large" />
+          <ActivityIndicator color={iconColor} size="large" />
         </View>
       ) : data.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-4xl mb-4">
-            {isTeacher ? "📭" : "🎓"}
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-3xl border border-border bg-card">
+            <Ionicons
+              name={isTeacher ? "chatbox-ellipses-outline" : "school-outline"}
+              size={32}
+              color={iconColor}
+            />
+          </View>
+          <Text className="text-[18px] font-semibold text-foreground">
+            {isTeacher ? "No questions yet" : "No questions posted yet"}
           </Text>
-          <Text className="text-white text-lg font-semibold text-center mb-2">
-            {isTeacher ? "No questions yet" : "No questions posted"}
-          </Text>
-          <Text className="text-slate-400 text-sm text-center">
+          <Text className="mt-2 max-w-xs text-center text-sm leading-6 text-muted-foreground">
             {isTeacher
               ? "New questions will appear here in real time."
-              : "Tap the + button to post your first question."}
+              : "Tap the plus button to post your first question."}
           </Text>
         </View>
       ) : (
@@ -82,58 +111,60 @@ export default function FeedScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor="#3B82F6"
+              tintColor={iconColor}
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           renderItem={({ item }) => (
             <TouchableOpacity
-              className="bg-slate-900 rounded-2xl p-4 border border-slate-800"
-              activeOpacity={0.8}
+              className="rounded-2xl border border-border bg-card p-4"
+              activeOpacity={0.85}
             >
-              <View className="flex-row items-center justify-between mb-2">
+              <View className="mb-2 flex-row items-center justify-between">
                 <View
-                  className={`px-2.5 py-1 rounded-full ${
+                  className={`rounded-full px-2.5 py-1 ${
                     item.status === "OPEN"
-                      ? "bg-green-900"
+                      ? "bg-emerald-500/10"
                       : item.status === "ACCEPTED"
-                      ? "bg-yellow-900"
-                      : "bg-blue-900"
+                        ? "bg-amber-500/10"
+                        : "bg-sky-500/10"
                   }`}
                 >
                   <Text
                     className={`text-xs font-semibold ${
                       item.status === "OPEN"
-                        ? "text-green-300"
+                        ? "text-emerald-600 dark:text-emerald-300"
                         : item.status === "ACCEPTED"
-                        ? "text-yellow-300"
-                        : "text-blue-300"
+                          ? "text-amber-600 dark:text-amber-300"
+                          : "text-sky-600 dark:text-sky-300"
                     }`}
                   >
                     {item.status}
                     {item.resetCount > 0 ? ` · Attempt ${item.resetCount + 1}` : ""}
                   </Text>
                 </View>
-                <View className="px-2.5 py-1 rounded-full bg-slate-800">
-                  <Text className="text-slate-400 text-xs">{item.answerFormat}</Text>
+                <View className="rounded-full border border-border bg-background px-2.5 py-1">
+                  <Text className="text-xs text-muted-foreground">
+                    {item.answerFormat}
+                  </Text>
                 </View>
               </View>
 
-              <Text className="text-white text-base font-semibold leading-snug mb-1">
+              <Text className="mb-1 text-base font-semibold leading-snug text-card-foreground">
                 {item.title}
               </Text>
               {item.body ? (
-                <Text className="text-slate-400 text-sm" numberOfLines={2}>
+                <Text className="text-sm leading-6 text-muted-foreground" numberOfLines={2}>
                   {item.body}
                 </Text>
               ) : null}
 
-              <View className="flex-row items-center gap-3 mt-3 pt-3 border-t border-slate-800">
+              <View className="mt-3 flex-row items-center gap-3 border-t border-border pt-3">
                 {item.subject ? (
-                  <Text className="text-slate-500 text-xs">{item.subject}</Text>
+                  <Text className="text-xs text-muted-foreground">{item.subject}</Text>
                 ) : null}
-                <Text className="text-slate-600 text-xs ml-auto">
+                <Text className="ml-auto text-xs text-muted-foreground">
                   {new Date(item.createdAt).toLocaleDateString()}
                 </Text>
               </View>

@@ -10,6 +10,8 @@ export function useAppTheme() {
     isDark,
     navigationTheme: isDark ? DarkTheme : DefaultTheme,
     statusBarStyle: isDark ? ("light-content" as const) : ("dark-content" as const),
+    backgroundColor: isDark ? "#1c1917" : "#FFFFFF",
+    cardColor: isDark ? "#292524" : "#FFFFFF",
     iconColor: isDark ? "#FFFFFF" : "#111111",
     mutedIconColor: isDark ? "#D6D3D1" : "#57534E",
   };

@@ -20,6 +20,11 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { persistMobileAuthSession } from "@/lib/mobile-auth-session";
 import { api } from "@/lib/api";
+import {
+  assertOkResponse,
+  getRequestErrorMessage,
+  readServerStatus,
+} from "@/lib/server-response";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -108,9 +113,10 @@ export default function LoginScreen() {
   const dispatch = useAppDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<LoginMethod>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const { statusBarStyle, iconColor } = useAppTheme();
+  const { statusBarStyle, backgroundColor, iconColor } = useAppTheme();
   const isGoogleConfigured =
     Platform.OS === "android"
       ? Boolean(GOOGLE_ANDROID_CLIENT_ID)
@@ -125,15 +131,13 @@ export default function LoginScreen() {
     setLoadingMethod(method);
     setFormError(null);
     try {
-      const res = await api.post("/mobile/login", payload);
+      const res = await api.post("/mobile/login", payload, readServerStatus);
+      assertOkResponse(res, "Login failed. Please try again.");
+
       const session = await persistMobileAuthSession(dispatch, res.data);
       router.replace(session.isSuspended ? "/suspended" : "/(tabs)/feed");
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.error ??
-        err?.response?.data?.message ??
-        "Login failed. Please try again.";
-      setFormError(msg);
+      setFormError(getRequestErrorMessage(err, "Login failed. Please try again."));
     } finally {
       setLoadingMethod(null);
     }
@@ -157,7 +161,7 @@ export default function LoginScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <StatusBar barStyle={statusBarStyle} />
+      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -168,22 +172,28 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View className="px-6 pt-16 pb-8">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="mb-6 w-10 h-10 items-center justify-center bg-card border border-border rounded-full"
-            >
-              <Ionicons name="arrow-back" size={20} color={iconColor} />
-            </TouchableOpacity>
+            <View className="flex-row items-center gap-3">
+              <TouchableOpacity
+                onPress={() => router.back()}
+                className="h-10 w-10 items-center justify-center rounded-full border border-border bg-card"
+                activeOpacity={0.85}
+              >
+                <Ionicons name="arrow-back" size={20} color={iconColor} />
+              </TouchableOpacity>
 
-            <Image 
-              source={require("../../assets/images/logo.png")} 
-              style={{ width: 64, height: 64, marginBottom: 16, borderRadius: 16 }} 
-              resizeMode="contain"
-            />
-            <Text className="text-foreground text-[32px] font-bold mb-2 tracking-tight">
+              <View className="h-10 w-10 items-center justify-center rounded-2xl border border-border bg-card">
+                <Image
+                  source={require("../../assets/images/logo.png")}
+                  style={{ width: 26, height: 26 }}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+
+            <Text className="mt-6 text-[32px] font-bold tracking-tight text-foreground">
               Welcome back
             </Text>
-            <Text className="text-muted-foreground text-base">
+            <Text className="text-base text-muted-foreground">
               Sign in with email or Google.
             </Text>
           </View>
@@ -210,15 +220,28 @@ export default function LoginScreen() {
               <Text className="text-foreground text-sm font-medium mb-2 ml-1">
                 Password
               </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Your password"
-                placeholderTextColor="#6B7280"
-                secureTextEntry
-                autoComplete="password"
-                className="bg-card border border-border rounded-2xl px-5 py-4 text-foreground text-[15px]"
-              />
+              <View className="relative">
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Your password"
+                  placeholderTextColor="#6B7280"
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                  className="bg-card border border-border rounded-2xl px-5 py-4 pr-12 text-foreground text-[15px]"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 h-8 w-8 -translate-y-4 items-center justify-center rounded-full"
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={18}
+                    color={iconColor}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity

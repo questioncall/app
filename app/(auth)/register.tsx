@@ -1,49 +1,77 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-  Image,
-  StatusBar,
-  Modal,
-  Pressable,
+  View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppDispatch } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { AuthNotice } from "@/components/auth/auth-notice";
 import { persistMobileAuthSession } from "@/lib/mobile-auth-session";
 import { api } from "@/lib/api";
+import {
+  assertOkResponse,
+  assertSuccessResponse,
+  getRequestErrorMessage,
+  readServerStatus,
+} from "@/lib/server-response";
 
 WebBrowser.maybeCompleteAuthSession();
 
 type Role = "STUDENT" | "TEACHER";
-type RegisterMethod = "email" | "google" | null;
+type RegisterAction = "send-code" | "verify-code" | "create-account" | "google" | null;
+type SignupStep = "email" | "code" | "password";
 
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
 
+function buildDisplayNameFromEmail(email: string) {
+  const localPart = email.split("@")[0] ?? "";
+  const cleaned = localPart.replace(/[._-]+/g, " ").trim();
+
+  if (!cleaned) {
+    return "User";
+  }
+
+  return cleaned
+    .split(/\s+/)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
 export default function RegisterScreen() {
-  const params = useLocalSearchParams<{ ref?: string }>();
+  const params = useLocalSearchParams<{ ref?: string; role?: string }>();
   const dispatch = useAppDispatch();
-  const [name, setName] = useState("");
+  const insets = useSafeAreaInsets();
+  const { statusBarStyle, backgroundColor, iconColor } = useAppTheme();
+
+  const initialRole: Role = params.role === "TEACHER" ? "TEACHER" : "STUDENT";
+  const [role, setRole] = useState<Role>(initialRole);
   const [email, setEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("STUDENT");
+  const [showPassword, setShowPassword] = useState(false);
   const [referralCode, setReferralCode] = useState(params.ref ?? "");
-  const [loadingMethod, setLoadingMethod] = useState<RegisterMethod>(null);
+  const [step, setStep] = useState<SignupStep>("email");
+  const [loadingAction, setLoadingAction] = useState<RegisterAction>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isGoogleConfirmOpen, setIsGoogleConfirmOpen] = useState(false);
-  const { statusBarStyle, iconColor } = useAppTheme();
 
   const isGoogleConfigured =
     Platform.OS === "android"
@@ -68,68 +96,204 @@ export default function RegisterScreen() {
     }
   }, [params.ref]);
 
-  async function handleRegister() {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      setFormError("Please fill in all fields.");
+  useEffect(() => {
+    if (params.role === "TEACHER" || params.role === "STUDENT") {
+      setRole(params.role);
+    }
+  }, [params.role]);
+
+  function resetVerificationState(nextEmail: string) {
+    setEmail(nextEmail);
+    setVerificationCode("");
+    setPassword("");
+    setStep("email");
+    setFormError(null);
+    setSuccessMessage(null);
+  }
+
+  function handleEmailChange(value: string) {
+    if (step !== "email") {
+      resetVerificationState(value);
       return;
     }
 
-    if (password.length < 8) {
+    setEmail(value);
+  }
+
+  async function handleSendCode() {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setFormError("Please enter your email first.");
+      return;
+    }
+
+    setLoadingAction("send-code");
+    setFormError(null);
+    setSuccessMessage(null);
+
+    try {
+      const res = await api.post(
+        "/auth/verify-email/send",
+        {
+          email: normalizedEmail,
+          name: buildDisplayNameFromEmail(normalizedEmail),
+        },
+        readServerStatus,
+      );
+
+      assertSuccessResponse(res, "Failed to send verification code.");
+
+      setStep("code");
+      setSuccessMessage("Verification code sent. Check your inbox.");
+    } catch (err: any) {
+      setFormError(
+        getRequestErrorMessage(
+          err,
+          "Failed to send verification code. Please try again.",
+        ),
+      );
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  async function handleVerifyCode() {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setFormError("Please enter your email first.");
+      return;
+    }
+
+    if (verificationCode.trim().length < 6) {
+      setFormError("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setLoadingAction("verify-code");
+    setFormError(null);
+    setSuccessMessage(null);
+
+    try {
+      const res = await api.post(
+        "/auth/verify-email/confirm",
+        {
+          email: normalizedEmail,
+          code: verificationCode.trim(),
+        },
+        readServerStatus,
+      );
+
+      assertSuccessResponse(res, "Failed to verify code. Please try again.");
+
+      setStep("password");
+      setSuccessMessage("Email verified. Choose a password to finish.");
+    } catch (err: any) {
+      setFormError(
+        getRequestErrorMessage(err, "Failed to verify code. Please try again."),
+      );
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  async function completeSignup() {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setFormError("Please enter your email first.");
+      return;
+    }
+
+    if (!password.trim() || password.trim().length < 8) {
       setFormError("Password must be at least 8 characters.");
       return;
     }
 
-    setLoadingMethod("email");
-    setFormError(null);
-    try {
-      await api.post("/auth/register", {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-        role,
-        referralCode: referralCode.trim() || undefined,
-      });
-
-      router.replace("/(auth)/verify-email");
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ??
-        err?.response?.data?.error ??
-        "Registration failed. Please try again.";
-      setFormError(msg);
-    } finally {
-      setLoadingMethod(null);
+    if (step !== "password") {
+      setFormError("Please verify your email before creating the account.");
+      return;
     }
-  }
 
-  const handleGoogleSignup = useCallback(async (googleIdToken: string) => {
+    setLoadingAction("create-account");
     setFormError(null);
+    setSuccessMessage(null);
+
     try {
-      const res = await api.post("/mobile/register", {
-        googleIdToken,
-        role,
-        referralCode: referralCode.trim() || undefined,
-      });
+      const registerRes = await api.post(
+        "/auth/register",
+        {
+          name: buildDisplayNameFromEmail(normalizedEmail),
+          email: normalizedEmail,
+          password,
+          role,
+          referralCode: referralCode.trim() || undefined,
+        },
+        readServerStatus,
+      );
+
+      assertOkResponse(registerRes, "Registration failed. Please try again.");
+
+      const res = await api.post(
+        "/mobile/login",
+        {
+          email: normalizedEmail,
+          password,
+        },
+        readServerStatus,
+      );
+
+      assertOkResponse(res, "Account created, but sign-in failed. Please sign in manually.");
 
       const session = await persistMobileAuthSession(dispatch, res.data);
       router.replace(session.isSuspended ? "/suspended" : "/(tabs)/feed");
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.error ??
-        err?.response?.data?.message ??
-        "Google sign-up failed. Please try again.";
-      setFormError(msg);
+      setFormError(
+        getRequestErrorMessage(err, "Registration failed. Please try again."),
+      );
     } finally {
-      setLoadingMethod(null);
+      setLoadingAction(null);
     }
-  }, [dispatch, referralCode, role]);
+  }
+
+  const handleGoogleSignup = useCallback(
+    async (googleIdToken: string) => {
+      setFormError(null);
+      setSuccessMessage(null);
+
+      try {
+        const res = await api.post(
+          "/mobile/register",
+          {
+            googleIdToken,
+            role,
+            referralCode: referralCode.trim() || undefined,
+          },
+          readServerStatus,
+        );
+
+        assertOkResponse(res, "Google sign-up failed. Please try again.");
+
+        const session = await persistMobileAuthSession(dispatch, res.data);
+        router.replace(session.isSuspended ? "/suspended" : "/(tabs)/feed");
+      } catch (err: any) {
+        setFormError(
+          getRequestErrorMessage(
+            err,
+            "Google sign-up failed. Please try again.",
+          ),
+        );
+      } finally {
+        setLoadingAction(null);
+      }
+    },
+    [dispatch, referralCode, role],
+  );
 
   useEffect(() => {
     if (response?.type === "success") {
       const googleIdToken = response.params.id_token;
       if (!googleIdToken) {
         setFormError("Google sign-up did not return an ID token.");
-        setLoadingMethod(null);
+        setLoadingAction(null);
         return;
       }
 
@@ -138,7 +302,7 @@ export default function RegisterScreen() {
     }
 
     if (response && response.type !== "opened") {
-      setLoadingMethod(null);
+      setLoadingAction(null);
     }
   }, [handleGoogleSignup, response]);
 
@@ -159,199 +323,268 @@ export default function RegisterScreen() {
   async function confirmGoogleSignup() {
     setIsGoogleConfirmOpen(false);
     setFormError(null);
-    setLoadingMethod("google");
+    setSuccessMessage(null);
+    setLoadingAction("google");
 
     const result = await promptGoogleSignIn();
     if (result.type !== "success") {
-      setLoadingMethod(null);
+      setLoadingAction(null);
     }
   }
 
+  const stepHelperText =
+    step === "email"
+      ? "Add your email. We will send a verification code to confirm it is yours."
+      : step === "code"
+        ? "Enter the verification code from your inbox to continue."
+        : "Set a password you can remember, and keep it strong.";
+
   return (
     <View className="flex-1 bg-background">
-      <StatusBar barStyle={statusBarStyle} />
+      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
+        <View
+          className="flex-1 px-6 pt-14"
+          style={{ paddingBottom: Math.max(insets.bottom + 24, 40) }}
         >
-          <View className="px-6 pt-16 pb-6">
+          <View className="flex-row items-center gap-3">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="mb-6 h-10 w-10 items-center justify-center rounded-full border border-border bg-card"
+              className="h-11 w-11 items-center justify-center rounded-full border border-border bg-card"
+              activeOpacity={0.85}
             >
               <Ionicons name="arrow-back" size={20} color={iconColor} />
             </TouchableOpacity>
 
-            <Image
-              source={require("../../assets/images/logo.png")}
-              style={{ width: 64, height: 64, marginBottom: 16, borderRadius: 16 }}
-              resizeMode="contain"
-            />
-            <Text className="mb-2 text-[32px] font-bold tracking-tight text-foreground">
-              Create account
-            </Text>
-            <Text className="text-base text-muted-foreground">
-              Choose a role, then sign up with email or Google.
-            </Text>
-          </View>
-
-          <View className="px-6 pb-8">
-            <View className="mb-6">
-              <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
-                I am a
-              </Text>
-              <View className="flex-row rounded-2xl border border-border bg-card p-1 shadow-sm">
-                <TouchableOpacity
-                  onPress={() => setRole("STUDENT")}
-                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3 ${
-                    role === "STUDENT" ? "bg-primary" : ""
-                  }`}
-                >
-                  <Ionicons
-                    name="school-outline"
-                    size={18}
-                    color={role === "STUDENT" ? "#FFFFFF" : iconColor}
-                  />
-                  <Text
-                    className={`text-[15px] font-semibold ${
-                      role === "STUDENT"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    Student
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setRole("TEACHER")}
-                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3 ${
-                    role === "TEACHER" ? "bg-primary" : ""
-                  }`}
-                >
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color={role === "TEACHER" ? "#FFFFFF" : iconColor}
-                  />
-                  <Text
-                    className={`text-[15px] font-semibold ${
-                      role === "TEACHER"
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    Teacher
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            <View className="h-11 w-11 items-center justify-center rounded-2xl border border-border bg-card">
+              <Image
+                source={require("../../assets/images/logo.png")}
+                style={{ width: 28, height: 28 }}
+                resizeMode="contain"
+              />
             </View>
 
-            {referralCode.trim() ? (
-              <View className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-400/30 dark:bg-blue-500/10">
-                <Text className="text-sm font-medium text-blue-700 dark:text-blue-200">
-                  Referral code detected. Any eligible bonus will be applied
-                  after signup.
-                </Text>
-              </View>
-            ) : null}
+            <View className="flex-1">
+              <Text className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                QuestionCall
+              </Text>
+            </View>
+          </View>
 
-            <View className="gap-5">
+          <Text className="mt-5 text-[30px] font-bold tracking-tight text-foreground">
+            Create account
+          </Text>
+
+          <Text className="mt-2 text-[15px] leading-6 text-muted-foreground">
+            {stepHelperText}
+          </Text>
+
+          {referralCode.trim() ? (
+            <View className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+              <Text className="text-sm font-medium text-foreground">
+                Referral code detected. Bonus questions will apply after signup.
+              </Text>
+            </View>
+          ) : null}
+
+          <View className="mt-5 flex-1">
+            <View className="gap-4">
               <View>
                 <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
-                  Full Name
+                  I am a
                 </Text>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Your full name"
-                  placeholderTextColor="#6B7280"
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
-                />
+                <View className="flex-row rounded-2xl border border-border bg-card p-1">
+                  <TouchableOpacity
+                    onPress={() => setRole("STUDENT")}
+                    className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3 ${
+                      role === "STUDENT" ? "bg-primary" : ""
+                    }`}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="school-outline"
+                      size={18}
+                      color={role === "STUDENT" ? "#FFFFFF" : iconColor}
+                    />
+                    <Text
+                      className={`text-[15px] font-semibold ${
+                        role === "STUDENT"
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      Student
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setRole("TEACHER")}
+                    className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3 ${
+                      role === "TEACHER" ? "bg-primary" : ""
+                    }`}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={18}
+                      color={role === "TEACHER" ? "#FFFFFF" : iconColor}
+                    />
+                    <Text
+                      className={`text-[15px] font-semibold ${
+                        role === "TEACHER"
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      Teacher
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
-              <View>
-                <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
-                  Email
-                </Text>
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor="#6B7280"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
-                />
-              </View>
+              {step === "email" ? (
+                <View>
+                  <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
+                    Email
+                  </Text>
+                  <TextInput
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    placeholder="you@example.com"
+                    placeholderTextColor="#6B7280"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
+                  />
+                </View>
+              ) : null}
 
-              <View>
-                <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
-                  Password
-                </Text>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="At least 8 characters"
-                  placeholderTextColor="#6B7280"
-                  secureTextEntry
-                  autoComplete="new-password"
-                  className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
-                />
-              </View>
+              {step === "code" ? (
+                <View>
+                  <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
+                    Verification code
+                  </Text>
+                  <TextInput
+                    value={verificationCode}
+                    onChangeText={setVerificationCode}
+                    placeholder="000000"
+                    placeholderTextColor="#6B7280"
+                    keyboardType="number-pad"
+                    autoCapitalize="none"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
+                  />
+                  <TouchableOpacity
+                    onPress={handleSendCode}
+                    disabled={loadingAction === "send-code"}
+                    className="mt-2 items-center py-2"
+                    activeOpacity={0.85}
+                  >
+                    <Text className="text-sm font-semibold text-primary">
+                      Resend code
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
 
-              <View>
-                <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
-                  Referral Code{" "}
-                  <Text className="text-xs text-muted-foreground">(optional)</Text>
-                </Text>
-                <TextInput
-                  value={referralCode}
-                  onChangeText={setReferralCode}
-                  placeholder="Enter referral code"
-                  placeholderTextColor="#6B7280"
-                  autoCapitalize="characters"
-                  className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
-                />
-              </View>
+              {step === "password" ? (
+                <View>
+                  <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
+                    Password
+                  </Text>
+                  <View className="relative">
+                    <TextInput
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="At least 8 characters"
+                      placeholderTextColor="#6B7280"
+                      secureTextEntry={!showPassword}
+                      autoComplete="new-password"
+                      className="rounded-2xl border border-border bg-card px-5 py-4 pr-12 text-[15px] text-foreground"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 h-8 w-8 -translate-y-4 items-center justify-center rounded-full"
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={18}
+                        color={iconColor}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text className="mb-2 ml-1 mt-4 text-sm font-medium text-foreground">
+                    Referral code{" "}
+                    <Text className="text-xs text-muted-foreground">(optional)</Text>
+                  </Text>
+                  <TextInput
+                    value={referralCode}
+                    onChangeText={setReferralCode}
+                    placeholder="Enter referral code"
+                    placeholderTextColor="#6B7280"
+                    autoCapitalize="characters"
+                    className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
+                  />
+                </View>
+              ) : null}
 
               <AuthNotice tone="error" message={formError} />
+              <AuthNotice tone="success" message={successMessage} />
 
               <TouchableOpacity
-                onPress={handleRegister}
-                disabled={loadingMethod !== null}
-                className="mt-2 items-center rounded-full bg-primary py-4 shadow-lg"
+                onPress={
+                  step === "email"
+                    ? handleSendCode
+                    : step === "code"
+                      ? handleVerifyCode
+                      : completeSignup
+                }
+                disabled={loadingAction !== null}
+                className="items-center rounded-full bg-primary py-4 shadow-lg"
                 activeOpacity={0.85}
               >
-                {loadingMethod === "email" ? (
-                  <ActivityIndicator color="#fff" />
+                {loadingAction === "send-code" ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : loadingAction === "verify-code" ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : loadingAction === "create-account" ? (
+                  <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text className="text-[16px] font-semibold text-primary-foreground">
-                    Create Account
+                    {step === "email"
+                      ? "Send code"
+                      : step === "code"
+                        ? "Verify code"
+                        : "Create account"}
                   </Text>
                 )}
               </TouchableOpacity>
+            </View>
 
-              <View className="flex-row items-center gap-4">
+            <View className="mt-8 gap-4">
+              <View className="flex-row items-center gap-3">
                 <View className="h-px flex-1 bg-border" />
-                <Text className="text-sm text-muted-foreground">or</Text>
+                <Text className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  or
+                </Text>
                 <View className="h-px flex-1 bg-border" />
               </View>
 
               {isGoogleConfigured ? (
                 <TouchableOpacity
                   onPress={handleGoogleSignupPress}
-                  disabled={loadingMethod !== null || !request}
+                  disabled={loadingAction !== null || !request}
                   className="flex-row items-center justify-center gap-2 rounded-full border border-border bg-card py-4 shadow-sm"
                   activeOpacity={0.85}
                 >
-                  {loadingMethod === "google" ? (
+                  {loadingAction === "google" ? (
                     <ActivityIndicator color={iconColor} />
                   ) : (
                     <Ionicons name="logo-google" size={20} color={iconColor} />
@@ -378,20 +611,20 @@ export default function RegisterScreen() {
                 </View>
               )}
 
-              <View className="items-center pt-2">
+              <View className="items-center">
                 <Text className="text-sm text-muted-foreground">
                   Already have an account?{" "}
                   <Text
                     className="font-bold text-foreground"
                     onPress={() => router.replace("/(auth)/login")}
                   >
-                    Sign In
+                    Sign in
                   </Text>
                 </Text>
               </View>
             </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
 
       <Modal
@@ -406,14 +639,10 @@ export default function RegisterScreen() {
               <Ionicons name="logo-google" size={24} color={iconColor} />
             </View>
             <Text className="text-[22px] font-bold tracking-tight text-foreground">
-              Continue with Google?
+              Continue as {role === "STUDENT" ? "Student" : "Teacher"}?
             </Text>
             <Text className="mt-2 text-[15px] leading-6 text-muted-foreground">
-              This will create a{" "}
-              <Text className="font-semibold text-foreground">
-                {role.toLowerCase()}
-              </Text>{" "}
-              account and sign you in right away.
+              This will create your account with Google and sign you in right away.
             </Text>
 
             <View className="mt-4 rounded-2xl border border-border bg-muted/30 px-4 py-3">
