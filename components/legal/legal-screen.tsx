@@ -135,7 +135,7 @@ export function LegalScreen({ section = "all" }: { section?: LegalSectionKey }) 
     <View className="flex-1 bg-background">
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
 
-      <View className="px-6 pt-16 pb-4">
+      <View className="px-6 pb-4 pt-16">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -199,9 +199,9 @@ export function LegalScreen({ section = "all" }: { section?: LegalSectionKey }) 
                 {item.title}
               </Text>
               <View className="mt-4 gap-4">
-                {item.body.map((paragraph) => (
+                {item.body.map((paragraph, index) => (
                   <Text
-                    key={paragraph}
+                    key={`${item.key}-${index}`}
                     className="text-[14px] leading-7 text-muted-foreground"
                   >
                     {paragraph}

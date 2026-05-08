@@ -7,10 +7,15 @@ export interface AppUser {
   name: string;
   email: string;
   role: UserRole;
+  username?: string | null;
+  bio?: string | null;
   image?: string;
+  skills?: string[];
+  interests?: string[];
   points: number;
   pointBalance: number;
   subscriptionStatus: string;
+  subscriptionEnd?: string | null;
   planSlug: string;
   questionsAsked: number;
   bonusQuestions: number;
@@ -22,7 +27,9 @@ export interface AppUser {
   dailyTargetsAchieved: number[];
   esewaNumber?: string;
   referralCode?: string;
+  seenNotices?: string[];
   seenOnboardingRoles: string[];
+  createdAt?: string | null;
   callSettings?: {
     silentIncomingCalls: boolean;
     incomingRingtone: string;

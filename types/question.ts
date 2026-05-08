@@ -56,6 +56,7 @@ export type QuestionRecordShape = {
 
 /** Extended shape used in the feed UI */
 export type FeedQuestion = QuestionRecordShape & {
+  _id?: string;
   channelId?: string | null;
   askerName: string;
   askerUsername?: string;

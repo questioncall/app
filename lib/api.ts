@@ -19,6 +19,14 @@ export const api = axios.create({
   timeout: 15000,
 });
 
+export const publicApi = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 15000,
+});
+
 // Attach Bearer token on every request
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
@@ -30,7 +38,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 let isRefreshing = false;
@@ -67,7 +75,7 @@ api.interceptors.response.use(
 
     try {
       const refreshToken = await SecureStore.getItemAsync(
-        SECURE_STORE_KEYS.REFRESH_TOKEN
+        SECURE_STORE_KEYS.REFRESH_TOKEN,
       );
       if (!refreshToken) throw new Error("No refresh token");
 
@@ -78,10 +86,7 @@ api.interceptors.response.use(
       const newAccessToken: string = response.data.accessToken;
 
       // Persist new token
-      await SecureStore.setItemAsync(
-        SECURE_STORE_KEYS.ACCESS_TOKEN,
-        newAccessToken
-      );
+      await SecureStore.setItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN, newAccessToken);
       store.dispatch(setAccessToken(newAccessToken));
 
       processQueue(newAccessToken);
@@ -101,7 +106,7 @@ api.interceptors.response.use(
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
 export default api;

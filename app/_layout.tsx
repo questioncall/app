@@ -16,6 +16,10 @@ import { setTokens, setAuthLoading, clearAuth } from "@/store/slices/authSlice";
 import { setUser } from "@/store/slices/userSlice";
 import { setConfig } from "@/store/slices/configSlice";
 import { api, SECURE_STORE_KEYS } from "@/lib/api";
+import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
+import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
+import { RealtimeBridge } from "@/components/realtime/realtime-bridge";
+import { ImageViewerProvider } from "@/components/image-viewer/image-viewer-context";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,20 +47,20 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     try {
       const res = await api.get("/mobile/me");
       store.dispatch(setUser(res.data));
+      return res.data;
     } catch (err: any) {
       if (err?.response?.status === 403) {
         router.replace("/suspended");
       }
+      return null;
     }
   }, []);
 
   const initializeApp = useCallback(async () => {
     try {
-      const accessToken = await SecureStore.getItemAsync(
-        SECURE_STORE_KEYS.ACCESS_TOKEN
-      );
+      const accessToken = await SecureStore.getItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
       const refreshToken = await SecureStore.getItemAsync(
-        SECURE_STORE_KEYS.REFRESH_TOKEN
+        SECURE_STORE_KEYS.REFRESH_TOKEN,
       );
 
       if (accessToken && refreshToken) {
@@ -84,8 +88,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
       // Refresh config if stale (older than 1 hour)
       const stale =
-        !config.lastFetchedAt ||
-        Date.now() - config.lastFetchedAt > 60 * 60 * 1000;
+        !config.lastFetchedAt || Date.now() - config.lastFetchedAt > 60 * 60 * 1000;
       if (stale) {
         void fetchPlatformConfig();
       }
@@ -99,10 +102,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void initializeApp();
 
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
     return () => subscription.remove();
   }, [handleAppStateChange, initializeApp]);
 
@@ -111,41 +111,48 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
 function RootLayout() {
   const { navigationTheme, backgroundColor } = useAppTheme();
-  
+
   return (
     <ThemeProvider value={navigationTheme}>
       <Provider store={store}>
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
             <AppInitializer>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="workspace/[channelId]" />
-                <Stack.Screen name="call/[roomId]" />
-                <Stack.Screen name="course/[id]" />
-                <Stack.Screen name="quiz/[topicId]" />
-                <Stack.Screen name="payment/gateway" />
-                <Stack.Screen name="payment/manual" />
-                <Stack.Screen name="payment/plans" />
-                <Stack.Screen name="profile/edit" />
-                <Stack.Screen name="profile/activity" />
-                <Stack.Screen name="settings/call-settings" />
-                <Stack.Screen name="settings/notifications" />
-                <Stack.Screen name="settings/theme" />
-                <Stack.Screen name="legal/index" />
-                <Stack.Screen name="legal/terms" />
-                <Stack.Screen name="legal/privacy" />
-                <Stack.Screen name="referral" />
-                <Stack.Screen name="leaderboard" />
-                <Stack.Screen name="notices" />
-                <Stack.Screen name="onboarding" />
-                <Stack.Screen
-                  name="suspended"
-                  options={{ gestureEnabled: false }}
-                />
-              </Stack>
+              <Sprint2Bootstrap />
+              <RealtimeBridge />
+              <GlobalNoticeModal />
+              <ImageViewerProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor },
+                  }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="workspace/[channelId]" />
+                  <Stack.Screen name="call/[roomId]" />
+                  <Stack.Screen name="course/[id]" />
+                  <Stack.Screen name="quiz/[topicId]" />
+                  <Stack.Screen name="payment/gateway" />
+                  <Stack.Screen name="payment/manual" />
+                  <Stack.Screen name="payment/plans" />
+                  <Stack.Screen name="profile/edit" />
+                  <Stack.Screen name="profile/activity" />
+                  <Stack.Screen name="settings/call-settings" />
+                  <Stack.Screen name="settings/notifications" />
+                  <Stack.Screen name="settings/theme" />
+                  <Stack.Screen name="legal/index" />
+                  <Stack.Screen name="legal/terms" />
+                  <Stack.Screen name="legal/privacy" />
+                  <Stack.Screen name="referral" />
+                  <Stack.Screen name="leaderboard" />
+                  <Stack.Screen name="notices" />
+                  <Stack.Screen name="onboarding" />
+                  <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
+                </Stack>
+              </ImageViewerProvider>
               <Toast />
             </AppInitializer>
           </GestureHandlerRootView>

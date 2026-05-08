@@ -1,9 +1,23 @@
 import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppSelector } from "@/hooks/redux";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import type { ComponentProps } from "react";
 
-function CenterTabButton({ children, onPress }: BottomTabBarButtonProps) {
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+
+function CenterTabButton({
+  children,
+  onPress,
+  backgroundColor,
+  borderColor,
+}: BottomTabBarButtonProps & {
+  backgroundColor: string;
+  borderColor: string;
+}) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -15,10 +29,12 @@ function CenterTabButton({ children, onPress }: BottomTabBarButtonProps) {
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: "#3B82F6",
-        shadowColor: "#3B82F6",
+        borderWidth: 1,
+        borderColor,
+        backgroundColor,
+        shadowColor: backgroundColor,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.32,
         shadowRadius: 8,
         elevation: 8,
       }}
@@ -29,21 +45,37 @@ function CenterTabButton({ children, onPress }: BottomTabBarButtonProps) {
 }
 
 function TabIcon({
-  emoji,
+  name,
   label,
   focused,
+  activeColor,
+  inactiveColor,
 }: {
-  emoji: string;
+  name: IoniconName;
   label: string;
   focused: boolean;
+  activeColor: string;
+  inactiveColor: string;
 }) {
+  const color = focused ? activeColor : inactiveColor;
+
   return (
-    <View className="items-center gap-0.5">
-      <Text style={{ fontSize: 20 }}>{emoji}</Text>
+    <View
+      style={{
+        alignItems: "center",
+        justifyContent: "center",
+        width: 64,
+        gap: 2,
+      }}
+    >
+      <Ionicons name={name} size={21} color={color} />
       <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
         style={{
           fontSize: 10,
-          color: focused ? "#3B82F6" : "#6B7280",
+          lineHeight: 12,
+          color,
           fontWeight: focused ? "600" : "400",
         }}
       >
@@ -55,20 +87,25 @@ function TabIcon({
 
 export default function TabsLayout() {
   const userRole = useAppSelector((s) => s.user.data?.role);
+  const insets = useSafeAreaInsets();
+  const { cardColor, borderColor, primaryColor, mutedIconColor, isDark } = useAppTheme();
   const isTeacher = userRole === "TEACHER";
   const centerLabel = isTeacher ? "Actions" : "Ask";
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 10);
+  const inactiveColor = isDark ? "#A8A29E" : mutedIconColor;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          backgroundColor: "#0F172A",
-          borderTopColor: "#1E293B",
+          backgroundColor: cardColor,
+          borderTopColor: borderColor,
           borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 80 : 65,
-          paddingBottom: Platform.OS === "ios" ? 20 : 10,
+          height: 56 + bottomPadding,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
         },
       }}
@@ -77,7 +114,13 @@ export default function TabsLayout() {
         name="feed"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📋" label="Feed" focused={focused} />
+            <TabIcon
+              name={focused ? "list" : "list-outline"}
+              label="Feed"
+              focused={focused}
+              activeColor={primaryColor}
+              inactiveColor={inactiveColor}
+            />
           ),
         }}
       />
@@ -85,17 +128,30 @@ export default function TabsLayout() {
         name="channels"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📢" label="Channels" focused={focused} />
+            <TabIcon
+              name={focused ? "chatbubbles" : "chatbubbles-outline"}
+              label="Channels"
+              focused={focused}
+              activeColor={primaryColor}
+              inactiveColor={inactiveColor}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="ask"
         options={{
-          tabBarButton: (props) => <CenterTabButton {...props} />,
+          tabBarButton: (props) => (
+            <CenterTabButton
+              {...props}
+              backgroundColor={primaryColor}
+              borderColor={borderColor}
+            />
+          ),
           tabBarIcon: () => (
-            <View className="items-center">
-              <Text style={{ fontSize: 28, color: "#FFFFFF" }}>+</Text>
+            <View className="items-center justify-center">
+              <Ionicons name="add" size={27} color="#FFFFFF" />
+              <Text className="text-[9px] font-semibold text-white">{centerLabel}</Text>
             </View>
           ),
           tabBarLabel: centerLabel,
@@ -105,7 +161,13 @@ export default function TabsLayout() {
         name="courses"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📚" label="Courses" focused={focused} />
+            <TabIcon
+              name={focused ? "book" : "book-outline"}
+              label="Courses"
+              focused={focused}
+              activeColor={primaryColor}
+              inactiveColor={inactiveColor}
+            />
           ),
         }}
       />
@@ -113,7 +175,13 @@ export default function TabsLayout() {
         name="menu"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="☰" label="Menu" focused={focused} />
+            <TabIcon
+              name={focused ? "menu" : "menu-outline"}
+              label="Menu"
+              focused={focused}
+              activeColor={primaryColor}
+              inactiveColor={inactiveColor}
+            />
           ),
         }}
       />

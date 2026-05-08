@@ -1,0 +1,2726 @@
+{
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\babel.config.js": {
+    "mtime": 1778154348.6904695,
+    "hash": "9f41bc7eb76ede9141d9458c572a1151"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\eslint.config.js": {
+    "mtime": 499162500.0,
+    "hash": "560a864580ad8107fbbf8d6d452c82fe"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\metro.config.js": {
+    "mtime": 1778168580.099364,
+    "hash": "d4918ae941df070396c3943a1fc5bdd0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\nativewind-env.d.ts": {
+    "mtime": 1777989409.580965,
+    "hash": "b02bcf4fde15f746f6e5248537d0b156"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\tailwind.config.js": {
+    "mtime": 1778043178.934523,
+    "hash": "3996b4568db17973c821634350182613"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\build.gradle": {
+    "mtime": 1778073028.7377107,
+    "hash": "55cec08c744fbe7b1f1294009fe3f65d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\gradlew": {
+    "mtime": 499162500.0,
+    "hash": "ff1ddbebbc9b4d04f2e9f8cab50d6595"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\settings.gradle": {
+    "mtime": 1778073028.7377107,
+    "hash": "11ba7c6f2c0da88517a42bef092ee1a8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\build.gradle": {
+    "mtime": 1778073028.681174,
+    "hash": "edab10c974f801d5ef6d3bc47d60a4a5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\java\\com\\siddthecoder\\qustioncall\\MainActivity.kt": {
+    "mtime": 1778073028.6945305,
+    "hash": "17243e983563f44a1e687ed5f9dca2d9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\java\\com\\siddthecoder\\qustioncall\\MainApplication.kt": {
+    "mtime": 1778073026.039538,
+    "hash": "ac5a9d0e55682d592b521bd9b87528eb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\index.tsx": {
+    "mtime": 1778133733.7543254,
+    "hash": "6e252517a23985015bc89beb7eeb8e79"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\leaderboard.tsx": {
+    "mtime": 1777989975.1620288,
+    "hash": "4119a3a5bf1ada5d37a767406b6792be"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\notices.tsx": {
+    "mtime": 1778133861.3632004,
+    "hash": "975921fc039faedbc500c7965d46e1d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\onboarding.tsx": {
+    "mtime": 1778133861.2343783,
+    "hash": "5cf5216065692cb90001c1823974f8c8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\referral.tsx": {
+    "mtime": 1777989975.1283743,
+    "hash": "7dd98618191988850c7f72310b7a9d4e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\suspended.tsx": {
+    "mtime": 1777989711.4879775,
+    "hash": "f95155578dd4d5fc015d6c2e060505d0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\_layout.tsx": {
+    "mtime": 1778166754.289368,
+    "hash": "716bfe6708622c685dd27ca12c76f513"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(auth)\\login.tsx": {
+    "mtime": 1778121926.7281568,
+    "hash": "636171697c8bb9adcff7daf8b73d2220"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(auth)\\register.tsx": {
+    "mtime": 1778121876.7445903,
+    "hash": "bb653fb2c38c5cc821095631031b4ad9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(auth)\\verify-email.tsx": {
+    "mtime": 1778120929.359123,
+    "hash": "6134f9703cdde7fa3908da2d356ce91f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(auth)\\_layout.tsx": {
+    "mtime": 1777989629.056456,
+    "hash": "b500d4225d6be241f3f114a8a21a65f7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(tabs)\\ask.tsx": {
+    "mtime": 1778166354.6520162,
+    "hash": "e9693dc2151b0b399a915d2043a1b09d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(tabs)\\channels.tsx": {
+    "mtime": 1778122557.5887399,
+    "hash": "0f6c9b88c2a6adaf245689728faf0bba"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(tabs)\\courses.tsx": {
+    "mtime": 1778155437.2085588,
+    "hash": "c5f3be17a1ff0479cf6c1f499968a4d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(tabs)\\feed.tsx": {
+    "mtime": 1778166825.4551547,
+    "hash": "4f37c650f2ec1113d911699021383060"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(tabs)\\menu.tsx": {
+    "mtime": 1778133915.5592725,
+    "hash": "58f13a3a4cf92fb4f5e0eed6ba4fe0ae"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\(tabs)\\_layout.tsx": {
+    "mtime": 1778165283.5218258,
+    "hash": "bff21bfe36d88007af902c6dac0fa4a4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\call\\[roomId].tsx": {
+    "mtime": 1777989889.7494287,
+    "hash": "10f445f1bd9cf0e43d2829e3f9dde7d9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\course\\[id].tsx": {
+    "mtime": 1778155437.4108207,
+    "hash": "8efa81a9188ed930568d9413eca3f978"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\legal\\index.tsx": {
+    "mtime": 1778094095.4640973,
+    "hash": "054ad9f4a2d1334efe4683af9231cef6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\legal\\privacy.tsx": {
+    "mtime": 1778094091.5396874,
+    "hash": "fa26ef99916d75287666bcc6eceb87bf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\legal\\terms.tsx": {
+    "mtime": 1778094083.945285,
+    "hash": "1c2e2963f4ce7398eb9143f5391fa061"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\payment\\gateway.tsx": {
+    "mtime": 1777989929.7726812,
+    "hash": "76a86b6ce78c011ad7de44e6460e59bf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\payment\\manual.tsx": {
+    "mtime": 1778134080.7027247,
+    "hash": "d257daf0e1a75c6e224132fe5df098bb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\payment\\plans.tsx": {
+    "mtime": 1777989922.0673623,
+    "hash": "3f4201cba43e858eebcee5afb9e7bbad"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\profile\\activity.tsx": {
+    "mtime": 1778133861.1133664,
+    "hash": "2b4f40c59fd40d1b52ac9111e45476c1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\profile\\edit.tsx": {
+    "mtime": 1778133904.5870514,
+    "hash": "c51a62bf84d03d90385312709f27cc9e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\quiz\\index.tsx": {
+    "mtime": 1777989901.7952058,
+    "hash": "d1f6252b84ca0c0e87e478f53960c1b9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\quiz\\[topicId].tsx": {
+    "mtime": 1777989897.6163683,
+    "hash": "404132f16f048875d35d607cd9b67f5c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\settings\\call-settings.tsx": {
+    "mtime": 1777989974.9577422,
+    "hash": "c6c3dc2e2b08bb9d460ca1c2af8921d4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\settings\\notifications.tsx": {
+    "mtime": 1777989974.9901016,
+    "hash": "c7f891818cf5f5ddc452fd01fe09b5ff"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\settings\\theme.tsx": {
+    "mtime": 1777989975.0242488,
+    "hash": "e240662969f716eb49693f712083b6c5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\studio\\index.tsx": {
+    "mtime": 1777989905.5568216,
+    "hash": "5d47dc512807e3dda1c3337bf98aea22"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app\\workspace\\[channelId].tsx": {
+    "mtime": 1777989886.0129688,
+    "hash": "ea4e9b029142cfaba45962fa88e2162f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\app\\modal.tsx": {
+    "mtime": 1777912912.4812984,
+    "hash": "b386d854756dea7e667d196390b55af5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\app\\_layout.tsx": {
+    "mtime": 499162500.0,
+    "hash": "428f4ebd48ad0c36e0c4965359891a35"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\app\\(tabs)\\explore.tsx": {
+    "mtime": 499162500.0,
+    "hash": "316c4f355d1710d47046c2c7c43bc614"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\app\\(tabs)\\index.tsx": {
+    "mtime": 499162500.0,
+    "hash": "0214896079ddca2e157cd3b1e42b650f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\app\\(tabs)\\_layout.tsx": {
+    "mtime": 499162500.0,
+    "hash": "407a8dc5f6df1fe2fc2709bbe776f321"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\external-link.tsx": {
+    "mtime": 499162500.0,
+    "hash": "a71bdc8e0bd55812a1e97662ade442d1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\haptic-tab.tsx": {
+    "mtime": 499162500.0,
+    "hash": "3865d2fa7a067a97b4a0bbc8f7dcb2db"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\hello-wave.tsx": {
+    "mtime": 499162500.0,
+    "hash": "bc241776c5bccac6964c694706e89e0a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\parallax-scroll-view.tsx": {
+    "mtime": 499162500.0,
+    "hash": "c2c998330722001de6d4a098fa914328"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\themed-text.tsx": {
+    "mtime": 499162500.0,
+    "hash": "c1f1947c3b24be35a7097cc46f71073a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\themed-view.tsx": {
+    "mtime": 499162500.0,
+    "hash": "ffcbffb4831735916a920f2d0305f126"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\ui\\collapsible.tsx": {
+    "mtime": 499162500.0,
+    "hash": "10ba95b344ca9a9846405b242153979a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\ui\\icon-symbol.ios.tsx": {
+    "mtime": 499162500.0,
+    "hash": "0f318b392e23d311c7094bdbb94d9c58"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\components\\ui\\icon-symbol.tsx": {
+    "mtime": 499162500.0,
+    "hash": "dca9fc677c970dc8bbeddb9e580cf99a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\constants\\theme.ts": {
+    "mtime": 499162500.0,
+    "hash": "86b35f6fc3c1a9cf036de923e0ec1b04"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\hooks\\use-color-scheme.ts": {
+    "mtime": 499162500.0,
+    "hash": "6f3444fcb9c7013a839a7832be518831"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\hooks\\use-color-scheme.web.ts": {
+    "mtime": 499162500.0,
+    "hash": "071fbb9a1a05ffb8af4b7d3b1ffa72d6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\hooks\\use-theme-color.ts": {
+    "mtime": 499162500.0,
+    "hash": "e9ac2719e4d914a6913252bb57b368d9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\app-example\\scripts\\reset-project.js": {
+    "mtime": 499162500.0,
+    "hash": "55e9a46ae7c35eb0340e956473beaed2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\index.ts": {
+    "mtime": 1778070645.905608,
+    "hash": "e2ebd7ddedcadeeadbf819c35985c768"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\auth\\auth-notice.tsx": {
+    "mtime": 1778120961.9185672,
+    "hash": "8915b29a23458f8b3c92f5c10b860f76"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\image-viewer\\image-viewer-context.tsx": {
+    "mtime": 1778166730.9235144,
+    "hash": "24379a04da77ae6dc28d5e0271739618"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\image-viewer\\image-viewer-modal.tsx": {
+    "mtime": 1778166723.1853724,
+    "hash": "0b0786f3fc74b533614579785ee33b89"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\legal\\legal-screen.tsx": {
+    "mtime": 1778122221.650471,
+    "hash": "83ea7679cd29faef23648379f0f01668"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\media\\inline-video.tsx": {
+    "mtime": 1778166702.3818994,
+    "hash": "6da8b95d374a7d186831ee579ad18a22"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\notices\\global-notice-modal.tsx": {
+    "mtime": 1778133733.5115252,
+    "hash": "3cef17b5908f340ab470aa17346e834d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\realtime\\realtime-bridge.tsx": {
+    "mtime": 1778133717.5417826,
+    "hash": "d708205f48e68b0d527649c705258ac0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\components\\sprint2\\sprint2-bootstrap.tsx": {
+    "mtime": 1778133717.66627,
+    "hash": "02f5315c5f1c2eb46ba82a072d5a8974"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\hooks\\redux.ts": {
+    "mtime": 1777989514.1101358,
+    "hash": "0687b5b1df54586ce8f8681c1e666733"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\hooks\\use-app-theme.ts": {
+    "mtime": 1778122221.0933847,
+    "hash": "e95fb28893cbf713b7c3380977113484"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\hooks\\use-filter-options.ts": {
+    "mtime": 1778166318.6031518,
+    "hash": "95a68eaa7c0662a8134351f6bd00e7a1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\hooks\\use-platform-config.ts": {
+    "mtime": 1778164391.7428813,
+    "hash": "ba2643a5b2563f7f0aff043134dd5aca"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\api.ts": {
+    "mtime": 1778155407.9410312,
+    "hash": "3a3da9071ad1f5e3e7a9ad3ee022cfc3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\media-helpers.ts": {
+    "mtime": 1778166688.9078343,
+    "hash": "d7561ccc83404b785e845810f826fb8f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\mobile-auth-session.ts": {
+    "mtime": 1778091493.668798,
+    "hash": "50830a528f5dcbab1cd3f2f07d0b5f08"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\netinfo-stub.js": {
+    "mtime": 1778168497.9915652,
+    "hash": "bf8f2d80a9ef9abc431a63f4bfed3f23"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\question-format.ts": {
+    "mtime": 1778165503.7121892,
+    "hash": "0c6d6edd39737d3ba239c8f83e7f9af3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\realtime.ts": {
+    "mtime": 1778168604.69713,
+    "hash": "d812eaad8b5c0f6b1ddc6b3a482ad8d9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\lib\\server-response.ts": {
+    "mtime": 1778121202.9649067,
+    "hash": "a2b558c1edba33a0c28ad0e319917145"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\index.ts": {
+    "mtime": 1778133608.1093428,
+    "hash": "02e58d3794945f861dcd0ef2b811e004"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\activitySlice.ts": {
+    "mtime": 1778133607.918702,
+    "hash": "cce7346585092e1b87749f874092ea43"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\authSlice.ts": {
+    "mtime": 1777989427.7084157,
+    "hash": "e5804ddfaccb21592188e0a5bdc3603c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\channelSlice.ts": {
+    "mtime": 1777989462.5904474,
+    "hash": "8d5d1c6b4ec1e0f1af5e6e08283438fb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\channelsSlice.ts": {
+    "mtime": 1778133608.2639327,
+    "hash": "24c0b30d97987c41d6936852754f41bd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\configSlice.ts": {
+    "mtime": 1777989502.8336096,
+    "hash": "4703eefa0f3b2dd29def829ea2e84d9f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\coursesSlice.ts": {
+    "mtime": 1778137416.278496,
+    "hash": "efcf101531fec737ab1a24da8ea1ff5e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\feedSlice.ts": {
+    "mtime": 1778153005.6979213,
+    "hash": "2158654cf7b1111ae47a8b15796d0e9d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\noticesSlice.ts": {
+    "mtime": 1778133607.962109,
+    "hash": "449898f87916b262f6f12eb57cfe3c6e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\onboardingSlice.ts": {
+    "mtime": 1778133607.998388,
+    "hash": "43b7ccaada2fbc376e71c202eb0af28b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\realtimeSlice.ts": {
+    "mtime": 1778133608.036116,
+    "hash": "a9097bb0faad96c5a574610eeaf19cd0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\uploadSlice.ts": {
+    "mtime": 1777989483.0598836,
+    "hash": "fcaf3b74f5a257f213855d3afc3215ba"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\store\\slices\\userSlice.ts": {
+    "mtime": 1778133733.5978165,
+    "hash": "b0029186cd8f4ddfd1eda2df932212be"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\types\\channel.ts": {
+    "mtime": 1777989545.8565128,
+    "hash": "d8d3f24ad090825ef3870a812e0ac8dd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\types\\question.ts": {
+    "mtime": 1778136486.7629635,
+    "hash": "1daf61ceb86769a941a9edc8eaad25f2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\types\\quiz.ts": {
+    "mtime": 1777989545.9262407,
+    "hash": "e0f4851508a7985f74471a2d6591dbbd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\eslint.config.mjs": {
+    "mtime": 1775992672.4838636,
+    "hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\instrumentation.ts": {
+    "mtime": 1777176814.549026,
+    "hash": "34ce6e33bc2c009acb55edec639056e5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\next-env.d.ts": {
+    "mtime": 1778134486.5415485,
+    "hash": "2a74d3909800ca5467fa83b0ab4a4890"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\next.config.ts": {
+    "mtime": 1777904409.8241563,
+    "hash": "b12abd82396086cfa58b675efc83dee7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\postcss.config.mjs": {
+    "mtime": 1775476104.2023582,
+    "hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\proxy.ts": {
+    "mtime": 1777987311.481839,
+    "hash": "87b40a9ee0209603865dcd7c814a1c0e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\layout.tsx": {
+    "mtime": 1777004590.569561,
+    "hash": "2c48d3f7a498ca2b2b99b4b18af0a14e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\manifest.ts": {
+    "mtime": 1777007082.62812,
+    "hash": "7f50d251e9eae819b11b7eaec85d378d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\not-found.tsx": {
+    "mtime": 1775530957.3155415,
+    "hash": "545d0e68b434729eb792292a0d258616"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\page.tsx": {
+    "mtime": 1777702347.4478846,
+    "hash": "5b3febcb597ae6e8a4627cd621b58eb9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\robots.ts": {
+    "mtime": 1776871681.7956498,
+    "hash": "114edcaba95facafca37029bb01d3647"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\sitemap.ts": {
+    "mtime": 1776871681.8632817,
+    "hash": "49144e1aa3c7527cc3f9a3767296a0b6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\layout.tsx": {
+    "mtime": 1777217381.2887814,
+    "hash": "fbec50d8d329586777b296944690abca"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\page.tsx": {
+    "mtime": 1776830702.2846742,
+    "hash": "8d014144418bcb657d4aa22719dd7010"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\ai-keys\\page.tsx": {
+    "mtime": 1776277101.701062,
+    "hash": "ec003145ca2d39560cdce82a22d26ae5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\courses\\admin-courses-client.tsx": {
+    "mtime": 1776062574.0947795,
+    "hash": "f4d7a715dce4d620c0e5f8c2ad16aa0e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\courses\\page.tsx": {
+    "mtime": 1776276452.5211928,
+    "hash": "b8db9607c63c1574aaca89989932da0b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\courses\\coupons\\admin-coupons-client.tsx": {
+    "mtime": 1777189349.856896,
+    "hash": "b4ba49e724f0bf9d7c2341a6ac20d3cd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\courses\\coupons\\page.tsx": {
+    "mtime": 1777186568.7048507,
+    "hash": "2ee2b77c6e2842333ede3bbfb42384ef"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\courses\\[id]\\page.tsx": {
+    "mtime": 1777177315.4933863,
+    "hash": "d36cb3bbfa280f562f0dd6f24dbc0270"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\developer\\page.tsx": {
+    "mtime": 1776919072.9026756,
+    "hash": "ff76d2bb4ec97e792019a0d90dbfe256"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\format-config\\format-client.tsx": {
+    "mtime": 1778079449.4714296,
+    "hash": "18f6224cc8af003caa79edccebca49ac"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\format-config\\page.tsx": {
+    "mtime": 1775791644.3908863,
+    "hash": "ce2d4b4db933f609660f4440bf917da0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\legal\\legal-client.tsx": {
+    "mtime": 1775878167.6731994,
+    "hash": "307088951b7e8f5694c36610242c9b40"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\legal\\page.tsx": {
+    "mtime": 1775878167.6731994,
+    "hash": "dbcfe6c39c134e54119886ee7f9bd271"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\live-sessions\\admin-live-sessions-client.tsx": {
+    "mtime": 1777619239.4179058,
+    "hash": "cdb59759301b67829d05fe3b2f6b0be4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\live-sessions\\page.tsx": {
+    "mtime": 1776955485.243157,
+    "hash": "9fcf0e55eccd63323ecbd850eb6d4c96"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\notices\\notice-client.tsx": {
+    "mtime": 1776858722.302046,
+    "hash": "3fff53ec1a93129b2433b1512c1b3c19"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\notices\\page.tsx": {
+    "mtime": 1776659168.8593717,
+    "hash": "c506de1ab1714ff6dbcf079e9a5a548a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\notifications\\page.tsx": {
+    "mtime": 1776960933.9076588,
+    "hash": "fa77bf3539cef3b76ae38dac1732ae54"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\onboarding-videos\\onboarding-videos-client.tsx": {
+    "mtime": 1776957855.975218,
+    "hash": "3359fcd41cf656b5a5bff693533e24d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\onboarding-videos\\page.tsx": {
+    "mtime": 1776957855.8403733,
+    "hash": "477155959d6d6696c789347165141824"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\payment-config\\page.tsx": {
+    "mtime": 1775875052.9408429,
+    "hash": "fc2d64abead20d5961b79f47d8f722e8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\payment-config\\payment-config-client.tsx": {
+    "mtime": 1776864648.9476328,
+    "hash": "941ba20d4e37ce24249bb96bded3aa28"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\pricing\\page.tsx": {
+    "mtime": 1775791617.3409905,
+    "hash": "7d8775a16e91a8cfe9fdf9d14a84963f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\pricing\\pricing-client.tsx": {
+    "mtime": 1778080257.1517825,
+    "hash": "659d5b0957e5e510d4f7b6aaa5cf3cce"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\questions\\actions.ts": {
+    "mtime": 1778127109.3521538,
+    "hash": "9a5e69dd818bd9631028064b55a2894b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\questions\\page.tsx": {
+    "mtime": 1778127023.005165,
+    "hash": "8b38405299e0a3188663d3b09e7014ce"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\questions\\questions-client.tsx": {
+    "mtime": 1778126971.3305917,
+    "hash": "2a9ff670f812f7e1198a3807d24333e1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\quiz-management\\page.tsx": {
+    "mtime": 1775881107.958459,
+    "hash": "b2768fb1a4674e03deddfb64ee8b5fd5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\quiz-management\\quiz-management-client.tsx": {
+    "mtime": 1777607693.134469,
+    "hash": "5adc76035dc6007281ee8308483e8f74"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\security\\page.tsx": {
+    "mtime": 1777702963.4756005,
+    "hash": "de58b146332e56902b8509d12a83c1d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\security\\security-client.tsx": {
+    "mtime": 1777703326.8251054,
+    "hash": "9b039f08c5764a0f7833f0bd998b1369"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\services\\page.tsx": {
+    "mtime": 1776921610.343012,
+    "hash": "87ead6af1ae569a55f40379948bd44f5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\settings\\page.tsx": {
+    "mtime": 1775797800.8248842,
+    "hash": "edbb91324dacd5f2d4cf1d3f8883d2d0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\settings\\settings-client.tsx": {
+    "mtime": 1776834057.5943868,
+    "hash": "9df027ddc4ca9864e4c0334e9808350f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\social\\page.tsx": {
+    "mtime": 1776833893.6717117,
+    "hash": "937c40d0a6b5fb277cc9cf26dd350a68"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\social\\social-client.tsx": {
+    "mtime": 1776833879.2417588,
+    "hash": "06621299ef7e54606e5ca3718321655b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\transactions\\page.tsx": {
+    "mtime": 1775791843.2179875,
+    "hash": "cccbfc443fcd5bc8b4ff8c36dadc9080"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\transactions\\transactions-client.tsx": {
+    "mtime": 1777610907.904054,
+    "hash": "81022f72d7d8cbd966f565286ce97303"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\users\\page.tsx": {
+    "mtime": 1775791700.4162495,
+    "hash": "bdabee5ca3290ba52d229c52cfe5d78e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\users\\users-client.tsx": {
+    "mtime": 1777608139.816473,
+    "hash": "d4288b9dcb58f73c4c9a18d35a07d5e8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(admin)\\admin\\withdrawals\\page.tsx": {
+    "mtime": 1777610538.820572,
+    "hash": "2101481876abcc0083257536615e1388"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\layout.tsx": {
+    "mtime": 1776871681.2557895,
+    "hash": "5d79b59631d5744fbb1dd8f8b1f0c541"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\forgot-password\\page.tsx": {
+    "mtime": 1777286977.948805,
+    "hash": "1a387931d6085bf087f946b40a8f1f80"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\register\\page.tsx": {
+    "mtime": 1776956324.1969368,
+    "hash": "2dd0f61fba88fef3665674f56a705efa"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\register\\[role]\\page.tsx": {
+    "mtime": 1776955102.483346,
+    "hash": "af9e761686fd48682cdc623da6d8dbca"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\signin\\page.tsx": {
+    "mtime": 1776871681.3226342,
+    "hash": "08df83eb43d1e484e8cab1343594aa9a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\signout\\page.tsx": {
+    "mtime": 1776871681.388564,
+    "hash": "373af490a6d899fabbcc629c1d7270b5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\signup\\page.tsx": {
+    "mtime": 1776956324.0298648,
+    "hash": "93e9039431ea60a8131e02f13ffa67a3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\signup\\student\\page.tsx": {
+    "mtime": 1776871681.4568975,
+    "hash": "6760831701af9303e64ee004ed573777"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(auth)\\auth\\signup\\teacher\\page.tsx": {
+    "mtime": 1776871681.5225258,
+    "hash": "eee54ce03440d6e44c6bbcc653235c73"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\layout.tsx": {
+    "mtime": 1776049491.0051143,
+    "hash": "bd03203660611c0edc6c876a7e01a661"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\courses-browse.tsx": {
+    "mtime": 1777608335.878145,
+    "hash": "7783cb1ae5166cad5034a27e76c2b1a3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\page.tsx": {
+    "mtime": 1776870215.5857925,
+    "hash": "960c6cae8b19bddb0c82ab20d3fa8152"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\my\\my-courses-client.tsx": {
+    "mtime": 1777184326.9153683,
+    "hash": "f2abde895a5437c24891605320414a9c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\my\\page.tsx": {
+    "mtime": 1776870240.7758267,
+    "hash": "b318208fac772a5be7c1a6c23c5e2baf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\course-detail-client.tsx": {
+    "mtime": 1777464253.4016228,
+    "hash": "4e65e2b8aa8719c5b4890efe12344529"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\page.tsx": {
+    "mtime": 1776870604.91197,
+    "hash": "796716dd59c14c938f9d0370d895132c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\buy\\course-buy-client.tsx": {
+    "mtime": 1777464618.4190497,
+    "hash": "772ae9b9e4774b2f6dcd2a19465f571c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\buy\\page.tsx": {
+    "mtime": 1776870240.842883,
+    "hash": "898b6fb3ade65aa7023b451629d3383f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\manage\\manage-course-client.tsx": {
+    "mtime": 1777185153.6437304,
+    "hash": "3703fb66e5a99a0dd95ff82ff6ee30e0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\manage\\page.tsx": {
+    "mtime": 1776870240.9127486,
+    "hash": "478f94b0d7fb6759e09e1e16d457713f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(courses)\\courses\\[slug]\\watch\\[videoId]\\page.tsx": {
+    "mtime": 1776870240.9801002,
+    "hash": "01d0fa314651045326846e1ae11cb222"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\layout.tsx": {
+    "mtime": 1777700784.2602015,
+    "hash": "c66cb68ee67359715bd5e4697114f4af"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\ask\\question\\layout.tsx": {
+    "mtime": 1776871681.9111228,
+    "hash": "8f9172e2523a2c748de39d28c3ef2e77"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\ask\\question\\page.tsx": {
+    "mtime": 1777176132.1446123,
+    "hash": "7d6ae42b96a6ef35f0453695d3dc43cc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\calls\\[callId]\\page.tsx": {
+    "mtime": 1777220240.7737,
+    "hash": "4f291d306c90d6d5224548fe6ae41176"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\channel\\[id]\\page.tsx": {
+    "mtime": 1775579507.0371044,
+    "hash": "750c0c96262b711ded7d16f581139c4d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\leaderboard\\page.tsx": {
+    "mtime": 1776871681.1793869,
+    "hash": "8da57ff18243eb60988c45ba5a623886"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\leaderboard\\[username]\\page.tsx": {
+    "mtime": 1777608123.8387964,
+    "hash": "6d7e69aeb491c9ed4bbc5586660eb2d7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\message\\page.tsx": {
+    "mtime": 1776871680.7928524,
+    "hash": "1018f984454d2773b891815bb31101e2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\question\\[id]\\page.tsx": {
+    "mtime": 1775786035.3376915,
+    "hash": "a301de0ee2d2adf2aa1f7f45d4fe236e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\search\\results\\page.tsx": {
+    "mtime": 1776277415.854463,
+    "hash": "32adc02b961019edd4b601ac6677cf58"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\settings\\page.tsx": {
+    "mtime": 1777006504.8506362,
+    "hash": "dd695875b3ee37d8317d4d9bec2a38f1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\settings\\calls\\page.tsx": {
+    "mtime": 1777006504.9712846,
+    "hash": "36256a7836e8b28cc846af40f58b19f2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\settings\\profile\\page.tsx": {
+    "mtime": 1777006505.0518637,
+    "hash": "341e29db411cbcc1cd45e2bb5edf0b01"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\subscription\\page.tsx": {
+    "mtime": 1778079475.807424,
+    "hash": "7658b8971426abbb21ee8c47aab62077"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\subscription\\subscription-client.tsx": {
+    "mtime": 1778087674.462517,
+    "hash": "425c385532670f5562599c0bb3d7116d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\upload-course\\page.tsx": {
+    "mtime": 1776871713.3495176,
+    "hash": "a5c2888cc684a4634a318ce3f8e81888"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\wallet\\page.tsx": {
+    "mtime": 1776871680.713301,
+    "hash": "b9c7ef9f6fa373b076775cd36893a14c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\(workspace)\\wallet\\wallet-client.tsx": {
+    "mtime": 1777610907.9061139,
+    "hash": "5715fe97d156857327d8e383d8ca3e7b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\admins\\route.ts": {
+    "mtime": 1776272847.6015265,
+    "hash": "a8e28739439167d2cc662563a51b5e53"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\admins\\password\\route.ts": {
+    "mtime": 1776272859.7014842,
+    "hash": "c9391740613c5c718436d37490cccb2b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\admins\\[id]\\route.ts": {
+    "mtime": 1776272833.4834187,
+    "hash": "50540f15812e7a589ba8ac444cbd831e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\ai-keys\\route.ts": {
+    "mtime": 1776273228.500244,
+    "hash": "098c9a7031ddc21fc7229c23cd0b00fa"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\ai-keys\\[provider]\\route.ts": {
+    "mtime": 1776273212.3985431,
+    "hash": "6db9017aa325b7981fa15fac8a0a91b1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\ai-keys\\[provider]\\[keyIndex]\\route.ts": {
+    "mtime": 1776273199.4169173,
+    "hash": "308958196f8b4d3cdae348d70f0986e7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\ai-keys\\[provider]\\[keyIndex]\\reset\\route.ts": {
+    "mtime": 1776273185.899121,
+    "hash": "f7bb7f3509b616eaed00574ab5f49f19"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\config\\route.ts": {
+    "mtime": 1777700296.3327806,
+    "hash": "712a9680771b17ca819d5d93a881b09e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\config\\manual-payment\\route.ts": {
+    "mtime": 1775875386.976462,
+    "hash": "c30465e966714849be57d2be98216f92"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\counts\\route.ts": {
+    "mtime": 1776960430.8045352,
+    "hash": "0a6adbf93cf8cab0b089b385d0df8f9a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\developer\\route.ts": {
+    "mtime": 1776919119.441023,
+    "hash": "5a19d7199d7bcdb718b2b0e8aae3f119"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\developer\\send-alert\\route.ts": {
+    "mtime": 1776919200.137663,
+    "hash": "d039ab32431cbfd1c0bb17cacfbdc88b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\developer\\test-alert\\route.ts": {
+    "mtime": 1776921794.4327545,
+    "hash": "dbd4dcdc0be45a3f0eaa0521fb0d7fc5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\errors\\log\\route.ts": {
+    "mtime": 1776919225.1819103,
+    "hash": "adee35e47b002d63af2267694e0d61ae"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\notices\\route.ts": {
+    "mtime": 1776858722.2160277,
+    "hash": "daf71dba5dff9f46e1fde8b762a7a0b2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\notices\\[id]\\route.ts": {
+    "mtime": 1776422617.1001284,
+    "hash": "f19c9c506edb53dba87fecab4580119e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\notices\\[id]\\seen\\route.ts": {
+    "mtime": 1776858180.0749748,
+    "hash": "755483d8bd55371785ed583e588579d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\notifications\\route.ts": {
+    "mtime": 1776960430.8796809,
+    "hash": "78c8249dc9cb344bc24c708652d33825"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\notifications\\read\\route.ts": {
+    "mtime": 1776960431.014158,
+    "hash": "6dbaa3ecd48877db642bf4a93ee040f7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\onboarding-videos\\route.ts": {
+    "mtime": 1776957701.9995127,
+    "hash": "8a521ca212368b79a6ca1c033f65b0d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\quiz-topics\\route.ts": {
+    "mtime": 1775910053.4309604,
+    "hash": "92ccdf1841c07580ffea8da7944095f6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\quiz-topics\\seed\\route.ts": {
+    "mtime": 1775910022.955585,
+    "hash": "45825eb742d972afa42bd1ead83379f7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\quiz-topics\\[id]\\route.ts": {
+    "mtime": 1775906839.4821596,
+    "hash": "c35d1e4072906d3d961187542bd25ba3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\quiz-topics\\[id]\\seed\\route.ts": {
+    "mtime": 1775910035.3937798,
+    "hash": "cddeae505743b4ffa5d516da3b5d2308"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\security\\route.ts": {
+    "mtime": 1777702954.0869098,
+    "hash": "3e0821ced93e78177d62b48eb1d20702"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\services\\route.ts": {
+    "mtime": 1776921951.4683933,
+    "hash": "a035dba89bb52473195a20e5111a82d7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\transactions\\route.ts": {
+    "mtime": 1777610415.9165947,
+    "hash": "d2d06bbf480ca578bd259e1b3a1fdf19"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\transactions\\[id]\\approve\\route.ts": {
+    "mtime": 1777005497.8093328,
+    "hash": "614a786f569deeb163eb99733541f463"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\transactions\\[id]\\refund\\route.ts": {
+    "mtime": 1777005497.9184835,
+    "hash": "9db23f7499bda373e3299fba23ae5c15"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\users\\route.ts": {
+    "mtime": 1776217220.3860207,
+    "hash": "f836e63bdf11e6a70032f2bba0ca7206"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\users\\[id]\\suspend\\route.ts": {
+    "mtime": 1775791966.6730397,
+    "hash": "eca68bb618f1a2a71255dce20fb5f0fc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\withdrawals\\route.ts": {
+    "mtime": 1777611309.0453978,
+    "hash": "d2b9deb9246678aa9dcd0fb52f942ba1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\withdrawals\\[id]\\complete\\route.ts": {
+    "mtime": 1777005498.2716694,
+    "hash": "19b17ab9b8b6760734080398a596291a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\admin\\withdrawals\\[id]\\reject\\route.ts": {
+    "mtime": 1777005498.3748114,
+    "hash": "20fb27622b59096c28153e7a4caed5c9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\answers\\route.ts": {
+    "mtime": 1777005464.6525958,
+    "hash": "43b6b065f92cf96e6841a652e2f842aa"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\forgot-password\\reset\\route.ts": {
+    "mtime": 1778121024.0285077,
+    "hash": "aff80fe6798cbb82e8a714ba817f73bc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\forgot-password\\send\\route.ts": {
+    "mtime": 1778120999.4065917,
+    "hash": "8385f089ca605031451c04dcbcfbab32"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\forgot-password\\verify\\route.ts": {
+    "mtime": 1778121012.2859318,
+    "hash": "dfdee8442c423043cf3333c0103dfc58"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\register\\route.ts": {
+    "mtime": 1778094033.665252,
+    "hash": "11d343c5da1fd3ad6b0882dbb85236b4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\verify-email\\confirm\\route.ts": {
+    "mtime": 1778120991.464603,
+    "hash": "5ca05c06576135276990b88dbbce5e8b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\verify-email\\send\\route.ts": {
+    "mtime": 1778121086.8075593,
+    "hash": "28b0fd9b10accef3195e795c2927b387"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\auth\\[...nextauth]\\route.ts": {
+    "mtime": 1775477588.7520435,
+    "hash": "d91bec4fa8fde98dbca2cb8877c384d4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\create\\route.ts": {
+    "mtime": 1778070226.9356751,
+    "hash": "cc6f9754b7be1f1b49c909851445a912"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\[id]\\accept\\route.ts": {
+    "mtime": 1778070227.0095048,
+    "hash": "49c7a373d8125a51023c6bd0bf5c0dd4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\[id]\\cancel\\route.ts": {
+    "mtime": 1778070227.1619728,
+    "hash": "49f755cad7ed61a2bf83b0c975e7d297"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\[id]\\end\\route.ts": {
+    "mtime": 1778070227.237882,
+    "hash": "ad45d33364271cdf5a4cf4adfb265074"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\[id]\\missed\\route.ts": {
+    "mtime": 1778070227.3103504,
+    "hash": "67751bef47bf7f86fa8450bd626f3898"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\[id]\\reject\\route.ts": {
+    "mtime": 1778070227.084337,
+    "hash": "cf726b818bc454a7da87f306bb59c0d5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\calls\\[id]\\token\\route.ts": {
+    "mtime": 1778070227.3855286,
+    "hash": "cb3899f924f7163c136b5234d072689c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\route.ts": {
+    "mtime": 1777981853.026827,
+    "hash": "7d4e35fa523dbfdd2426cd711b281cfd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\route.ts": {
+    "mtime": 1776999427.0198877,
+    "hash": "42425b0d4cf9cf9cc57e4240e81de3d8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\close\\route.ts": {
+    "mtime": 1777700250.6959908,
+    "hash": "bdaecacafea458026e9b9c0e46f22434"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\extend\\route.ts": {
+    "mtime": 1776999468.1063063,
+    "hash": "c9f77e7c74bb9121e57e9b537a2bf2ec"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\mark-answer\\route.ts": {
+    "mtime": 1775961606.1012342,
+    "hash": "36ba56110b610a4ff2f232a4263b3f7e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\messages\\route.ts": {
+    "mtime": 1776999440.4513228,
+    "hash": "f34e3ebb3aff034912c1b80c76c2671e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\messages\\[messageId]\\route.ts": {
+    "mtime": 1776910388.793097,
+    "hash": "022734b2b034ec5b47608fa6433ffbe0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\messages\\[messageId]\\mark-answer\\route.ts": {
+    "mtime": 1775961606.099234,
+    "hash": "8b762293e2fe69738c1c6bef1de3e714"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\channels\\[id]\\read\\route.ts": {
+    "mtime": 1775621024.8140101,
+    "hash": "502081776f3968241533a2ccddf6c355"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\route.ts": {
+    "mtime": 1778155407.7757783,
+    "hash": "660eb4be43a3e4e8337e60093571afdb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\coupons\\route.ts": {
+    "mtime": 1777185904.8295653,
+    "hash": "334c6ce40d99d79c21b280e06729a571"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\coupons\\validate\\route.ts": {
+    "mtime": 1776998514.801603,
+    "hash": "87ce570c544ce882d1c4fce66fc6084a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\coupons\\[id]\\route.ts": {
+    "mtime": 1777185088.5011058,
+    "hash": "e2c74617d946df7df8eee456b1a820cc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\coupons\\[id]\\redemptions\\route.ts": {
+    "mtime": 1777189147.9072993,
+    "hash": "8889fad8c7357e78ff2690b915f177a2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\route.ts": {
+    "mtime": 1778155407.8680823,
+    "hash": "f10196bf6b5b654cf57d466930a30848"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\enroll\\route.ts": {
+    "mtime": 1777186022.9955223,
+    "hash": "74fb166ac062b82796a6ef57b4243b94"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\enrollments\\route.ts": {
+    "mtime": 1776957530.7688847,
+    "hash": "b694356c9864846f197cfb46c268ad43"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\live-sessions\\route.ts": {
+    "mtime": 1776057995.97381,
+    "hash": "310e7fd86b7e3f931a56ba79291b008d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\live-sessions\\[sessionId]\\route.ts": {
+    "mtime": 1776008539.9212103,
+    "hash": "ee170b5ccdc81fcec71e407152cd09c0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\live-sessions\\[sessionId]\\notify\\route.ts": {
+    "mtime": 1776139631.3939328,
+    "hash": "0576f35c359f216738624009452a3987"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\live-sessions\\[sessionId]\\recording\\route.ts": {
+    "mtime": 1776083195.5127566,
+    "hash": "e05f08dbc86ab87f3d81bcb9bccced62"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\progress\\route.ts": {
+    "mtime": 1776007187.794583,
+    "hash": "653d99e713cf903ed9a6a10af384aacc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\purchase\\initiate\\route.ts": {
+    "mtime": 1777186947.845866,
+    "hash": "28d7de04a622eb137dd158835c95a8db"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\sections\\route.ts": {
+    "mtime": 1776006894.4810503,
+    "hash": "209f00965acfb3f0323254ab16cbe838"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\sections\\[sectionId]\\route.ts": {
+    "mtime": 1776006894.483059,
+    "hash": "a2c29b97f577235c209167cfab944018"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\sections\\[sectionId]\\reorder\\route.ts": {
+    "mtime": 1776007040.8595085,
+    "hash": "406a7964c23c117b01d349e30a4c49d0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\videos\\route.ts": {
+    "mtime": 1776089400.8588758,
+    "hash": "5b8189c5459160386fdec27882342b07"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\videos\\sign\\route.ts": {
+    "mtime": 1776084537.9748614,
+    "hash": "9d8844e4525cf54bb7e61c58228e9fc3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\videos\\[videoId]\\route.ts": {
+    "mtime": 1776088732.5064328,
+    "hash": "100f77ebe27f9f07f2e1c0cdcdcda1cb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\videos\\[videoId]\\progress\\route.ts": {
+    "mtime": 1776137767.1304555,
+    "hash": "c5d43b9421f6cebe83ea5bcfc746b927"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\courses\\[id]\\videos\\[videoId]\\status\\route.ts": {
+    "mtime": 1776394891.0615222,
+    "hash": "db8ed0ef2c6154717df07cd5556833f0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\cron\\expire-calls\\route.ts": {
+    "mtime": 1776910298.047761,
+    "hash": "011f4bd3f59119709014e9a39706e9af"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\cron\\expire-channels\\route.ts": {
+    "mtime": 1777176578.082425,
+    "hash": "07f2018d757de1e05fe64d1fcec0d115"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\cron\\monthly-rewards\\route.ts": {
+    "mtime": 1777005498.1367762,
+    "hash": "43d143b2945f2ba88af1a6824e930940"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\filters\\options\\route.ts": {
+    "mtime": 1776417856.3530078,
+    "hash": "0f97633e15b9043e3fcd0e8a2da8dfa3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\legal\\route.ts": {
+    "mtime": 1775878167.667553,
+    "hash": "859c82ce8baadb5a76e1f9e038206a78"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\mobile\\login\\route.ts": {
+    "mtime": 1778091980.981366,
+    "hash": "2501326189493ba94abf948def01a8cb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\mobile\\me\\route.ts": {
+    "mtime": 1778133894.204831,
+    "hash": "aaa69c070cbd261a212372cb5dcc53ff"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\mobile\\refresh\\route.ts": {
+    "mtime": 1777981851.2308357,
+    "hash": "e9191594ca4f335dc7352d6f4d37c33e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\mobile\\register\\route.ts": {
+    "mtime": 1778134600.3670323,
+    "hash": "4a0b16e40152465add56b47abd01e0e8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\notices\\route.ts": {
+    "mtime": 1778133894.0544257,
+    "hash": "787c552b20fbae84491a18fc0406856c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\notices\\[id]\\dismiss\\route.ts": {
+    "mtime": 1778133894.1301818,
+    "hash": "59f7807f1b22285ad44efd0a124e4210"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\notifications\\route.ts": {
+    "mtime": 1777005370.659875,
+    "hash": "2f8452eb44f2387bebfaa52d6b076eec"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\notifications\\[id]\\route.ts": {
+    "mtime": 1775626163.0941994,
+    "hash": "ff02e46bc4700519b862e00b915b6c3c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\onboarding-video\\route.ts": {
+    "mtime": 1778133893.9022367,
+    "hash": "dbaa418e795dde361167b9757c7280ec"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\onboarding-video\\dismiss\\route.ts": {
+    "mtime": 1778133893.977862,
+    "hash": "f3cd35a027bf4dc10ac9c0fbf58b74a2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\payments\\esewa\\course-verify\\route.ts": {
+    "mtime": 1776008186.353153,
+    "hash": "624e132be718eeb011a9484ea252e173"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\payments\\esewa\\initiate\\route.ts": {
+    "mtime": 1776861339.0291908,
+    "hash": "87a672ec7ea473490906245f801d6b59"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\payments\\esewa\\verify\\route.ts": {
+    "mtime": 1777182611.300704,
+    "hash": "6c44afec4c204bb6bdb5863007c0b943"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\payments\\khalti\\course-verify\\route.ts": {
+    "mtime": 1776007498.7631564,
+    "hash": "ae1e54087d2e2620502499b4331b90eb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\payments\\manual\\route.ts": {
+    "mtime": 1777182591.189192,
+    "hash": "acd1f994e64ee4195ce81c1573c96e22"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\platform\\config\\route.ts": {
+    "mtime": 1775711907.943701,
+    "hash": "fd3d4bb872bcde0e0f484b53515fe22b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\profile-questions\\route.ts": {
+    "mtime": 1777388356.660993,
+    "hash": "4fea20b00e83222f30f292ae63607ef2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\push\\public-key\\route.ts": {
+    "mtime": 1777005369.9610417,
+    "hash": "ee86a492a28f4f0ebcd675f92e85f5f7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\push\\status\\route.ts": {
+    "mtime": 1777025913.5071373,
+    "hash": "c3b26c392b26ff8fbf29906c87d61c8b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\push\\subscribe\\route.ts": {
+    "mtime": 1777987974.818921,
+    "hash": "64c0931d98242089d9ce4472e947b71c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\push\\unsubscribe\\route.ts": {
+    "mtime": 1777981851.265421,
+    "hash": "b327e9143e6a650744eec7021f1cc12e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\questions\\route.ts": {
+    "mtime": 1778152719.4860291,
+    "hash": "0501ec9821cd2a2fb5012de9921062e7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\questions\\feed\\route.ts": {
+    "mtime": 1775838742.642025,
+    "hash": "a6d356d2486667afea792fc0cde5104e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\questions\\[id]\\route.ts": {
+    "mtime": 1777608816.6223187,
+    "hash": "625ea35f15c644ebf7381181d32fb22a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\questions\\[id]\\accept\\route.ts": {
+    "mtime": 1778137548.0643287,
+    "hash": "4091b7302f367b0ded97a3e312b4926c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\questions\\[id]\\comments\\route.ts": {
+    "mtime": 1778137588.2054157,
+    "hash": "436e9ce333b39b6948e475d042053ab5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\questions\\[id]\\react\\route.ts": {
+    "mtime": 1778137491.7665553,
+    "hash": "75270fac3bf02d711d1c4a82ee6d831d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\history\\route.ts": {
+    "mtime": 1775880434.152593,
+    "hash": "391f026dad9e565213ead2e02429a7f4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\start\\route.ts": {
+    "mtime": 1776956443.5033784,
+    "hash": "21e415bb7e7ed40cda6666f7a64b8da1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\topics\\route.ts": {
+    "mtime": 1775906865.10246,
+    "hash": "ba385b7fa2a51583f9a54550984791f4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\[sessionId]\\route.ts": {
+    "mtime": 1775880506.7095585,
+    "hash": "74b8c86bb76e3ceefb591395df5f5aeb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\[sessionId]\\auto-submit\\route.ts": {
+    "mtime": 1775880590.641229,
+    "hash": "154e91ffc45cca672ef421a33b8147cd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\[sessionId]\\progress\\route.ts": {
+    "mtime": 1775881895.7183294,
+    "hash": "5f56970fc6a7ca6f84fabcffb070b619"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\quiz\\[sessionId]\\submit\\route.ts": {
+    "mtime": 1775880569.734558,
+    "hash": "06e718bed4997ce212a6bbf216094d7a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\referral\\invite\\route.ts": {
+    "mtime": 1777005747.376744,
+    "hash": "552072362474237f8331a53ba0bd1a66"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\search\\route.ts": {
+    "mtime": 1776161566.3220563,
+    "hash": "ac033844ddf4c2fc1906120826c5ac1c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\teachers\\top-rated\\route.ts": {
+    "mtime": 1775965364.174167,
+    "hash": "e8182c5c8cfa631535ba49d98802d0a9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\upload\\route.ts": {
+    "mtime": 1778166245.7816713,
+    "hash": "f0a6efefe1c02e7d8c6185c95b15a80c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\user\\referral\\route.ts": {
+    "mtime": 1776189247.200205,
+    "hash": "f0f9dbecfa9ed597e8d4078f1cfb3db5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\user\\subscription\\route.ts": {
+    "mtime": 1776955389.901995,
+    "hash": "05c9021f84e94cb3e56b2d6ec10cb166"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\users\\activity\\route.ts": {
+    "mtime": 1777704993.6277404,
+    "hash": "1090468c5bea8220f7a61ec6a3249be3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\users\\call-settings\\route.ts": {
+    "mtime": 1776911545.3504865,
+    "hash": "53cc2fc00fc02ff130f6c642bef8c518"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\users\\profile\\route.ts": {
+    "mtime": 1778134080.6206524,
+    "hash": "61a93af542e546c61aa420574c01d174"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\wallet\\route.ts": {
+    "mtime": 1777982664.1374953,
+    "hash": "66b28df833ba4ad16f8f1930f2cdd6fc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\api\\wallet\\withdraw\\route.ts": {
+    "mtime": 1777981851.2632356,
+    "hash": "3082c48c7c42da6ac34417cd617b02c1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\legal\\page.tsx": {
+    "mtime": 1776870215.5143125,
+    "hash": "2bcea6afbf0d1400ccf5068d822246a1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\payment\\layout.tsx": {
+    "mtime": 1776870240.3504002,
+    "hash": "b8440dcdeb992055b0f8c8424a888de4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\payment\\esewa\\failure\\page.tsx": {
+    "mtime": 1775709751.2776382,
+    "hash": "c5f59d0e61fe7e5e513f3493b31fc0d8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\payment\\esewa\\success\\page.tsx": {
+    "mtime": 1776007580.3772306,
+    "hash": "fe1487e9287f5df0e648b9d4170b8790"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\privacy\\page.tsx": {
+    "mtime": 1777731469.6140168,
+    "hash": "900fcf9239e531326a5bfee28c5a9c54"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\privacy-policy\\page.tsx": {
+    "mtime": 1777731475.0265164,
+    "hash": "914fa7552ae13d71fa56a7017fa2c810"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\quiz\\layout.tsx": {
+    "mtime": 1776871681.5890644,
+    "hash": "5c1af5bd5b299bbbb6b1c0934909b0a1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\quiz\\page.tsx": {
+    "mtime": 1777607561.5140882,
+    "hash": "2338ade59b0496fe6c51170cc93f71f6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\quiz\\[sessionId]\\page.tsx": {
+    "mtime": 1776871681.7288282,
+    "hash": "84d0c76d3b1d0d1a87ef758640cbe069"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\register\\page.tsx": {
+    "mtime": 1776956324.3468447,
+    "hash": "107009c39fa52cabf9012b08957fe0fc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\register\\[role]\\page.tsx": {
+    "mtime": 1776955102.711385,
+    "hash": "d395e30a27e5fbd3164e7759721b0b70"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\studio\\page.tsx": {
+    "mtime": 1776870240.7071595,
+    "hash": "83e0c731138eae27554a1b4599877e73"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\studio\\studio-client.tsx": {
+    "mtime": 1776139243.83662,
+    "hash": "4964a134977656ee581f780322c8b39b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\subscription\\layout.tsx": {
+    "mtime": 1776870240.4377038,
+    "hash": "f0f78ce81f9fba4102fa54bc8e69fea8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\subscription\\payment\\page.tsx": {
+    "mtime": 1776659647.9685206,
+    "hash": "09f8fba04f3c69bf0b67a4eb8057e1a5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\subscription\\payment\\success\\page.tsx": {
+    "mtime": 1775703278.9260306,
+    "hash": "f826aaf6274fdf0dcc147fb9d50be126"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\[username]\\page.tsx": {
+    "mtime": 1777705234.6973922,
+    "hash": "4f8044da8a8483ae44f3c5d89c35d24e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\admin\\admin-header-client.tsx": {
+    "mtime": 1777170569.686905,
+    "hash": "ec3a330398e55fb5dd3bb3f00d05b352"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\admin\\admin-layout-client.tsx": {
+    "mtime": 1777170870.4987645,
+    "hash": "93997966cf0ddb4842c9cd466c808081"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\admin\\admin-search-client.tsx": {
+    "mtime": 1776831114.8307128,
+    "hash": "a6f31465003ddc7c8fd21065f9b79fe1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\admin\\admin-sidebar-content.tsx": {
+    "mtime": 1778126818.088072,
+    "hash": "d4d4c7cadaa02b77cdab492e91189308"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\admin\\admin-sidebar.tsx": {
+    "mtime": 1777217410.3601463,
+    "hash": "45f98d75635928054997091c7a226035"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\AddContentModal.tsx": {
+    "mtime": 1776394808.8825507,
+    "hash": "dfd59570b3aad62f82e2e5ee28150a47"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\CourseCard.tsx": {
+    "mtime": 1776678166.7415922,
+    "hash": "9bd68e20c2d67ee11d62cbc9551cce57"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\CourseCouponsManager.tsx": {
+    "mtime": 1777189301.1011057,
+    "hash": "af7e00e78cfd9cdd6d379023fafa0933"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\CourseHeader.tsx": {
+    "mtime": 1776955102.8608894,
+    "hash": "f6645c6ec0a6c464a21c939fd5d99f90"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\CourseViewportModal.tsx": {
+    "mtime": 1776059528.3717103,
+    "hash": "967e08bf5139f2c021aacdc5033dc367"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\CreateCourseModal.tsx": {
+    "mtime": 1777184788.1272867,
+    "hash": "21633b47537d98fb71a7891aac8cfe00"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\EnrolledUsersModal.tsx": {
+    "mtime": 1777177446.0105102,
+    "hash": "413a3cb0f9b2b7003f9b7f8e72833aa3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\LiveSessionManager.tsx": {
+    "mtime": 1776009938.8919384,
+    "hash": "bcb3951fe6a73a4a96bd41670ad30584"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\PricingGate.tsx": {
+    "mtime": 1777464218.896499,
+    "hash": "6f481fc4bb363f765eca1ad0215c6356"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\PricingModelForm.tsx": {
+    "mtime": 1776009189.2238255,
+    "hash": "5f55293070ca5870e126caead0d28453"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\ProgressRing.tsx": {
+    "mtime": 1776008998.3348303,
+    "hash": "cb9d389301809f7b17a5b0158ded0866"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\SectionAccordion.tsx": {
+    "mtime": 1776009066.8343294,
+    "hash": "c586f087fd6842d14b3a900fe37749c1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\course\\VideoPlayer.tsx": {
+    "mtime": 1776088669.2471373,
+    "hash": "24b27cec4f1f370994ab6e64e4f0c73f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\payment\\esewa-pay-button.tsx": {
+    "mtime": 1775709768.2942564,
+    "hash": "fb9c4e533329ee6547e760239ba65aef"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\payment\\transaction-modal.tsx": {
+    "mtime": 1775995693.9472804,
+    "hash": "9d7d82401cf4495ae5a3100b2f0e255a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\providers\\pwa-install-prompt.tsx": {
+    "mtime": 1777007240.160802,
+    "hash": "e34eb9f147c784daacbae928bc4a3e73"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\providers\\pwa-provider.tsx": {
+    "mtime": 1777007082.548275,
+    "hash": "7bfe00ed5ed6cf4bfdf82827d4bd060c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\providers\\store-provider.tsx": {
+    "mtime": 1776095650.8075643,
+    "hash": "6a17aaf70d0b596e6c04cc720935b933"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\providers\\theme-provider.tsx": {
+    "mtime": 1775489324.349498,
+    "hash": "c00fa9d4a460ac4f9c808ad29d573581"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\quiz\\quiz-hub-client.tsx": {
+    "mtime": 1777607544.6180525,
+    "hash": "d4247081e74dd105db5791e673abbf96"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\quiz\\quiz-player-client.tsx": {
+    "mtime": 1777607546.8586524,
+    "hash": "5f92150c73465696ea3218d8a366134e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\quiz\\quiz-results-view.tsx": {
+    "mtime": 1777607548.8699107,
+    "hash": "e406d112d9afaba8294f33db10484985"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\activity-graph.tsx": {
+    "mtime": 1777705220.7031333,
+    "hash": "80664593f6cd7b1a159d33db3c1a1579"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\activity-heatmap.tsx": {
+    "mtime": 1777703296.005015,
+    "hash": "cd01885c6737be013f7fdbbb57be5f66"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\activity-overview.tsx": {
+    "mtime": 1777705043.311646,
+    "hash": "696f81b015ca9d376f6726b0e6c26cc1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\auth-form.tsx": {
+    "mtime": 1777729597.0291302,
+    "hash": "ec5b95cea2aa3b08c913657f444da39a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\auth-shell.tsx": {
+    "mtime": 1775878711.23977,
+    "hash": "cf851e36b3ee118aaaf27bf536cffa88"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\authenticated-header.tsx": {
+    "mtime": 1777031527.2232625,
+    "hash": "d4de3f18975d36b926a2c3a74bd2c64d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\auto-signout.tsx": {
+    "mtime": 1775877037.3105555,
+    "hash": "c08b32afcb20d2def8adb7fd76d48c57"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\call-settings-form.tsx": {
+    "mtime": 1777006505.1295185,
+    "hash": "73150a1ce7e1c3b635e82d4d582a4a1c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\channel-chat.tsx": {
+    "mtime": 1777698787.2243423,
+    "hash": "6f42d1b04a95de5492a13c3cfd16e208"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\chat-layout.tsx": {
+    "mtime": 1776677971.3807933,
+    "hash": "373632fa1cd4ed3f70f729d40866af67"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\chat-message-area.tsx": {
+    "mtime": 1776167943.0555663,
+    "hash": "5b21ebe4c1780f14de37c9be4f189247"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\custom-audio-player.tsx": {
+    "mtime": 1777697761.6785798,
+    "hash": "e963e4e49f6893bcf560711f583d17e6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\global-notice-modal.tsx": {
+    "mtime": 1776775115.8432624,
+    "hash": "2dd790c50772f4e10fc917efc9d03f01"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\global-upload-progress.tsx": {
+    "mtime": 1776678280.106413,
+    "hash": "926c81a53e39d7c83f336225bd5b70d9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\guest-header.tsx": {
+    "mtime": 1777020881.8673003,
+    "hash": "468361b8311ac9552c449ccfb24a958a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\incoming-call-overlay.tsx": {
+    "mtime": 1776999559.982792,
+    "hash": "96b7c3002d2e8bdf7231aea8e86f9746"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\invite-friends-dialog.tsx": {
+    "mtime": 1776956324.6497507,
+    "hash": "2eba2654b343231ccf7620c664f654b8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\legal-content.tsx": {
+    "mtime": 1777902269.6816912,
+    "hash": "41a541497ce064178de5fb22f1c2ea8a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\legal-dialog.tsx": {
+    "mtime": 1775878733.6718132,
+    "hash": "1d44c767d7a6990a35f3edadfcb4d2c8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\logo.tsx": {
+    "mtime": 1776831114.6575575,
+    "hash": "52af691f13b60951d3e3a8523b36970a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\nav-user.tsx": {
+    "mtime": 1777000476.2065303,
+    "hash": "1a3d5d91df12ca90745dfe6d0ec400eb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\notification-bell.tsx": {
+    "mtime": 1777220173.1506126,
+    "hash": "928816eaad9d891aea16ec7a2f64d924"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\onboarding-video-modal.tsx": {
+    "mtime": 1776957773.9198415,
+    "hash": "b2d6b42ad8cc8164071b01db73df323a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\outgoing-call-overlay.tsx": {
+    "mtime": 1776999560.0647786,
+    "hash": "1e13837a5eee433ad2cfc05f44d9d3a7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\page-loading-bar.tsx": {
+    "mtime": 1776395327.6294029,
+    "hash": "698e0db9bb5380b2a2cab800817370c4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\post-question-modal.tsx": {
+    "mtime": 1777029334.2692146,
+    "hash": "2b5da07c4c55b2d935a54d62b2138a0f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\profile-form.tsx": {
+    "mtime": 1777006505.200488,
+    "hash": "7e33f3fbd2c37571dae3dc94d9bce755"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\profile-questions-tab.tsx": {
+    "mtime": 1777389444.0938418,
+    "hash": "dcb6402010460e045b3af23dc7a606e6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\public-landing.tsx": {
+    "mtime": 1778070751.3780527,
+    "hash": "8a12bdd773d19c5b0e0b11f6507198a0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\sign-out-button.tsx": {
+    "mtime": 1775523849.45875,
+    "hash": "b605beee070d0c7a998053755dc0f7b1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\social-handles-hover.tsx": {
+    "mtime": 1777697397.8411808,
+    "hash": "8174a9df20a6d6f73e182f92fc141a6c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\theme-toggle.tsx": {
+    "mtime": 1775491624.5514426,
+    "hash": "44d84ce6d9d8fd73a42ddbe7040b7cb9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\upload-progress-bar.tsx": {
+    "mtime": 1775995385.2497265,
+    "hash": "6ea26def92f59d36a2f06e89da26f3ae"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\workspace-filter-context.tsx": {
+    "mtime": 1776773317.3556073,
+    "hash": "a9718ca1f1fc87f1c3a1d97a295a9f78"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\workspace-home.tsx": {
+    "mtime": 1777696636.9537337,
+    "hash": "6fb27b641cccac3f9aa158b88c5b76ca"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\shared\\workspace-shell.tsx": {
+    "mtime": 1777702460.625069,
+    "hash": "cac63142149c523cc1bd05da49bcd02f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\student\\student-dashboard-overview.tsx": {
+    "mtime": 1777607526.285893,
+    "hash": "9298d7662ecff99c9cf4217fa2b88729"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\teacher\\teacher-dashboard-overview.tsx": {
+    "mtime": 1775643141.7802942,
+    "hash": "053b605b42cad4eb8bbbecb60bcc607c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\accordion.tsx": {
+    "mtime": 1777518931.2963855,
+    "hash": "fe2a52d06700de4615ed133ff31e98f1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\alert-dialog.tsx": {
+    "mtime": 1775796666.1301708,
+    "hash": "3998aec9d30efc5ef9ae14b154c89d32"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\avatar.tsx": {
+    "mtime": 1775490133.8391635,
+    "hash": "b4756de2daa503790fba2d10209fcc70"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\badge.tsx": {
+    "mtime": 1775834872.350111,
+    "hash": "86c855c4052a7013e8b00bd7d72180a4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\button.tsx": {
+    "mtime": 1775487044.617849,
+    "hash": "bf7285a1243e1e6b7c21b0b3dee320f4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\card.tsx": {
+    "mtime": 1775487105.2328608,
+    "hash": "dffccca568fcf22cec0bfc1c2dcb477d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\checkbox.tsx": {
+    "mtime": 1775795832.133181,
+    "hash": "5ce6b0793a9f8eb096beddf3829faa08"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\dialog.tsx": {
+    "mtime": 1775564537.8029418,
+    "hash": "bee2a207a85d8768ed5952a70f61325a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\dropdown-menu.tsx": {
+    "mtime": 1775490133.3296158,
+    "hash": "6b9ae138263fedf91e36153d85966b2f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\hover-card.tsx": {
+    "mtime": 1776773234.9716823,
+    "hash": "23b3a7d257364062120afe7af10efc15"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\input-group.tsx": {
+    "mtime": 1775487353.7005677,
+    "hash": "eef11ad2edb1525ee7069194c241e3f7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\input.tsx": {
+    "mtime": 1775487351.026796,
+    "hash": "9e9f7d7ac227ff720cc27dc40b37b8da"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\label.tsx": {
+    "mtime": 1775487351.2580779,
+    "hash": "62f0c7d7d68bebec19272be9ce2acdcb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\menubar.tsx": {
+    "mtime": 1775487351.9123137,
+    "hash": "9bad1a978c88885f74525a4e48bee6e8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\navigation-menu.tsx": {
+    "mtime": 1775487351.5014112,
+    "hash": "6d0f383c41f6771a9250295ff53f183a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\progress.tsx": {
+    "mtime": 1775487352.104143,
+    "hash": "2960b4b370a509aa2e20a8a214c5ee5b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\scroll-area.tsx": {
+    "mtime": 1775566704.1177285,
+    "hash": "5a04c269a377e8176ebbf27ee8ac35bf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\select.tsx": {
+    "mtime": 1776911838.910656,
+    "hash": "ed1089af6514b43237f75462fcbc590d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\separator.tsx": {
+    "mtime": 1775487352.2998023,
+    "hash": "f57449eae78fbd87d99e4edc45ab3c1e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\sheet.tsx": {
+    "mtime": 1775487353.416299,
+    "hash": "9347f034470b1b379cdde1010ee63d4f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\sidebar.tsx": {
+    "mtime": 1776958340.8069043,
+    "hash": "923c159505a9d98f2879cf38ebe216bd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\skeleton.tsx": {
+    "mtime": 1775487352.5116606,
+    "hash": "0e6e825c43d858d98c9903f4da975382"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\sonner.tsx": {
+    "mtime": 1775532902.1955473,
+    "hash": "f46214bc2a6a5153a6e04fad523d5587"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\textarea.tsx": {
+    "mtime": 1775487352.8298924,
+    "hash": "e6f772739bfc19a3a25b4bfa6c226d0d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\components\\ui\\tooltip.tsx": {
+    "mtime": 1775487353.0093606,
+    "hash": "b0b931c1a15ec3924fa5fecebaa15685"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\emails\\ForgotPasswordEmail.tsx": {
+    "mtime": 1777286804.1981266,
+    "hash": "f9be8e41d6ead04f9d58e51c4b7413e4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\emails\\GreetingEmail.tsx": {
+    "mtime": 1777176194.0261068,
+    "hash": "3025203405325b348e13a38d4d463c0a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\emails\\LiveSessionInviteEmail.tsx": {
+    "mtime": 1776659647.9535139,
+    "hash": "b15bf3eaa321f68bbcefde30df44e31f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\emails\\ReferralInviteEmail.tsx": {
+    "mtime": 1776659647.9512963,
+    "hash": "aba4f96bdaf443cd27d593ef9d72d3a0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\emails\\TransactionAlertEmail.tsx": {
+    "mtime": 1777176202.1285317,
+    "hash": "5b44b92ca60ea9e20c0118186c3e68ba"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\emails\\VerificationEmail.tsx": {
+    "mtime": 1777176200.1143227,
+    "hash": "bec50d42401263a02b707bb196603ebd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\helper\\apiError.ts": {
+    "mtime": 1775485489.3571403,
+    "hash": "31f210bfc06dd2e5f3848b425452dc5f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\helper\\sendApiError.ts": {
+    "mtime": 1775485496.1120334,
+    "hash": "33eea6cc8eab6880e3ed103f4d7afb18"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\helper\\sendApiRespone.ts": {
+    "mtime": 1775485507.0179963,
+    "hash": "6929fefc7e094d4d79916435dd08639f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\helper\\withApiHandler.ts": {
+    "mtime": 1775485515.8872418,
+    "hash": "639233441efb9a15203ea2314a9e9bd2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\hooks\\use-mobile.ts": {
+    "mtime": 1775487353.1942377,
+    "hash": "209b5193af16624cdd89d3591480dd48"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\admin-notifications.ts": {
+    "mtime": 1776960337.5400805,
+    "hash": "d71f243cb3750c985c20e91fac261ff8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\admin-portal.ts": {
+    "mtime": 1778126797.8511448,
+    "hash": "a68fca57db55369d6ac9a61a8f354070"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\anti-cheat.ts": {
+    "mtime": 1777702872.5995295,
+    "hash": "c4a6961cbb43d01a09b99372b7a8ec6f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\auth.ts": {
+    "mtime": 1777905316.467786,
+    "hash": "738451c51ce9097ce7c2a6cac97653cd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\axios.ts": {
+    "mtime": 1776861338.7833283,
+    "hash": "538e02dbc16d4e41ce32f2fc063a1184"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\call-expiration.ts": {
+    "mtime": 1776910057.694622,
+    "hash": "9ab609ae347625053936cdfc1d39d890"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\call-logging.ts": {
+    "mtime": 1776910016.3093903,
+    "hash": "426669dcef492780728b8031249259da"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\call-policies.ts": {
+    "mtime": 1776910090.150536,
+    "hash": "5732018b511a278266fbadf01a9a3415"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\call-settings.ts": {
+    "mtime": 1776917880.41893,
+    "hash": "f4901d566834f7f00848ebb55524f68b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\call-tone-player.ts": {
+    "mtime": 1776916903.7359078,
+    "hash": "adf96e902c8bab5e399bc52d5cf198c2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\call-utils.ts": {
+    "mtime": 1776910003.3625731,
+    "hash": "43ba17128b23494b76a4144562921d17"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\channel-answer-marking.ts": {
+    "mtime": 1775961606.0982337,
+    "hash": "13b39d07e3e5e46b8eeb3161c5c5d7ac"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\channel-deadline-warning.ts": {
+    "mtime": 1777005464.8434622,
+    "hash": "9703974edb341b73f809c20344ae496a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\channel-expiration.ts": {
+    "mtime": 1777700270.8542018,
+    "hash": "a156ab3e1628a4854a2a4be619745c3b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\channel-timer.ts": {
+    "mtime": 1776999376.6962938,
+    "hash": "c137e0c637482ca8bcc0c618cc175597"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\client-upload.ts": {
+    "mtime": 1776083901.4748235,
+    "hash": "ad5096c2162ed8ba285dd78b865f566a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\config.ts": {
+    "mtime": 1778070310.8534408,
+    "hash": "b4e412b7127baaf4f713e2ec37bf503d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\constants.ts": {
+    "mtime": 1776864497.6414578,
+    "hash": "fc0186b4f8fc49cd459e74b6e020be2f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\course-access.ts": {
+    "mtime": 1776006733.7772932,
+    "hash": "24513372223aa68491378ec4d822c3cf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\course-coupons.ts": {
+    "mtime": 1776006733.778296,
+    "hash": "c2dd712aba49f1d1f18082d069860920"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\course-page-data.ts": {
+    "mtime": 1777188620.708477,
+    "hash": "cb5777d533fb6e268e1cef7176fa6e54"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\course-progress.ts": {
+    "mtime": 1776006733.779296,
+    "hash": "270ef0f120fa6da404766655ff2d00ee"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\course-purchases.ts": {
+    "mtime": 1777186064.5584903,
+    "hash": "23f1f4233445a9e9c3b90f66648c9b2b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\cron-auth.ts": {
+    "mtime": 1776744526.3631659,
+    "hash": "fc8101d18661aa12cffc2fa3a7e28934"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\daily-targets.ts": {
+    "mtime": 1777700208.886187,
+    "hash": "84960f750ec0c9fb27a6548e5fb72938"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\email.ts": {
+    "mtime": 1776878448.050179,
+    "hash": "6dc1157428d0d5f3fe6cf5e1022b49a5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\error-logging.ts": {
+    "mtime": 1776921782.1887858,
+    "hash": "463ca12538fcd7832709f63955dca6b0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\fcm-push.ts": {
+    "mtime": 1777987792.0295813,
+    "hash": "6933880b0915de69afc904a1b9b247d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\firebase-admin.ts": {
+    "mtime": 1777981954.047374,
+    "hash": "c0b7e058843531efd3f638c645769ba1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\incoming-call-queue.ts": {
+    "mtime": 1776910023.940932,
+    "hash": "397d81aba7a65f294bb306776e9b9561"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\legacy-auth-redirect.ts": {
+    "mtime": 1776955102.207726,
+    "hash": "a01d263058dafa614f4d13ab57fe24cb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\llm.ts": {
+    "mtime": 1776091777.1245692,
+    "hash": "b7c8b3f40f8ab1ff63a008680f631e0d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\message-deletion.ts": {
+    "mtime": 1776910345.2060983,
+    "hash": "28531167f0f142b67f115fc20b5d169f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\mobile-auth.ts": {
+    "mtime": 1777981852.57627,
+    "hash": "29a4c3806eddfd2857249366d28b7d48"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\mongodb.ts": {
+    "mtime": 1776430796.8867729,
+    "hash": "d5d3c1fa78c2eccba4129f9541510a07"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\navigation.ts": {
+    "mtime": 1776861338.7042315,
+    "hash": "46e75eba6620a4b539a3384357da4717"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\onboarding-videos.ts": {
+    "mtime": 1776957681.6238456,
+    "hash": "8652b740d36ca9d3a53322e63e957f2d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\plans.ts": {
+    "mtime": 1775711188.885589,
+    "hash": "08ba3ac852c2f4725cf307dfe2e0622f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\points.ts": {
+    "mtime": 1776957241.6312163,
+    "hash": "a7198d0780ec3a36b2bb9af0eca50dab"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\pwa.ts": {
+    "mtime": 1777005369.4894152,
+    "hash": "d03539ec6ed5fecd1bb451a30246ddd0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\question-types.ts": {
+    "mtime": 1776746764.389888,
+    "hash": "983a8444a786a9c13ba2913278940b45"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\quiz-admin-seed.ts": {
+    "mtime": 1775910005.3084092,
+    "hash": "393cbc3abc0783cc0e9a350164243718"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\quiz-generation.ts": {
+    "mtime": 1775906649.5849755,
+    "hash": "4944e0fb65217bf18796ffd0a15d6fe6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\quiz-seed-data.ts": {
+    "mtime": 1775905309.856193,
+    "hash": "04ac5db3ba142833501089b0856a39f9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\quiz-topic-utils.ts": {
+    "mtime": 1775906536.574954,
+    "hash": "eed7bbddae422b47eb4b15c5aad8d4bf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\quiz.ts": {
+    "mtime": 1776956443.4279742,
+    "hash": "7f02f47ac5d41cf8a126d6a2134931e8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\request-rate-limit.ts": {
+    "mtime": 1776910080.1570282,
+    "hash": "6c79d617e78f090723aa467f644721f9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\seo.ts": {
+    "mtime": 1776870172.0390494,
+    "hash": "f206714c73edf263d6aacd7f647e287f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\site-url.ts": {
+    "mtime": 1776868148.9481726,
+    "hash": "da79329eaad6cfa3fc6079e3e06e5cb4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\subscription-state.ts": {
+    "mtime": 1776955432.143783,
+    "hash": "81bbc4d339498f514aaaf8234cb41681"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\unified-auth.ts": {
+    "mtime": 1777984210.7139466,
+    "hash": "a5ee89e3adbb3d74bc98c709ba3e130d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\upload-manager.ts": {
+    "mtime": 1776136235.774501,
+    "hash": "46c9f3a7420b1ec38e25e232f7bd9a66"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\user-directory.ts": {
+    "mtime": 1776675439.7406056,
+    "hash": "0b3df3b51aeb7e814b2a243a7f80159e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\user-paths.ts": {
+    "mtime": 1777286752.4471092,
+    "hash": "1d58bf907201a86ee86e5ae964c359af"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\utils.ts": {
+    "mtime": 1775487044.8804698,
+    "hash": "5a6fd53fdcf2be529e9cc0b718fde352"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\wallet-history.ts": {
+    "mtime": 1776827026.2554543,
+    "hash": "807e2565b5efaccd42052bd6d34abbae"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\api\\auth.ts": {
+    "mtime": 1775486021.0949693,
+    "hash": "83763186a3a50946e1c365528b831f66"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\notifications\\email.ts": {
+    "mtime": 1776008407.1782303,
+    "hash": "66f7b41c9aaedcd3f3a5b82711c616dd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\notifications\\metadata.ts": {
+    "mtime": 1777005369.5356677,
+    "hash": "cfb4323044d724f21358bbdf0a7a50a3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\notifications\\whatsapp.ts": {
+    "mtime": 1776008428.000215,
+    "hash": "fc18b339e9fc959d301f22ad120bb1a5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\payment\\esewa.ts": {
+    "mtime": 1775709693.024913,
+    "hash": "0392607ea9c188896c5c9e68570d156b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\push\\client.ts": {
+    "mtime": 1777005369.65695,
+    "hash": "d6f2f02324ba13c725e43af1dc4dfe36"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\push\\web-push.ts": {
+    "mtime": 1778070265.609907,
+    "hash": "2f9b8f996a9aeba888191580a0fb8f46"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\pusher\\events.ts": {
+    "mtime": 1776999392.2936604,
+    "hash": "d8173a5041f435ab3d5515837a8319d8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\pusher\\pusherClient.ts": {
+    "mtime": 1775620930.3331463,
+    "hash": "3a97a43cec116f757f7f5cd8c1260c8a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\pusher\\pusherServer.ts": {
+    "mtime": 1777433731.442989,
+    "hash": "fc270dde737d1fd1d8b39a692efb54e6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\questions\\sample-feed.ts": {
+    "mtime": 1775839286.3288808,
+    "hash": "e5d808dc7ce92148a03a26e1cd429891"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\resend\\resend.ts": {
+    "mtime": 1755104908.3194158,
+    "hash": "86eb788955a6c041eac7092a942e41cc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendAdminNotificationEmail.ts": {
+    "mtime": 1776878300.582731,
+    "hash": "3627513086c1c9b8326be835d1295aee"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendAlertEmail.ts": {
+    "mtime": 1776919191.3341234,
+    "hash": "350f3016acce5fcb3c271ecff12e78e2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendForgotPasswordEmail.ts": {
+    "mtime": 1777286813.9512463,
+    "hash": "1713cb26eee0fb03a754a28b26cd022e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendGreetingEmail.ts": {
+    "mtime": 1776878300.3615544,
+    "hash": "8708c02286c492deac2d3ae84268cd75"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendLiveSessionInviteEmail.ts": {
+    "mtime": 1776878324.599887,
+    "hash": "bc0716a2e94e7bfb967ec5d1a1eaad47"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendReferralInviteEmail.ts": {
+    "mtime": 1776878300.705869,
+    "hash": "fabe7717a42b44749fbc4963a2bff65d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendTransactionEmail.ts": {
+    "mtime": 1776878300.4817524,
+    "hash": "97b4c4958f1ff10a27b4cdcb3cd62759"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\lib\\sendEmails\\sendVerificationEmail.ts": {
+    "mtime": 1776878300.2418516,
+    "hash": "982567a18adb15b4a361297b11ff43ca"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\AIProviderConfig.ts": {
+    "mtime": 1775834392.8651023,
+    "hash": "9a8e55d288569a2f317fa3f30ed7af47"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Answer.ts": {
+    "mtime": 1776746768.059052,
+    "hash": "a244b70055a8ba1c72ab6dd617e8b3f3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\AntiCheatAlert.ts": {
+    "mtime": 1777702831.9232266,
+    "hash": "a7d660fd2120c2ceeac7602deaf635bc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\ApiRequestLog.ts": {
+    "mtime": 1776910067.260369,
+    "hash": "ffb8eab76ae587d61c3fb055e9950495"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CallSession.ts": {
+    "mtime": 1776909984.169763,
+    "hash": "d33f8d72d82d7243f15d57767a80de16"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Channel.ts": {
+    "mtime": 1776999392.0217316,
+    "hash": "3b692a6d77d018b0eb4618f0eefb9519"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Course.ts": {
+    "mtime": 1776059924.503273,
+    "hash": "f8cb72aa87f9bf2e8b6eab0b170533f4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CourseCoupon.ts": {
+    "mtime": 1777185888.2290359,
+    "hash": "75e055913a8b260c82df044b981a9a3e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CourseCouponRedemption.ts": {
+    "mtime": 1776005820.1521802,
+    "hash": "ca59d82d8058fad278b21ede33ca2731"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CourseEnrollment.ts": {
+    "mtime": 1776005820.1496658,
+    "hash": "40ee911af90d678a1036cddba95fc014"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CourseNotificationLog.ts": {
+    "mtime": 1776005820.1536932,
+    "hash": "294cd8b49bbb922424a96ac3d4c4d46d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CourseSection.ts": {
+    "mtime": 1776005820.1456504,
+    "hash": "78dbbafb0b0f5e7d8292608c78a6d86c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\CourseVideo.ts": {
+    "mtime": 1776088067.906621,
+    "hash": "94f8309a72dfca0e910b3d4b4d55ae38"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\DeveloperConfig.ts": {
+    "mtime": 1776919079.0038497,
+    "hash": "befd3dd005c16d8fed0ca36557c16222"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\ErrorLog.ts": {
+    "mtime": 1776919132.9469023,
+    "hash": "b2e27d474c1398ce275f0ccb38988764"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\LiveSession.ts": {
+    "mtime": 1776088069.9279995,
+    "hash": "7b8abbbaf0da0bec1d7bfb8a9fb444ab"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Message.ts": {
+    "mtime": 1776880770.8405747,
+    "hash": "7518685501d3c54590f53f750801d19e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Notice.ts": {
+    "mtime": 1776858090.4686525,
+    "hash": "1b41c3fa1665bcfe35f72a3b782edd52"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Notification.ts": {
+    "mtime": 1777700217.8013186,
+    "hash": "19a9cd833f5c20e446f605aa048bfbcb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\PeerComment.ts": {
+    "mtime": 1775838664.2748165,
+    "hash": "b442fb7f16a4236ef82640c196034f8b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\PlatformConfig.ts": {
+    "mtime": 1778079423.45963,
+    "hash": "09a6e49ace3b97eb64eca6e98f46b7f5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\PushSubscription.ts": {
+    "mtime": 1778070240.112373,
+    "hash": "b680bddf0fc7cfaa8f2e7fcbea75cd92"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Question.ts": {
+    "mtime": 1777176127.9630868,
+    "hash": "611f4e8baf932bd5c41672c1eb670fa3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\QuizGenerationLog.ts": {
+    "mtime": 1775906549.9062529,
+    "hash": "86ac10ca31b3d4f0ba6eaba9f7781e57"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\QuizQuestion.ts": {
+    "mtime": 1775880057.0364473,
+    "hash": "719dfb93aa1334aad5c5994fc186cbcf"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\QuizSession.ts": {
+    "mtime": 1775880082.8722825,
+    "hash": "7322b3f283b850a76c2459d525b9d077"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\QuizTopic.ts": {
+    "mtime": 1775906559.1085296,
+    "hash": "8a763323382a5b6617dc7642cd416ba7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Referral.ts": {
+    "mtime": 1776189054.9657362,
+    "hash": "21757f5e1db76a23836f0ccdcf51e101"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\RefreshToken.ts": {
+    "mtime": 1777981308.3741858,
+    "hash": "4ece5fba7e5b5dde5d5ce77f8034fdc6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\Transaction.ts": {
+    "mtime": 1776954587.1081684,
+    "hash": "646345f84857c7a32270f4a8497d4d1c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\User.ts": {
+    "mtime": 1777729475.872945,
+    "hash": "55b23ca26129a7048be8be8e51b4163d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\VerificationToken.ts": {
+    "mtime": 1776139405.754168,
+    "hash": "e211d22334860c7901d59c1bb094512a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\VideoProgress.ts": {
+    "mtime": 1776005820.1506634,
+    "hash": "60468a19d8c68344b04abf234ecad0af"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\WalletHistoryEvent.ts": {
+    "mtime": 1777699063.385359,
+    "hash": "52ad570609c7433c0ce1dd97f2a57bf4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\models\\WithdrawalRequest.ts": {
+    "mtime": 1776954587.111207,
+    "hash": "a53db136ae5e9d87a809ebde6f834564"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sw.js": {
+    "mtime": 1777220695.3573463,
+    "hash": "e16a9cda5ba6ab1fb69f1ea40db1afe8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scratch\\fix-landing.js": {
+    "mtime": 1777604199.7918518,
+    "hash": "5b7e9209da3316ccd33fcb66b39b7e33"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scripts\\cleanup-mux.mjs": {
+    "mtime": 1776135840.4690166,
+    "hash": "7a07f0400d3c5270d16b168158731ef8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scripts\\generate-vapid-keys.ts": {
+    "mtime": 1777005371.4103553,
+    "hash": "e7a88b3eb2124814c90b6cd0565f73cb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scripts\\migrate-push-platform.ts": {
+    "mtime": 1777981852.581061,
+    "hash": "0909c2a7b521e7319d9c6337d826b9e4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scripts\\migrate-to-production.mjs": {
+    "mtime": 1776851170.6326592,
+    "hash": "10434b479035dc5eaf0030fe59807ab0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scripts\\migratedb.ts": {
+    "mtime": 1776224055.1663535,
+    "hash": "26988209d1160a73fad9a297d5548f50"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\scripts\\run-call-checks.js": {
+    "mtime": 1776910763.3384502,
+    "hash": "7fae8ddadb61e98d6ffe2a6395d4ff46"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\hooks.ts": {
+    "mtime": 1775485372.3503573,
+    "hash": "265bdc40278466a154d88e5cbf340e29"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\store.ts": {
+    "mtime": 1776095491.054005,
+    "hash": "1416dfdce7e722e788ba1b5273a01382"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\auth\\auth-slice.ts": {
+    "mtime": 1775485363.5899062,
+    "hash": "afc3ab5c1f7ba3a1e8c72d27bb06347e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\auth\\types.ts": {
+    "mtime": 1776189132.2699404,
+    "hash": "d876b7d8c7eb105e733f3dfe8aa8bb23"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\channel\\channel-slice.ts": {
+    "mtime": 1777468163.4639602,
+    "hash": "58ea186ba598c23e846722027de4d00e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\channels\\channels-slice.ts": {
+    "mtime": 1775620185.4133358,
+    "hash": "f30e6137a13c82e4efdbfe738233377b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\feed\\feed-slice.ts": {
+    "mtime": 1775556516.1940658,
+    "hash": "c359bb3265bf6c8f333db5c5d352ebcc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\upload\\upload-slice.ts": {
+    "mtime": 1776095463.566212,
+    "hash": "47df80756b9849c86ae53dd22d5cafcc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\store\\features\\user\\user-slice.ts": {
+    "mtime": 1777182821.1203504,
+    "hash": "a3e28584a1d4e4d21783122ff149bfee"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\types\\channel.ts": {
+    "mtime": 1776999392.1066263,
+    "hash": "d8d3f24ad090825ef3870a812e0ac8dd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\types\\next-auth.d.ts": {
+    "mtime": 1775795782.7572536,
+    "hash": "26a9e71e69be7ee1969efad815b183d3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\types\\question.ts": {
+    "mtime": 1776746747.956981,
+    "hash": "2b47ffb90f39f41aa91c9203ef3232c1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\types\\quiz.ts": {
+    "mtime": 1775906566.4333768,
+    "hash": "e0f4851508a7985f74471a2d6591dbbd"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\CLAUDE.md": {
+    "mtime": 1778210199.171083,
+    "hash": "747e73a5e1af4b72c0d65c9169c23199"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\sprints.md": {
+    "mtime": 1778166478.3537862,
+    "hash": "a2b3cd0675a91657bdfda158d6f36e26"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\CLAUDE.md": {
+    "mtime": 1778212438.2900524,
+    "hash": "4d939aa779c0f1191915805819952917"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\GUIDE.md": {
+    "mtime": 1778212864.2823994,
+    "hash": "4b9247f9f582303a6bfcccc800012607"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\README.md": {
+    "mtime": 1777908818.213664,
+    "hash": "e22acbc85bc1f0b21dd2d4fbb55488b7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\secure-files\\generate-sha-keys.md": {
+    "mtime": 1778073792.3215497,
+    "hash": "7e4de747aee24a47086279796a7db0f8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\CHECK.md": {
+    "mtime": 1777286710.6975272,
+    "hash": "1106d265f522d36480e4cc76ed5b4f4c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\CLAUDE.md": {
+    "mtime": 1778212440.443415,
+    "hash": "4d939aa779c0f1191915805819952917"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\error.md": {
+    "mtime": 1777905257.4450493,
+    "hash": "2fe06042a5ad89d68f1880a4889efd91"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\llm.md": {
+    "mtime": 1777608009.5264716,
+    "hash": "34b18d548e1ff87eb0eca5e6dd2155cc"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\README.md": {
+    "mtime": 1777608070.5832527,
+    "hash": "e3601b815fd4f0e524c9690f46e6ed6b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\TODO.md": {
+    "mtime": 1778088230.5733182,
+    "hash": "2ca031b5855a732dbfc5422b3e8e1ee9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\md\\AGENTS.md": {
+    "mtime": 1777608027.861679,
+    "hash": "34ecefff799e2802a16f13e028afb859"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\md\\cron.md": {
+    "mtime": 1776772393.6671412,
+    "hash": "e5307d472da61b9e73a9e0817b16d7d1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\md\\DEPLOYMENT.md": {
+    "mtime": 1776216572.183952,
+    "hash": "18742c402a43300e14bc2fab86bc74a1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\md\\esewa_mannaul_payment.md": {
+    "mtime": 1775702222.5700095,
+    "hash": "b007b6b69be4c5445e43799d78027076"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\md\\MONEY_FLOW.md": {
+    "mtime": 1777608055.235284,
+    "hash": "b0450d13ebcbe128f8fb8f1a9991cfee"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\md\\PaymentGateway.md": {
+    "mtime": 1775661588.0280726,
+    "hash": "15d716988c9e0da63e094293647acba6"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-hdpi\\notification_icon.png": {
+    "mtime": 1778073027.6119435,
+    "hash": "8e464175547a8b93d9e897f4057425b2"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-hdpi\\splashscreen_logo.png": {
+    "mtime": 1778073028.67555,
+    "hash": "90a69c19f541dee4583daff16da92210"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-mdpi\\notification_icon.png": {
+    "mtime": 1778073027.6139789,
+    "hash": "0829a68e1bf92e16a93964990cdfcd6a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-mdpi\\splashscreen_logo.png": {
+    "mtime": 1778073028.5086186,
+    "hash": "39657c9f09b7abb9047f5ce4bf1ed19f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-xhdpi\\notification_icon.png": {
+    "mtime": 1778073027.6119435,
+    "hash": "475a3795f274ccaa185ce84e0c20e7f5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-xhdpi\\splashscreen_logo.png": {
+    "mtime": 1778073028.673449,
+    "hash": "32a8e49cdb4437c5abcc10ebf5c2c7a4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-xxhdpi\\notification_icon.png": {
+    "mtime": 1778073027.6119435,
+    "hash": "41a30051fa08953626c5382e61baf73e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-xxhdpi\\splashscreen_logo.png": {
+    "mtime": 1778073028.67555,
+    "hash": "61a46b822b45e0f0ed41b6587ecee43a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-xxxhdpi\\notification_icon.png": {
+    "mtime": 1778073027.6139789,
+    "hash": "e4017295a53f15dff0b0c6c5bb1a320b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\drawable-xxxhdpi\\splashscreen_logo.png": {
+    "mtime": 1778073028.6775692,
+    "hash": "93c427ec76832d3103c3575698238541"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-hdpi\\ic_launcher.webp": {
+    "mtime": 1778073026.9949834,
+    "hash": "8bf6bd688b71dbc774d9db133eacbd3a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-hdpi\\ic_launcher_background.webp": {
+    "mtime": 1778073027.4250376,
+    "hash": "2ed9bfaf225703ef1b0942c22afff575"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-hdpi\\ic_launcher_foreground.webp": {
+    "mtime": 1778073027.4260666,
+    "hash": "2ed9bfaf225703ef1b0942c22afff575"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-hdpi\\ic_launcher_monochrome.webp": {
+    "mtime": 1778073027.2135532,
+    "hash": "2ed9bfaf225703ef1b0942c22afff575"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-hdpi\\ic_launcher_round.webp": {
+    "mtime": 1778073027.099684,
+    "hash": "bbfc0ff695c9eeb485cd027bf88024f5"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-mdpi\\ic_launcher.webp": {
+    "mtime": 1778073026.9949834,
+    "hash": "a68fc3c7605992acdda0378514b8b042"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-mdpi\\ic_launcher_background.webp": {
+    "mtime": 1778073027.4230149,
+    "hash": "15a03adf5f018dac0ef6056545949c8a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-mdpi\\ic_launcher_foreground.webp": {
+    "mtime": 1778073027.4260666,
+    "hash": "15a03adf5f018dac0ef6056545949c8a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-mdpi\\ic_launcher_monochrome.webp": {
+    "mtime": 1778073027.2135532,
+    "hash": "15a03adf5f018dac0ef6056545949c8a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-mdpi\\ic_launcher_round.webp": {
+    "mtime": 1778073027.1088796,
+    "hash": "877654204e567af9a162fbafde9b33d9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xhdpi\\ic_launcher.webp": {
+    "mtime": 1778073026.992177,
+    "hash": "6685b2fce15729e9747c2c2ed91cc458"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xhdpi\\ic_launcher_background.webp": {
+    "mtime": 1778073027.4230149,
+    "hash": "210286829b839f33c234f1ddf4f1cbce"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xhdpi\\ic_launcher_foreground.webp": {
+    "mtime": 1778073027.4260666,
+    "hash": "210286829b839f33c234f1ddf4f1cbce"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xhdpi\\ic_launcher_monochrome.webp": {
+    "mtime": 1778073027.2135532,
+    "hash": "210286829b839f33c234f1ddf4f1cbce"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xhdpi\\ic_launcher_round.webp": {
+    "mtime": 1778073027.1088796,
+    "hash": "6148464de168f3877b907b2eb47bb255"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxhdpi\\ic_launcher.webp": {
+    "mtime": 1778073026.9949834,
+    "hash": "db98822b1c44fc4dd353a8cb8d71ce80"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxhdpi\\ic_launcher_background.webp": {
+    "mtime": 1778073027.4230149,
+    "hash": "cfe7e633a692f411d97b5b149eeec294"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxhdpi\\ic_launcher_foreground.webp": {
+    "mtime": 1778073027.4260666,
+    "hash": "cfe7e633a692f411d97b5b149eeec294"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxhdpi\\ic_launcher_monochrome.webp": {
+    "mtime": 1778073027.2135532,
+    "hash": "cfe7e633a692f411d97b5b149eeec294"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxhdpi\\ic_launcher_round.webp": {
+    "mtime": 1778073027.1078725,
+    "hash": "4999ae804769323c24e38fd0b5b15a94"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxxhdpi\\ic_launcher.webp": {
+    "mtime": 1778073026.9949834,
+    "hash": "627daaa3f5bb3ce2eceebee8a0d71586"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxxhdpi\\ic_launcher_background.webp": {
+    "mtime": 1778073027.4230149,
+    "hash": "c33c15622332310e12bd570cab31c8c9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxxhdpi\\ic_launcher_foreground.webp": {
+    "mtime": 1778073027.4260666,
+    "hash": "c33c15622332310e12bd570cab31c8c9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxxhdpi\\ic_launcher_monochrome.webp": {
+    "mtime": 1778073027.2135532,
+    "hash": "c33c15622332310e12bd570cab31c8c9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\android\\app\\src\\main\\res\\mipmap-xxxhdpi\\ic_launcher_round.webp": {
+    "mtime": 1778073027.1088796,
+    "hash": "dad3c4d9de0e102439021e64b209b8bb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\auth-ui-inspiration.png": {
+    "mtime": 1777994302.431105,
+    "hash": "3189a64f2324f74659955bfa22f275d8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\landing-screen-ui-inspiration.png": {
+    "mtime": 1777994460.3814008,
+    "hash": "f2492dda12db113f678659d171b3906a"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\message-channel-showcase-all-ui-inspiration.png": {
+    "mtime": 1777998028.5074892,
+    "hash": "eb8f296657fe5b6088a0e975df7dfcd8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\question-post-ui-inspiration.png": {
+    "mtime": 1777997700.4904811,
+    "hash": "4ba6c2d4c8be92f6f5f85df0a2384232"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\setting-profile-update-ui-inspiration.png": {
+    "mtime": 1777997744.456036,
+    "hash": "395e7c113b71ddced1e04824cea285b0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\subscripion-plan-ui-inspiration.png": {
+    "mtime": 1777998160.1281438,
+    "hash": "43b181692988b9f88b7882eb4c03d409"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\app_ref\\tabs-ui-inspiration.png": {
+    "mtime": 1777994058.502197,
+    "hash": "e56218cbdd0486c3df47d8f692c3f046"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\android-icon-background.png": {
+    "mtime": 1777912612.205,
+    "hash": "587f3df51e1386f99eff6407a27ef48b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\android-icon-foreground.png": {
+    "mtime": 1777912612.19,
+    "hash": "587f3df51e1386f99eff6407a27ef48b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\android-icon-monochrome.png": {
+    "mtime": 1777912612.219,
+    "hash": "587f3df51e1386f99eff6407a27ef48b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\favicon.png": {
+    "mtime": 1777912612.132,
+    "hash": "f2850d1f0477323b1d148de25d8b8f15"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\icon.png": {
+    "mtime": 1777912612.151,
+    "hash": "840e74325dbd67679eaf4488dae966da"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\logo.png": {
+    "mtime": 1776829915.4115367,
+    "hash": "00cacfbc36b3e6ec0abe508b259e4267"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\partial-react-logo.png": {
+    "mtime": 1777912612.234,
+    "hash": "257e76221274963fe27cfeb07e883b9b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\react-logo.png": {
+    "mtime": 1777912612.247,
+    "hash": "257e76221274963fe27cfeb07e883b9b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\react-logo@2x.png": {
+    "mtime": 1777912612.265,
+    "hash": "12bdfa689a0821f75db885b2ab3f2521"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\react-logo@3x.png": {
+    "mtime": 1777912612.284,
+    "hash": "84b53b12851d8f46132414b59a9987b8"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\app\\assets\\images\\splash-icon.png": {
+    "mtime": 1777912612.177,
+    "hash": "12bdfa689a0821f75db885b2ab3f2521"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\apple-icon.png": {
+    "mtime": 1776831494.879,
+    "hash": "81c3ac9d1021fef74eea3d765dcbb30c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\app\\icon.png": {
+    "mtime": 1776831494.861,
+    "hash": "2c895805f09695e47a3ff0d95454121b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\file.svg": {
+    "mtime": 1775476104.2170143,
+    "hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\globe.svg": {
+    "mtime": 1775476104.2365563,
+    "hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\logo.png": {
+    "mtime": 1776829915.4115367,
+    "hash": "00cacfbc36b3e6ec0abe508b259e4267"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\next.svg": {
+    "mtime": 1775476104.2590451,
+    "hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\QUESTION_HUB_PAYMENT_QR_CODE.jpeg": {
+    "mtime": 1775842476.1637287,
+    "hash": "adeb1bf7ef90d9c9de9cad8ec8efdce1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\signup-student-img.png": {
+    "mtime": 1775528088.9378245,
+    "hash": "d6b6d7979cb72ee6439387d5b1c97353"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\singin-img.png": {
+    "mtime": 1775527831.0770385,
+    "hash": "feeaea5bf2b05a227bd6081ef0c3418c"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\singout-img.png": {
+    "mtime": 1775528705.184497,
+    "hash": "58517eb8dbe35ea3c02627bc0d8e8ad3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\singup-teacher-img.png": {
+    "mtime": 1775528752.342327,
+    "hash": "f53d5282b9778fe699281245aabc3923"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\vercel.svg": {
+    "mtime": 1775476104.27974,
+    "hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\window.svg": {
+    "mtime": 1775476104.2980812,
+    "hash": "a2760511c65806022ad20adf74370ff3"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\admin-dashboard.png": {
+    "mtime": 1776832488.491371,
+    "hash": "d3be9a2fa3ba11aa8ed5ab3070d366d7"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\auth-ui.png": {
+    "mtime": 1775527255.642179,
+    "hash": "b5561ed27be6c5c1628157707e2b187b"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\course-buying-screen-here-freecourse-can-be added to student watchlist. .png": {
+    "mtime": 1776047926.0617332,
+    "hash": "334b4bcc225f3bded5a34531b0de6937"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\course-lisiting-page.png": {
+    "mtime": 1776047705.738559,
+    "hash": "874e9b000b73f6fa204fa64ad7dda113"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\course-showcase-hostroy-page.png": {
+    "mtime": 1776047496.6120255,
+    "hash": "2f390f5e59f1e1adb18f07b776d05fc4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\course-specific-details-showcase.png": {
+    "mtime": 1776047833.416623,
+    "hash": "84fd2f8cbd1803a1a5a79789768bcae9"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\landing-bg.png": {
+    "mtime": 1777606543.3051255,
+    "hash": "fd47c2ef62b821483502acff9efabc59"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\landing-hero-inspiration.jpeg": {
+    "mtime": 1776858571.400678,
+    "hash": "ad637ce31a926c603ed7b869e5f0e237"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\landing-page-bg.png": {
+    "mtime": 1777606188.5913424,
+    "hash": "aa96a3c20fd61b10e226048bd2519840"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\message ui inspiration.png": {
+    "mtime": 1775564847.2762754,
+    "hash": "6a55a94807375820b7198eaff61ddb19"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\payment-checkout.png": {
+    "mtime": 1775701514.1751933,
+    "hash": "2cba1392c5858174d216e4954941cf4d"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\profile-inspiration.png": {
+    "mtime": 1775530433.0116787,
+    "hash": "95684f490fb148645b2a0fd2693cdf5f"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\assets\\subscription-pan-ui.png": {
+    "mtime": 1776186310.816834,
+    "hash": "262c020a109c0e619a74a47dd26f69cb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\branding\\logo.png": {
+    "mtime": 1777735250.664841,
+    "hash": "fbbc36c514a17f78426041eac773b7de"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\aria.wav": {
+    "mtime": 1776917471.4833374,
+    "hash": "3241944f2e3c42191be9ad8e418d39cb"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\classic.wav": {
+    "mtime": 1776917471.3644066,
+    "hash": "76b37cc45e9b1a7b96035e68717b4a12"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\lullaby.wav": {
+    "mtime": 1776917471.5209687,
+    "hash": "b68196a039d1e097c66f82ad700f9fa1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\message-tone.wav": {
+    "mtime": 1777178147.9097998,
+    "hash": "e04addefe512c283f58b3849d5c2e721"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\nocturne.wav": {
+    "mtime": 1776917471.4047892,
+    "hash": "d6145679e269d1756b07ec2ba4a7cada"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\prelude.wav": {
+    "mtime": 1776917471.4991696,
+    "hash": "855a6986c26418d8b26d3de9550c04f0"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\reverie.wav": {
+    "mtime": 1776917471.5460875,
+    "hash": "634fdc7e0271af5d0c966c2f10d61492"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\serenade.wav": {
+    "mtime": 1776917471.4377296,
+    "hash": "248651753c269055d1680f592a89d635"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\soft.wav": {
+    "mtime": 1776917471.3846083,
+    "hash": "089ea9c4878315c3d4998e20068818c1"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\sonata.wav": {
+    "mtime": 1776917471.4183073,
+    "hash": "e967df9b9ba8c37aa145f94b308944f4"
+  },
+  "D:\\siddhant-files\\projects\\CLIENT_PROJECTS\\Jiwan-Mijhar\\web\\public\\sounds\\waltz.wav": {
+    "mtime": 1776917471.4639711,
+    "hash": "2680b2c1d321dff05147d96e2ef5d738"
+  }
+}

@@ -4,8 +4,13 @@ import userReducer from "./slices/userSlice";
 import feedReducer from "./slices/feedSlice";
 import channelReducer from "./slices/channelSlice";
 import channelsReducer from "./slices/channelsSlice";
+import coursesReducer from "./slices/coursesSlice";
 import uploadReducer from "./slices/uploadSlice";
 import configReducer from "./slices/configSlice";
+import activityReducer from "./slices/activitySlice";
+import noticesReducer from "./slices/noticesSlice";
+import onboardingReducer from "./slices/onboardingSlice";
+import realtimeReducer from "./slices/realtimeSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,8 +19,13 @@ export const store = configureStore({
     feed: feedReducer,
     channel: channelReducer,
     channels: channelsReducer,
+    courses: coursesReducer,
     upload: uploadReducer,
     config: configReducer,
+    activity: activityReducer,
+    notices: noticesReducer,
+    onboarding: onboardingReducer,
+    realtime: realtimeReducer,
   },
 });
 

@@ -1,111 +1,155 @@
-import { View, Text, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator } from "react-native";
-import { useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
+  StatusBar,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useCallback, useEffect } from "react";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import {
   setChannels,
   setChannelsLoading,
   setChannelsRefreshing,
+  selectIsChannelsStale,
 } from "@/store/slices/channelsSlice";
-import api from "@/lib/api";
+import type { ChannelListItem } from "@/store/slices/channelsSlice";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { api } from "@/lib/api";
+
+function getChannelKey(item: ChannelListItem, index: number) {
+  return `${item._id || item.questionId || item.createdAt || "channel"}-${index}`;
+}
 
 export default function ChannelsScreen() {
   const dispatch = useAppDispatch();
-  const { list, isLoading, isRefreshing } = useAppSelector((s) => s.channels);
+  const userId = useAppSelector((s) => s.user.data?._id ?? null);
+  const { list, isLoading, isRefreshing, lastFetchedAt, loadedForUserId } =
+    useAppSelector((s) => s.channels);
+  const { statusBarStyle, backgroundColor, iconColor, primaryColor } = useAppTheme();
+  const cacheMatchesUser = loadedForUserId === userId;
+  const channels = cacheMatchesUser ? list : [];
+  const shouldUseCache = cacheMatchesUser && !selectIsChannelsStale(lastFetchedAt);
+
+  const loadChannels = useCallback(
+    async (force = false) => {
+      if (!force && (isLoading || shouldUseCache)) {
+        return;
+      }
+
+      dispatch(setChannelsLoading(true));
+      try {
+        const res = await api.get("/channels");
+        // API returns a plain array
+        dispatch(
+          setChannels({
+            channels: Array.isArray(res.data) ? res.data : [],
+            userId,
+          }),
+        );
+      } catch {
+        dispatch(setChannelsLoading(false));
+        dispatch(setChannelsRefreshing(false));
+      }
+    },
+    [dispatch, isLoading, shouldUseCache, userId],
+  );
 
   useEffect(() => {
-    loadChannels();
-  }, []);
+    void loadChannels();
+  }, [loadChannels]);
 
-  async function loadChannels() {
-    dispatch(setChannelsLoading(true));
-    try {
-      const res = await api.get("/channels");
-      // API returns a plain array
-      dispatch(setChannels(Array.isArray(res.data) ? res.data : []));
-    } catch {
-      dispatch(setChannelsLoading(false));
-    }
-  }
-
-  async function handleRefresh() {
+  const handleRefresh = useCallback(async () => {
     dispatch(setChannelsRefreshing(true));
-    await loadChannels();
-  }
+    await loadChannels(true);
+  }, [dispatch, loadChannels]);
 
   return (
-    <View className="flex-1 bg-slate-950">
-      <View className="px-4 pt-14 pb-4">
-        <Text className="text-white text-2xl font-bold">Channels</Text>
-        <Text className="text-slate-400 text-sm mt-0.5">
+    <View className="flex-1 bg-background">
+      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+
+      <View className="px-6 pb-4 pt-14">
+        <Text className="text-[28px] font-bold tracking-tight text-foreground">
+          Channels
+        </Text>
+        <Text className="mt-1 text-sm leading-6 text-muted-foreground">
           Your active conversations
         </Text>
       </View>
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#3B82F6" size="large" />
+          <ActivityIndicator color={iconColor} size="large" />
         </View>
-      ) : list.length === 0 ? (
+      ) : channels.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-4xl mb-4">💬</Text>
-          <Text className="text-white text-lg font-semibold text-center mb-2">
+          <View className="mb-4 h-16 w-16 items-center justify-center rounded-3xl border border-border bg-card">
+            <Ionicons name="chatbubbles-outline" size={32} color={iconColor} />
+          </View>
+          <Text className="mb-2 text-center text-[18px] font-semibold text-foreground">
             No active channels
           </Text>
-          <Text className="text-slate-400 text-sm text-center">
+          <Text className="max-w-xs text-center text-sm leading-6 text-muted-foreground">
             Channels appear here when a teacher accepts your question.
           </Text>
         </View>
       ) : (
         <FlatList
-          data={list}
-          keyExtractor={(item) => item._id}
+          data={channels}
+          keyExtractor={getChannelKey}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor="#3B82F6"
+              tintColor={iconColor}
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-          ItemSeparatorComponent={() => <View className="h-1" />}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          ItemSeparatorComponent={() => <View className="h-3" />}
           renderItem={({ item }) => (
             <TouchableOpacity
-              onPress={() =>
-                router.push(`/workspace/${item._id}` as any)
-              }
-              className="flex-row items-center py-4 px-4 bg-slate-900 rounded-2xl border border-slate-800"
+              onPress={() => router.push(`/workspace/${item._id}` as any)}
+              className="flex-row items-center rounded-2xl border border-border bg-card px-4 py-4"
               activeOpacity={0.8}
             >
-              {/* Avatar placeholder */}
-              <View className="w-12 h-12 rounded-full bg-blue-700 items-center justify-center mr-3">
-                <Text className="text-white font-bold text-lg">
+              <View
+                className="mr-3 h-12 w-12 items-center justify-center rounded-full"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <Text className="text-lg font-bold text-white">
                   {(item.questionTitle ?? "Q")[0].toUpperCase()}
                 </Text>
               </View>
 
               <View className="flex-1">
-                <View className="flex-row items-center justify-between mb-0.5">
+                <View className="mb-0.5 flex-row items-center justify-between">
                   <Text
-                    className="text-white font-semibold text-sm flex-1 mr-2"
+                    className="mr-2 flex-1 text-sm font-semibold text-card-foreground"
                     numberOfLines={1}
                   >
                     {item.questionTitle ?? "Question"}
                   </Text>
                   {item.lastMessage?.createdAt ? (
-                    <Text className="text-slate-500 text-xs">
+                    <Text className="text-xs text-muted-foreground">
                       {new Date(item.lastMessage.createdAt).toLocaleDateString()}
                     </Text>
                   ) : null}
                 </View>
-                <Text className="text-slate-400 text-sm" numberOfLines={1}>
+                <Text className="text-sm text-muted-foreground" numberOfLines={1}>
                   {item.lastMessage?.content ?? "No messages yet"}
                 </Text>
               </View>
 
               {item.unreadCount > 0 ? (
-                <View className="ml-3 w-5 h-5 rounded-full bg-blue-500 items-center justify-center">
-                  <Text className="text-white text-xs font-bold">
+                <View
+                  className="ml-3 h-5 w-5 items-center justify-center rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Text className="text-xs font-bold text-white">
                     {item.unreadCount > 9 ? "9+" : item.unreadCount}
                   </Text>
                 </View>
