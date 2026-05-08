@@ -1,23 +1,16 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface ChannelListItem {
-  _id: string;
-  questionId: string;
-  questionTitle?: string;
-  participants: string[];
+  id: string;
+  questionTitle: string;
+  counterpartName: string;
+  counterpartImage?: string;
   status: "ACTIVE" | "CLOSED" | "EXPIRED";
-  lastMessage?: {
-    content: string;
-    senderId: string;
-    createdAt: string;
-  };
+  lastMessagePreview?: string;
+  lastMessageAt?: string;
   unreadCount: number;
-  createdAt: string;
-  updatedAt: string;
-  teacherId: string;
-  studentId: string;
-  teacherName?: string;
-  studentName?: string;
+  timerDeadline: string;
+  role: "asker" | "acceptor";
 }
 
 interface ChannelsState {
@@ -59,7 +52,7 @@ const channelsSlice = createSlice({
       state.error = null;
     },
     upsertChannel(state, action: PayloadAction<ChannelListItem>) {
-      const index = state.list.findIndex((c) => c._id === action.payload._id);
+      const index = state.list.findIndex((c) => c.id === action.payload.id);
       if (index === -1) {
         state.list = [action.payload, ...state.list];
       } else {
@@ -70,24 +63,33 @@ const channelsSlice = createSlice({
       state,
       action: PayloadAction<{
         channelId: string;
-        lastMessage: ChannelListItem["lastMessage"];
+        lastMessagePreview?: string;
+        lastMessageAt?: string;
         unreadCount?: number;
+        unreadCountIncrement?: number;
       }>,
     ) {
-      const channel = state.list.find((c) => c._id === action.payload.channelId);
+      const channel = state.list.find((c) => c.id === action.payload.channelId);
       if (channel) {
-        channel.lastMessage = action.payload.lastMessage;
+        if (action.payload.lastMessagePreview) {
+          channel.lastMessagePreview = action.payload.lastMessagePreview;
+        }
+        if (action.payload.lastMessageAt) {
+          channel.lastMessageAt = action.payload.lastMessageAt;
+        }
         if (action.payload.unreadCount !== undefined) {
           channel.unreadCount = action.payload.unreadCount;
+        } else if (action.payload.unreadCountIncrement) {
+          channel.unreadCount += action.payload.unreadCountIncrement;
         }
       }
     },
     markChannelRead(state, action: PayloadAction<string>) {
-      const channel = state.list.find((c) => c._id === action.payload);
+      const channel = state.list.find((c) => c.id === action.payload);
       if (channel) channel.unreadCount = 0;
     },
     removeChannel(state, action: PayloadAction<string>) {
-      state.list = state.list.filter((c) => c._id !== action.payload);
+      state.list = state.list.filter((c) => c.id !== action.payload);
     },
     setChannelsLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;

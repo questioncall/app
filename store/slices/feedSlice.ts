@@ -14,6 +14,7 @@ interface FeedState {
   questions: FeedQuestion[];
   myQuestions: FeedQuestion[];
   isLoading: boolean;
+  isLoadingMore: boolean;
   isRefreshing: boolean;
   hasMore: boolean;
   page: number;
@@ -21,6 +22,9 @@ interface FeedState {
   lastFetchedAt: number | null;
   loadedForRole: FeedRole | null;
   loadedForUserId: string | null;
+  // Question IDs that are still being persisted to the server.
+  // Used to render a "Posting…" badge on optimistic question cards.
+  optimisticIds: string[];
 }
 
 const FEED_CACHE_TTL_MS = 60 * 1000;
@@ -160,6 +164,7 @@ const initialState: FeedState = {
   questions: [],
   myQuestions: [],
   isLoading: false,
+  isLoadingMore: false,
   isRefreshing: false,
   hasMore: true,
   page: 1,
@@ -167,6 +172,7 @@ const initialState: FeedState = {
   lastFetchedAt: null,
   loadedForRole: null,
   loadedForUserId: null,
+  optimisticIds: [],
 };
 
 const feedSlice = createSlice({
@@ -247,11 +253,22 @@ const feedSlice = createSlice({
     setFeedLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
     },
+    setFeedLoadingMore(state, action: PayloadAction<boolean>) {
+      state.isLoadingMore = action.payload;
+    },
     setFeedRefreshing(state, action: PayloadAction<boolean>) {
       state.isRefreshing = action.payload;
     },
     setHasMore(state, action: PayloadAction<boolean>) {
       state.hasMore = action.payload;
+    },
+    markOptimistic(state, action: PayloadAction<string>) {
+      if (!state.optimisticIds.includes(action.payload)) {
+        state.optimisticIds.push(action.payload);
+      }
+    },
+    unmarkOptimistic(state, action: PayloadAction<string>) {
+      state.optimisticIds = state.optimisticIds.filter((id) => id !== action.payload);
     },
     setPage(state, action: PayloadAction<number>) {
       state.page = action.payload;
@@ -271,7 +288,10 @@ const feedSlice = createSlice({
       state.loadedForUserId = null;
       state.error = null;
       state.isLoading = false;
+      state.isLoadingMore = false;
       state.isRefreshing = false;
+      state.hasMore = true;
+      state.optimisticIds = [];
     },
   },
 });
@@ -285,12 +305,15 @@ export const {
   setMyQuestions,
   addMyQuestion,
   setFeedLoading,
+  setFeedLoadingMore,
   setFeedRefreshing,
   setHasMore,
   setPage,
   setFeedError,
   clearFeedError,
   clearFeedCache,
+  markOptimistic,
+  unmarkOptimistic,
 } = feedSlice.actions;
 
 export const selectIsFeedStale = (lastFetchedAt: number | null) => {

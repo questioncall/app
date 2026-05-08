@@ -113,8 +113,11 @@ export function RealtimeBridge() {
     });
 
     channel.bind(NEW_CHANNEL_EVENT, (payload: any) => {
-      if (payload?.channel?._id) {
-        dispatch(upsertChannel(payload.channel));
+      const ch = payload?.channel;
+      if (!ch) return;
+      const id = ch.id ?? ch._id;
+      if (id) {
+        dispatch(upsertChannel({ ...ch, id }));
       }
     });
 
@@ -124,15 +127,13 @@ export function RealtimeBridge() {
       dispatch(
         updateChannelLastMessage({
           channelId: payload.channelId,
-          lastMessage:
-            payload.lastMessagePreview && payload.lastMessageAt
-              ? {
-                  content: payload.lastMessagePreview,
-                  senderId: "",
-                  createdAt: payload.lastMessageAt,
-                }
-              : undefined,
-          unreadCount: payload.unreadCountCleared ? 0 : payload.unreadCountIncrement,
+          lastMessagePreview: payload.lastMessagePreview,
+          lastMessageAt: payload.lastMessageAt,
+          ...(payload.unreadCountCleared
+            ? { unreadCount: 0 }
+            : payload.unreadCountIncrement
+              ? { unreadCountIncrement: payload.unreadCountIncrement }
+              : {}),
         }),
       );
     });

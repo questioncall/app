@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated as RNAnimated,
   Easing,
   FlatList,
@@ -34,6 +35,7 @@ import { InlineVideo } from "@/components/media/inline-video";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api, publicApi } from "@/lib/api";
+import { scheduleAnswerDeadlineReminder } from "@/lib/local-notifications";
 import { isVideoUrl } from "@/lib/media-helpers";
 import {
   getPusherClient,
@@ -44,19 +46,24 @@ import {
 import { store } from "@/store";
 import {
   addMyQuestion,
+  appendQuestions,
   clearFeedError,
   getFeedQuestionId,
   normalizeFeedQuestion,
   normalizeFeedQuestions,
   prependQuestion,
+  removeQuestion,
   selectIsFeedStale,
   setFeedError,
   setFeedLoading,
+  setFeedLoadingMore,
   setFeedRefreshing,
+  setHasMore,
   setMyQuestions,
   setQuestions,
   updateQuestion,
 } from "@/store/slices/feedSlice";
+import { updateUser } from "@/store/slices/userSlice";
 import {
   selectIsCoursesStale,
   setCourses,
@@ -339,6 +346,7 @@ export default function FeedScreen() {
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [isSubmittingComment, setIsSubmittingComment] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Modal slide-up animation
   const modalSlide = useRef(new RNAnimated.Value(0)).current;
@@ -384,6 +392,8 @@ export default function FeedScreen() {
     setActiveSort(defaultSort);
   }, [defaultSort]);
 
+  const FEED_PAGE_SIZE = 20;
+
   const loadFeed = useCallback(
     async (force = false) => {
       const currentFeedState = store.getState().feed;
@@ -398,11 +408,11 @@ export default function FeedScreen() {
       dispatch(clearFeedError());
       try {
         const client = userId ? api : publicApi;
-        const res = await client.get("/questions/feed");
-        const normalized = normalizeFeedQuestions(
-          Array.isArray(res.data) ? res.data : [],
-        );
+        const res = await client.get(`/questions/feed?limit=${FEED_PAGE_SIZE}`);
+        const raw = Array.isArray(res.data) ? res.data : [];
+        const normalized = normalizeFeedQuestions(raw);
         dispatch(setQuestions({ questions: normalized, role: roleKey, userId }));
+        dispatch(setHasMore(raw.length >= FEED_PAGE_SIZE));
         dispatch(
           setMyQuestions(userId ? normalized.filter((q) => q.askerId === userId) : []),
         );
@@ -433,6 +443,39 @@ export default function FeedScreen() {
     },
     [dispatch, roleKey, userId],
   );
+
+  const loadMore = useCallback(async () => {
+    const currentFeedState = store.getState().feed;
+    if (currentFeedState.isLoadingMore || !currentFeedState.hasMore) return;
+    const questions = currentFeedState.questions;
+    if (questions.length === 0) return;
+
+    const lastQuestion = questions[questions.length - 1];
+    const cursor = lastQuestion.createdAt;
+    if (!cursor) return;
+
+    dispatch(setFeedLoadingMore(true));
+    try {
+      const client = userId ? api : publicApi;
+      const res = await client.get(
+        `/questions/feed?cursor=${encodeURIComponent(cursor)}&limit=${FEED_PAGE_SIZE}`,
+      );
+      const raw = Array.isArray(res.data) ? res.data : [];
+      const normalized = normalizeFeedQuestions(raw);
+      if (normalized.length > 0) {
+        dispatch(appendQuestions(normalized));
+        if (userId) {
+          const myNew = normalized.filter((q) => q.askerId === userId);
+          for (const q of myNew) dispatch(addMyQuestion(q));
+        }
+      }
+      dispatch(setHasMore(raw.length >= FEED_PAGE_SIZE));
+    } catch {
+      // silent — user can pull-to-refresh
+    } finally {
+      dispatch(setFeedLoadingMore(false));
+    }
+  }, [dispatch, userId]);
 
   const loadCourses = useCallback(
     async (force = false) => {
@@ -636,7 +679,18 @@ export default function FeedScreen() {
       const res = await api.post(`/questions/${questionId}/accept`);
       const updated = normalizeFeedQuestion(res.data);
       dispatch(updateQuestion({ id: questionId, data: updated }));
-      if (updated.channelId) router.push(`/channel/${updated.channelId}` as any);
+
+      const timerDeadline = res.data?.timerDeadline;
+      const channelId = updated.channelId;
+      if (timerDeadline && channelId) {
+        scheduleAnswerDeadlineReminder({
+          questionTitle: updated.title,
+          channelId,
+          timerDeadline,
+        }).catch(() => {});
+      }
+
+      if (channelId) router.push(`/workspace/${channelId}` as any);
     } catch (err: any) {
       Toast.show({
         type: "error",
@@ -648,6 +702,40 @@ export default function FeedScreen() {
     } finally {
       setAcceptingId(null);
     }
+  };
+
+  const handleDelete = (questionId: string, questionTitle: string) => {
+    Alert.alert(
+      "Delete question",
+      `Are you sure you want to delete "${questionTitle.length > 60 ? questionTitle.slice(0, 60) + "…" : questionTitle}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeletingId(questionId);
+            try {
+              await api.delete(`/questions/${questionId}`);
+              dispatch(removeQuestion(questionId));
+              dispatch(
+                updateUser({
+                  questionsAsked: Math.max(0, (user?.questionsAsked ?? 1) - 1),
+                }),
+              );
+              Toast.show({ type: "success", text1: "Question deleted." });
+            } catch (err: any) {
+              Toast.show({
+                type: "error",
+                text1: err?.response?.data?.error ?? "Failed to delete question",
+              });
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSubmitComment = async (questionId: string) => {
@@ -1109,6 +1197,12 @@ export default function FeedScreen() {
     const isAccepted = item.status === "ACCEPTED";
 
     const isPrivate = item.answerVisibility === "PRIVATE";
+    const isOptimistic = feedState.optimisticIds.includes(questionId);
+    const isReset = item.status === "RESET" && item.resetCount > 0;
+    const canDelete =
+      isOwnQuestion &&
+      (item.status === "OPEN" || item.status === "RESET") &&
+      !isOptimistic;
 
     return (
       <View
@@ -1117,6 +1211,7 @@ export default function FeedScreen() {
           backgroundColor: cardColor,
           borderBottomWidth: 1,
           borderBottomColor: borderColor,
+          opacity: isOptimistic ? 0.7 : 1,
         }}
       >
         <View className="px-4 py-4">
@@ -1159,7 +1254,14 @@ export default function FeedScreen() {
                 ) : null}
               </View>
             </View>
-            {isSolved ? (
+            {isOptimistic ? (
+              <View className="flex-row items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1">
+                <ActivityIndicator size={10} color="#f59e0b" />
+                <Text className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                  Posting…
+                </Text>
+              </View>
+            ) : isSolved ? (
               <View className="flex-row items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1">
                 <Ionicons name="checkmark-circle" size={12} color="#10b981" />
                 <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1171,6 +1273,13 @@ export default function FeedScreen() {
                 <Ionicons name="ellipse" size={8} color="#38bdf8" />
                 <Text className="text-[10px] font-semibold text-sky-600 dark:text-sky-400">
                   Active
+                </Text>
+              </View>
+            ) : isReset ? (
+              <View className="flex-row items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-1">
+                <Ionicons name="refresh" size={11} color="#f97316" />
+                <Text className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
+                  Attempt {item.resetCount + 1}
                 </Text>
               </View>
             ) : null}
@@ -1325,6 +1434,21 @@ export default function FeedScreen() {
                   {item.commentCount}
                 </Text>
               </TouchableOpacity>
+
+              {canDelete ? (
+                <TouchableOpacity
+                  disabled={deletingId === questionId}
+                  onPress={() => handleDelete(questionId, item.title)}
+                  className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5"
+                  style={{ backgroundColor: "#ef444418" }}
+                >
+                  {deletingId === questionId ? (
+                    <ActivityIndicator color="#ef4444" size="small" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                  )}
+                </TouchableOpacity>
+              ) : null}
 
               {canAccept ? (
                 <TouchableOpacity
@@ -1531,6 +1655,17 @@ export default function FeedScreen() {
         renderItem={renderQuestionItem}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={
+          feedState.isLoadingMore ? (
+            <View className="items-center py-6">
+              <ActivityIndicator color={primaryColor} />
+            </View>
+          ) : null
+        }
+        onEndReached={() => {
+          if (!feedState.isLoadingMore && feedState.hasMore) void loadMore();
+        }}
+        onEndReachedThreshold={0.4}
         initialNumToRender={4}
         maxToRenderPerBatch={4}
         windowSize={5}

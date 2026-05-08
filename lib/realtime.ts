@@ -25,6 +25,14 @@ export const CHANNEL_UPDATED_EVENT = "channel:updated";
 export const NEW_CHANNEL_EVENT = "channel:new";
 export const NOTIFICATION_EVENT = "notification:new";
 export const SUBSCRIPTION_UPDATED_EVENT = "subscription:updated";
+export const CHANNEL_MESSAGE_EVENT = "channel:message";
+export const CHANNEL_STATUS_EVENT = "channel:status";
+export const CHANNEL_CLOSED_EVENT = "channel:closed";
+export const CHANNEL_TIMER_UPDATED_EVENT = "channel:timer_updated";
+export const CHANNEL_MESSAGES_SEEN_EVENT = "channel:messages_seen";
+export const MESSAGE_MARKED_EVENT = "message:marked";
+export const MESSAGE_DELETED_EVENT = "message:deleted";
+export const ANSWER_SUBMITTED_EVENT = "answer:submitted";
 export const CALL_INCOMING_EVENT = "call:incoming";
 export const CALL_ACCEPTED_EVENT = "call:accepted";
 export const CALL_REJECTED_EVENT = "call:rejected";
@@ -33,6 +41,10 @@ export const CALL_MISSED_EVENT = "call:missed";
 
 export function getUserPusherName(userId: string) {
   return `${USER_CHANNEL_PREFIX}${userId}`;
+}
+
+export function getChannelPusherName(channelId: string) {
+  return `channel-${channelId}`;
 }
 
 export function getPusherConfig() {

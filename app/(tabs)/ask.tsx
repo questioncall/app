@@ -20,9 +20,11 @@ import Toast from "react-native-toast-message";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import {
   addMyQuestion,
+  markOptimistic,
   normalizeFeedQuestion,
   prependQuestion,
   removeQuestion,
+  unmarkOptimistic,
 } from "@/store/slices/feedSlice";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useFilterOptions } from "@/hooks/use-filter-options";
@@ -97,7 +99,6 @@ function StudentAskScreen() {
     backgroundColor,
     cardColor,
     borderColor,
-    iconColor,
     mutedIconColor,
     primaryColor,
     primarySoftColor,
@@ -269,6 +270,7 @@ function StudentAskScreen() {
     });
     dispatch(prependQuestion(optimistic));
     dispatch(addMyQuestion(optimistic));
+    dispatch(markOptimistic(tempId));
 
     try {
       const imageUrls = await uploadPendingImages();
@@ -285,6 +287,7 @@ function StudentAskScreen() {
       });
 
       const created = normalizeFeedQuestion(res.data);
+      dispatch(unmarkOptimistic(tempId));
       dispatch(removeQuestion(tempId));
       dispatch(prependQuestion(created));
       dispatch(addMyQuestion(created));
@@ -301,6 +304,7 @@ function StudentAskScreen() {
       Toast.show({ type: "success", text1: "Question posted." });
       router.replace("/(tabs)/feed");
     } catch (err: any) {
+      dispatch(unmarkOptimistic(tempId));
       dispatch(removeQuestion(tempId));
       const status = err?.response?.status;
       const apiMessage = err?.response?.data?.error ?? err?.response?.data?.message;

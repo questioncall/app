@@ -22,7 +22,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 
 function getChannelKey(item: ChannelListItem, index: number) {
-  return `${item._id || item.questionId || item.createdAt || "channel"}-${index}`;
+  return `${item.id || "channel"}-${index}`;
 }
 
 export default function ChannelsScreen() {
@@ -112,7 +112,7 @@ export default function ChannelsScreen() {
           ItemSeparatorComponent={() => <View className="h-3" />}
           renderItem={({ item }) => (
             <TouchableOpacity
-              onPress={() => router.push(`/workspace/${item._id}` as any)}
+              onPress={() => router.push(`/workspace/${item.id}` as any)}
               className="flex-row items-center rounded-2xl border border-border bg-card px-4 py-4"
               activeOpacity={0.8}
             >
@@ -121,7 +121,7 @@ export default function ChannelsScreen() {
                 style={{ backgroundColor: primaryColor }}
               >
                 <Text className="text-lg font-bold text-white">
-                  {(item.questionTitle ?? "Q")[0].toUpperCase()}
+                  {(item.counterpartName ?? "?")[0].toUpperCase()}
                 </Text>
               </View>
 
@@ -131,17 +131,25 @@ export default function ChannelsScreen() {
                     className="mr-2 flex-1 text-sm font-semibold text-card-foreground"
                     numberOfLines={1}
                   >
-                    {item.questionTitle ?? "Question"}
+                    {item.questionTitle}
                   </Text>
-                  {item.lastMessage?.createdAt ? (
+                  {item.lastMessageAt ? (
                     <Text className="text-xs text-muted-foreground">
-                      {new Date(item.lastMessage.createdAt).toLocaleDateString()}
+                      {new Date(item.lastMessageAt).toLocaleDateString()}
                     </Text>
                   ) : null}
                 </View>
-                <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                  {item.lastMessage?.content ?? "No messages yet"}
-                </Text>
+                <View className="flex-row items-center">
+                  <Text
+                    className="flex-1 text-sm text-muted-foreground"
+                    numberOfLines={1}
+                  >
+                    {item.lastMessagePreview ?? "No messages yet"}
+                  </Text>
+                  <Text className="ml-2 text-xs text-muted-foreground">
+                    {item.counterpartName}
+                  </Text>
+                </View>
               </View>
 
               {item.unreadCount > 0 ? (

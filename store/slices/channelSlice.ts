@@ -1,125 +1,252 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface ChatMessage {
-  _id: string;
+  id: string;
+  _id?: string;
   channelId: string;
   senderId: string;
-  senderName?: string;
-  senderImage?: string;
+  senderName: string;
   content: string;
-  attachments?: { url: string; type: string; name?: string }[];
-  isAnswer?: boolean;
-  isSystem?: boolean;
-  createdAt: string;
-  // Local-only state
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  isSystemMessage: boolean;
+  isOwn: boolean;
+  isSeen: boolean;
+  isDelivered: boolean;
+  isMarkedAsAnswer: boolean;
+  isDeleted: boolean;
+  sentAt: string;
+  callInfo?: {
+    callSessionId: string;
+    mode: "AUDIO" | "VIDEO";
+    status: "ENDED" | "REJECTED" | "MISSED";
+    durationSeconds: number | null;
+    callerName: string;
+    callerId: string;
+  } | null;
+  localId?: string;
   isSending?: boolean;
   sendFailed?: boolean;
-  localId?: string;
+}
+
+export interface ChannelDetail {
+  id: string;
+  questionId: string;
+  askerId: string;
+  acceptorId: string;
+  openedAt: string;
+  timerDeadline: string;
+  timeExtensionCount: number;
+  closedAt?: string | null;
+  status: "ACTIVE" | "CLOSED" | "EXPIRED" | "ANSWERED";
+  isClosedByAsker: boolean;
+  ratingGiven?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  questionTitle: string;
+  questionBody: string;
+  answerFormat: string;
+  answerVisibility: string;
+  askerName: string;
+  askerUsername?: string;
+  askerImage?: string;
+  acceptorName: string;
+  acceptorUsername?: string;
+  acceptorImage?: string;
+  formatDurationMinutes: number;
+  maxVideoDurationMinutes: number;
+  isAnswerSubmitted: boolean;
+}
+
+interface ChannelCacheEntry {
+  detail: ChannelDetail;
+  messages: ChatMessage[];
+  fetchedAt: number;
 }
 
 interface ChannelState {
   activeChannelId: string | null;
-  messages: ChatMessage[];
-  pendingMessages: ChatMessage[];
+  cache: Record<string, ChannelCacheEntry>;
   isLoading: boolean;
-  hasMore: boolean;
-  page: number;
   error: string | null;
 }
 
 const initialState: ChannelState = {
   activeChannelId: null,
-  messages: [],
-  pendingMessages: [],
+  cache: {},
   isLoading: false,
-  hasMore: true,
-  page: 1,
   error: null,
 };
+
+function getMessageId(m: ChatMessage) {
+  return m.id || m._id || m.localId || "";
+}
+
+function getActive(state: ChannelState) {
+  if (!state.activeChannelId) return null;
+  return state.cache[state.activeChannelId] ?? null;
+}
 
 const channelSlice = createSlice({
   name: "channel",
   initialState,
   reducers: {
-    setActiveChannel(state, action: PayloadAction<string>) {
-      state.activeChannelId = action.payload;
-      state.messages = [];
-      state.page = 1;
-      state.hasMore = true;
-    },
-    setMessages(state, action: PayloadAction<ChatMessage[]>) {
-      state.messages = action.payload;
-      state.isLoading = false;
-    },
-    prependMessages(state, action: PayloadAction<ChatMessage[]>) {
-      state.messages = [...action.payload, ...state.messages];
-    },
-    appendMessage(state, action: PayloadAction<ChatMessage>) {
-      state.messages = [...state.messages, action.payload];
-    },
-    updateMessage(
-      state,
-      action: PayloadAction<{ localId: string; data: Partial<ChatMessage> }>
-    ) {
-      const idx = state.messages.findIndex(
-        (m) => m.localId === action.payload.localId || m._id === action.payload.localId
-      );
-      if (idx !== -1) {
-        state.messages[idx] = { ...state.messages[idx], ...action.payload.data };
-      }
-    },
-    removeMessage(state, action: PayloadAction<string>) {
-      state.messages = state.messages.filter((m) => m._id !== action.payload);
-    },
-    addPendingMessage(state, action: PayloadAction<ChatMessage>) {
-      state.pendingMessages = [...state.pendingMessages, action.payload];
-      state.messages = [...state.messages, action.payload];
-    },
-    resolvePendingMessage(
-      state,
-      action: PayloadAction<{ localId: string; message: ChatMessage }>
-    ) {
-      state.pendingMessages = state.pendingMessages.filter(
-        (m) => m.localId !== action.payload.localId
-      );
-      const idx = state.messages.findIndex(
-        (m) => m.localId === action.payload.localId
-      );
-      if (idx !== -1) {
-        state.messages[idx] = action.payload.message;
-      }
-    },
     setChannelLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
     },
-    setChannelHasMore(state, action: PayloadAction<boolean>) {
-      state.hasMore = action.payload;
+    setChannelError(state, action: PayloadAction<string | null>) {
+      state.error = action.payload;
+      state.isLoading = false;
     },
-    setChannelPage(state, action: PayloadAction<number>) {
-      state.page = action.payload;
+    setChannelData(
+      state,
+      action: PayloadAction<{
+        channelId: string;
+        detail: ChannelDetail;
+        messages: ChatMessage[];
+      }>,
+    ) {
+      const { channelId, detail, messages } = action.payload;
+      state.activeChannelId = channelId;
+      state.cache[channelId] = { detail, messages, fetchedAt: Date.now() };
+      state.isLoading = false;
+      state.error = null;
+    },
+    appendMessage(state, action: PayloadAction<ChatMessage>) {
+      const entry = getActive(state);
+      if (!entry) return;
+      const msgId = getMessageId(action.payload);
+      const exists = entry.messages.some((m) => getMessageId(m) === msgId);
+      if (!exists) {
+        entry.messages.push(action.payload);
+      }
+    },
+    addPendingMessage(state, action: PayloadAction<ChatMessage>) {
+      const entry = getActive(state);
+      if (entry) entry.messages.push(action.payload);
+    },
+    resolvePendingMessage(
+      state,
+      action: PayloadAction<{ localId: string; message: ChatMessage }>,
+    ) {
+      const entry = getActive(state);
+      if (!entry) return;
+      const idx = entry.messages.findIndex((m) => m.localId === action.payload.localId);
+      if (idx !== -1) {
+        entry.messages[idx] = action.payload.message;
+      }
+    },
+    failPendingMessage(state, action: PayloadAction<string>) {
+      const entry = getActive(state);
+      if (!entry) return;
+      const idx = entry.messages.findIndex((m) => m.localId === action.payload);
+      if (idx !== -1) {
+        entry.messages[idx] = {
+          ...entry.messages[idx],
+          isSending: false,
+          sendFailed: true,
+        };
+      }
+    },
+    removeMessage(state, action: PayloadAction<string>) {
+      const entry = getActive(state);
+      if (entry) {
+        entry.messages = entry.messages.filter((m) => getMessageId(m) !== action.payload);
+      }
+    },
+    toggleMessageMarked(
+      state,
+      action: PayloadAction<{ messageId: string; isMarkedAsAnswer: boolean }>,
+    ) {
+      const entry = getActive(state);
+      if (!entry) return;
+      const msg = entry.messages.find(
+        (m) => getMessageId(m) === action.payload.messageId,
+      );
+      if (msg) msg.isMarkedAsAnswer = action.payload.isMarkedAsAnswer;
+    },
+    setMessageDeleted(state, action: PayloadAction<string>) {
+      const entry = getActive(state);
+      if (!entry) return;
+      const msg = entry.messages.find((m) => getMessageId(m) === action.payload);
+      if (msg) {
+        msg.isDeleted = true;
+        msg.content = "";
+      }
+    },
+    markMessagesAsSeen(state) {
+      const entry = getActive(state);
+      if (!entry) return;
+      for (const msg of entry.messages) {
+        if (!msg.isOwn) msg.isSeen = true;
+      }
+    },
+    setChannelStatus(
+      state,
+      action: PayloadAction<{
+        status: ChannelDetail["status"];
+        ratingGiven?: number | null;
+      }>,
+    ) {
+      const entry = getActive(state);
+      if (entry) {
+        entry.detail.status = action.payload.status;
+        if (action.payload.ratingGiven !== undefined) {
+          entry.detail.ratingGiven = action.payload.ratingGiven;
+        }
+      }
+    },
+    setChannelTimer(
+      state,
+      action: PayloadAction<{
+        timerDeadline: string;
+        timeExtensionCount: number;
+      }>,
+    ) {
+      const entry = getActive(state);
+      if (entry) {
+        entry.detail.timerDeadline = action.payload.timerDeadline;
+        entry.detail.timeExtensionCount = action.payload.timeExtensionCount;
+      }
+    },
+    setAnswerSubmitted(state, action: PayloadAction<boolean>) {
+      const entry = getActive(state);
+      if (entry) entry.detail.isAnswerSubmitted = action.payload;
     },
     clearChannel(state) {
       state.activeChannelId = null;
-      state.messages = [];
-      state.pendingMessages = [];
-      state.page = 1;
-      state.hasMore = true;
+      state.error = null;
+      state.isLoading = false;
+    },
+    evictChannelCache(state, action: PayloadAction<string>) {
+      delete state.cache[action.payload];
+    },
+    clearAllChannelCache(state) {
+      state.cache = {};
+      state.activeChannelId = null;
+      state.error = null;
+      state.isLoading = false;
     },
   },
 });
 
 export const {
-  setActiveChannel,
-  setMessages,
-  prependMessages,
+  setChannelLoading,
+  setChannelError,
+  setChannelData,
   appendMessage,
-  updateMessage,
-  removeMessage,
   addPendingMessage,
   resolvePendingMessage,
-  setChannelLoading,
-  setChannelHasMore,
-  setChannelPage,
+  failPendingMessage,
+  removeMessage,
+  toggleMessageMarked,
+  setMessageDeleted,
+  markMessagesAsSeen,
+  setChannelStatus,
+  setChannelTimer,
+  setAnswerSubmitted,
   clearChannel,
+  evictChannelCache,
+  clearAllChannelCache,
 } = channelSlice.actions;
 export default channelSlice.reducer;

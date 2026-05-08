@@ -2,6 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { store } from "@/store";
 import { setAccessToken, clearAuth } from "@/store/slices/authSlice";
+import { clearAllChannelCache } from "@/store/slices/channelSlice";
 import { clearUser } from "@/store/slices/userSlice";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://questioncall.com/api";
@@ -97,6 +98,7 @@ api.interceptors.response.use(
       await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
       store.dispatch(clearAuth());
       store.dispatch(clearUser());
+      store.dispatch(clearAllChannelCache());
       // 403 on refresh = account suspended
       if (refreshError?.response?.status === 403) {
         const { router } = require("expo-router");
