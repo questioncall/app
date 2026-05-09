@@ -9,14 +9,16 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+ Alert, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+
+import Toast from "react-native-toast-message";
 
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { publicApi } from "@/lib/api";
+import { api, publicApi } from "@/lib/api";
 import type { Course } from "@/store/slices/coursesSlice";
 
 type CourseVideo = {
@@ -93,6 +95,10 @@ export default function CourseDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [showCoupon, setShowCoupon] = useState(false);
 
   const loadCourse = useCallback(
     async (force = false) => {
@@ -130,6 +136,77 @@ export default function CourseDetailScreen() {
   useEffect(() => {
     void loadCourse();
   }, [loadCourse]);
+
+  useEffect(() => {
+    if (course?.overallProgressPercent != null) setIsEnrolled(true);
+  }, [course?.overallProgressPercent]);
+
+  const handleEnroll = useCallback(
+    async (code?: string) => {
+      if (!courseId) return;
+      setIsEnrolling(true);
+      try {
+        const body: any = {};
+        if (code?.trim()) body.couponCode = code.trim();
+        const res = await api.post(`/courses/${courseId}/enroll`, body);
+        setIsEnrolled(true);
+        Toast.show({ type: "success", text1: "Enrolled!", text2: "Happy learning." });
+        void loadCourse(true);
+      } catch (err: any) {
+        const msg = err?.response?.data?.error ?? "";
+        const reason = err?.response?.data?.reason ?? "";
+        if (msg.includes("PAID_COURSE_USE_PURCHASE_FLOW")) {
+          router.push({
+            pathname: "/payment/manual" as any,
+            params: { courseId },
+          });
+        } else if (reason === "SUBSCRIPTION_REQUIRED") {
+          Alert.alert(
+            "Subscription Required",
+            "You need an active subscription to access this course.",
+            [
+              { text: "View Plans", onPress: () => router.push("/payment/plans" as any) },
+              { text: "Cancel", style: "cancel" },
+            ],
+          );
+        } else {
+          Toast.show({
+            type: "error",
+            text1: "Enrollment Failed",
+            text2: msg || "Try again.",
+          });
+        }
+      } finally {
+        setIsEnrolling(false);
+      }
+    },
+    [courseId, loadCourse],
+  );
+
+  const handlePurchase = useCallback(() => {
+    if (!courseId) return;
+    if (course?.pricingModel === "PAID") {
+      Alert.alert("Choose Payment Method", "", [
+        {
+          text: "eSewa",
+          onPress: () =>
+            router.push({
+              pathname: "/payment/gateway" as any,
+              params: { courseId, mode: "course" },
+            }),
+        },
+        {
+          text: "Manual Transfer",
+          onPress: () =>
+            router.push({
+              pathname: "/payment/manual" as any,
+              params: { courseId },
+            }),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    }
+  }, [courseId, course?.pricingModel]);
 
   const totalSections = course?.sections?.length ?? 0;
   const totalVideos = useMemo(
@@ -425,22 +502,108 @@ export default function CourseDetailScreen() {
             )}
           </View>
 
-          <View className="mt-4 flex-row flex-wrap gap-2">
+          {/* Enroll / Purchase CTA */}
+          {userRole === "STUDENT" && !isEnrolled ? (
+            <View className="mt-4 gap-3">
+              {activeCourse.pricingModel === "PAID" ? (
+                <TouchableOpacity
+                  onPress={handlePurchase}
+                  className="items-center rounded-2xl py-4"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Text className="text-base font-bold text-white">
+                    Buy Course · {formatCurrency(activeCourse)}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => handleEnroll(couponCode)}
+                  disabled={isEnrolling}
+                  className="items-center rounded-2xl py-4"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {isEnrolling ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="text-base font-bold text-white">
+                      {activeCourse.pricingModel === "FREE"
+                        ? "Enroll for Free"
+                        : "Enroll with Subscription"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {/* Coupon */}
+              {!showCoupon ? (
+                <TouchableOpacity onPress={() => setShowCoupon(true)}>
+                  <Text className="text-center text-sm text-muted-foreground">
+                    Have a coupon code?
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View className="flex-row gap-2">
+                  <TextInput
+                    className="flex-1 rounded-xl border border-border px-4 py-3 text-sm text-foreground"
+                    value={couponCode}
+                    onChangeText={setCouponCode}
+                    placeholder="Enter coupon code"
+                    placeholderTextColor={mutedIconColor}
+                    autoCapitalize="characters"
+                  />
+                  <TouchableOpacity
+                    onPress={() => handleEnroll(couponCode)}
+                    disabled={!couponCode.trim() || isEnrolling}
+                    className="items-center justify-center rounded-xl px-4"
+                    style={{
+                      backgroundColor: couponCode.trim()
+                        ? primaryColor
+                        : `${primaryColor}40`,
+                    }}
+                  >
+                    <Text className="font-semibold text-white">Apply</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          {/* Enrolled — continue learning */}
+          {isEnrolled ? (
+            <View className="mt-4">
+              <TouchableOpacity
+                onPress={() => {
+                  const firstVideo = activeCourse.sections?.[0]?.videos?.[0];
+                  if (firstVideo) {
+                    router.push({
+                      pathname: "/course/video" as any,
+                      params: {
+                        courseId,
+                        videoId: firstVideo._id,
+                        title: firstVideo.title,
+                      },
+                    });
+                  }
+                }}
+                className="items-center rounded-2xl py-4"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <Text className="text-base font-bold text-white">
+                  {(activeCourse.overallProgressPercent ?? 0) > 0
+                    ? "Continue Learning"
+                    : "Start Learning"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          <View className="mt-4">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="rounded-full border border-border bg-card px-4 py-3"
+              className="self-start rounded-full border border-border bg-card px-4 py-3"
             >
               <Text className="text-sm font-medium text-foreground">Back</Text>
             </TouchableOpacity>
-
-            {userRole === "STUDENT" ? (
-              <TouchableOpacity
-                onPress={() => router.push("/(tabs)/courses" as any)}
-                className="rounded-full bg-primary px-4 py-3"
-              >
-                <Text className="text-sm font-semibold text-white">Browse courses</Text>
-              </TouchableOpacity>
-            ) : null}
           </View>
         </View>
       </ScrollView>

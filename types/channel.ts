@@ -5,7 +5,7 @@
 import type { AnswerFormat } from "@/types/question";
 
 export type ChannelStatus = "ACTIVE" | "CLOSED" | "EXPIRED";
-export type MessageMediaType = "TEXT" | "IMAGE" | "VIDEO" | "AUDIO";
+export type MessageMediaType = "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT";
 
 // ──────────────────────────────────────────────────────────
 // Channel shapes
@@ -71,7 +71,7 @@ export type ChatMessage = {
   senderName: string;
   content: string;
   mediaUrl: string | null;
-  mediaType: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | null;
+  mediaType: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT" | null;
   isSystemMessage: boolean;
   isOwn: boolean;
   isSending?: boolean;

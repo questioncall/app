@@ -221,12 +221,7 @@ export default function MenuScreen() {
             icon="wallet-outline"
             label="Wallet"
             subtitle={`${pointBalance} pts · NPR ${nprEquivalent}`}
-            onPress={() =>
-              Alert.alert(
-                "Wallet",
-                "Wallet with biometric gate — coming soon in the next sprint!",
-              )
-            }
+            onPress={() => router.push("/wallet" as any)}
           />
           {isTeacher ? (
             <>
@@ -235,7 +230,7 @@ export default function MenuScreen() {
                 icon="cash-outline"
                 label="Withdraw"
                 subtitle="Transfer to eSewa"
-                onPress={() => Alert.alert("Withdraw", "Withdrawal flow — coming soon!")}
+                onPress={() => router.push("/wallet/withdraw" as any)}
               />
             </>
           ) : null}
@@ -243,7 +238,7 @@ export default function MenuScreen() {
           <MenuItem
             icon="receipt-outline"
             label="Transaction History"
-            onPress={() => Alert.alert("Transactions", "History — coming soon!")}
+            onPress={() => router.push("/wallet" as any)}
           />
           {isTeacher ? (
             <>

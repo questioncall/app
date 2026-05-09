@@ -20,6 +20,11 @@ import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
 import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
 import { RealtimeBridge } from "@/components/realtime/realtime-bridge";
 import { ImageViewerProvider } from "@/components/image-viewer/image-viewer-context";
+import {
+  registerForPushNotifications,
+  subscribePushToken,
+  addNotificationResponseListener,
+} from "@/lib/push-notifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -66,6 +71,9 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       if (accessToken && refreshToken) {
         store.dispatch(setTokens({ accessToken, refreshToken }));
         await Promise.all([fetchPlatformConfig(), fetchCurrentUser()]);
+        registerForPushNotifications().then((token) => {
+          if (token) void subscribePushToken(token);
+        });
       } else {
         store.dispatch(clearAuth());
       }
@@ -103,7 +111,16 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     void initializeApp();
 
     const subscription = AppState.addEventListener("change", handleAppStateChange);
-    return () => subscription.remove();
+    const notificationSub = addNotificationResponseListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.url && typeof data.url === "string") {
+        router.push(data.url as any);
+      }
+    });
+    return () => {
+      subscription.remove();
+      notificationSub.remove();
+    };
   }, [handleAppStateChange, initializeApp]);
 
   return <>{children}</>;
@@ -134,7 +151,12 @@ function RootLayout() {
                   <Stack.Screen name="workspace/[channelId]" />
                   <Stack.Screen name="call/[roomId]" />
                   <Stack.Screen name="course/[id]" />
+                  <Stack.Screen name="course/video" />
+                  <Stack.Screen name="quiz/index" />
                   <Stack.Screen name="quiz/[topicId]" />
+                  <Stack.Screen name="quiz/results" />
+                  <Stack.Screen name="wallet/index" />
+                  <Stack.Screen name="wallet/withdraw" />
                   <Stack.Screen name="payment/gateway" />
                   <Stack.Screen name="payment/manual" />
                   <Stack.Screen name="payment/plans" />

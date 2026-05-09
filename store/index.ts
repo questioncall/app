@@ -11,6 +11,8 @@ import activityReducer from "./slices/activitySlice";
 import noticesReducer from "./slices/noticesSlice";
 import onboardingReducer from "./slices/onboardingSlice";
 import realtimeReducer from "./slices/realtimeSlice";
+import walletReducer from "./slices/walletSlice";
+import quizReducer from "./slices/quizSlice";
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +28,8 @@ export const store = configureStore({
     notices: noticesReducer,
     onboarding: onboardingReducer,
     realtime: realtimeReducer,
+    wallet: walletReducer,
+    quiz: quizReducer,
   },
 });
 
