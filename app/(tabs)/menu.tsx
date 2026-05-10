@@ -174,10 +174,10 @@ export default function MenuScreen() {
             </View>
           </View>
           <TouchableOpacity
-            onPress={() => router.push("/profile/edit" as any)}
+            onPress={() => router.push("/profile" as any)}
             className="rounded-xl bg-secondary px-3 py-2"
           >
-            <Text className="text-xs font-medium text-secondary-foreground">Edit</Text>
+            <Text className="text-xs font-medium text-secondary-foreground">View</Text>
           </TouchableOpacity>
         </View>
 
@@ -203,8 +203,8 @@ export default function MenuScreen() {
         <View className="mx-4 overflow-hidden rounded-2xl border border-border bg-card">
           <MenuItem
             icon="person-outline"
-            label="Edit Profile"
-            onPress={() => router.push("/profile/edit" as any)}
+            label="My Profile"
+            onPress={() => router.push("/profile" as any)}
           />
           <Divider />
           <MenuItem
@@ -267,6 +267,13 @@ export default function MenuScreen() {
               <Divider />
             </>
           ) : null}
+          <MenuItem
+            icon="document-text-outline"
+            label="Notes"
+            subtitle="Study notes shared by students"
+            onPress={() => router.push("/notes" as any)}
+          />
+          <Divider />
           <MenuItem
             icon="bulb-outline"
             label="AI Quizzes"
@@ -337,7 +344,7 @@ export default function MenuScreen() {
           <MenuItem
             icon="key-outline"
             label="Change Password"
-            onPress={() => Alert.alert("Change Password", "Coming soon!")}
+            onPress={() => router.push("/profile/change-password" as any)}
           />
           <Divider />
           <MenuItem

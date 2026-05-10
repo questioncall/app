@@ -130,6 +130,10 @@ export default function WorkspaceScreen() {
 
   const flatListRef = useRef<FlatList<any>>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isLoadingOlderRef = useRef(false);
+
+  const PAGE_SIZE = 30;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const CACHE_TTL_MS = 30_000;
 
@@ -590,11 +594,22 @@ export default function WorkspaceScreen() {
     }
   };
 
+  const handleLoadOlder = useCallback(() => {
+    isLoadingOlderRef.current = true;
+    setVisibleCount((c) => c + PAGE_SIZE);
+  }, []);
+
+  // Reset pagination when channel changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [channelId]);
+
   // ─── Date separators ──────────────────────────────────────────
   const messagesWithDates = useMemo(() => {
+    const visible = messages.slice(Math.max(0, messages.length - visibleCount));
     const result: (ChatMessage | { __dateSeparator: string })[] = [];
     let lastDate = "";
-    for (const msg of messages) {
+    for (const msg of visible) {
       const date = formatMessageDate(msg.sentAt);
       if (date !== lastDate) {
         result.push({ __dateSeparator: date });
@@ -603,7 +618,7 @@ export default function WorkspaceScreen() {
       result.push(msg);
     }
     return result;
-  }, [messages]);
+  }, [messages, visibleCount]);
 
   // ─── Loading state ────────────────────────────────────────────
   if (isLoading || !detail) {
@@ -979,8 +994,23 @@ export default function WorkspaceScreen() {
         contentContainerStyle={{ paddingVertical: 8 }}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => {
-          flatListRef.current?.scrollToEnd({ animated: false });
+          if (!isLoadingOlderRef.current) {
+            flatListRef.current?.scrollToEnd({ animated: false });
+          }
+          isLoadingOlderRef.current = false;
         }}
+        ListHeaderComponent={
+          messages.length > visibleCount ? (
+            <TouchableOpacity
+              onPress={handleLoadOlder}
+              className="mx-auto my-3 flex-row items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2"
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-up-circle-outline" size={15} color={mutedIconColor} />
+              <Text className="text-xs text-muted-foreground">Load older messages</Text>
+            </TouchableOpacity>
+          ) : null
+        }
       />
 
       {/* ── Input bar ───────────────────────────────────────── */}

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import type { StatusBarStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { usePreventScreenCapture } from "expo-screen-capture";
@@ -59,7 +60,8 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function WalletScreen() {
   usePreventScreenCapture();
-  const { isUnlocked } = useBiometricGate();
+  const { isUnlocked, isPending, biometricType, authenticate, handleGoBack } =
+    useBiometricGate();
   const dispatch = useAppDispatch();
   const wallet = useAppSelector((s) => s.wallet);
   const user = useAppSelector((s) => s.user.data);
@@ -126,13 +128,17 @@ export default function WalletScreen() {
 
   if (!isUnlocked) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
-        <Ionicons name="lock-closed" size={48} color={mutedIconColor} />
-        <Text className="mt-4 text-base text-muted-foreground">
-          Authenticate to access your wallet
-        </Text>
-      </View>
+      <BiometricLockScreen
+        statusBarStyle={statusBarStyle}
+        backgroundColor={backgroundColor}
+        primaryColor={primaryColor}
+        primarySoftColor={primarySoftColor}
+        mutedIconColor={mutedIconColor}
+        biometricType={biometricType}
+        isPending={isPending}
+        onAuthenticate={authenticate}
+        onGoBack={handleGoBack}
+      />
     );
   }
 
@@ -454,6 +460,85 @@ export default function WalletScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
+    </View>
+  );
+}
+
+interface LockScreenProps {
+  statusBarStyle: StatusBarStyle;
+  backgroundColor: string;
+  primaryColor: string;
+  primarySoftColor: string;
+  mutedIconColor: string;
+  biometricType: "fingerprint" | "face" | "passcode";
+  isPending: boolean;
+  onAuthenticate: () => Promise<boolean>;
+  onGoBack: () => void;
+}
+
+function BiometricLockScreen({
+  statusBarStyle,
+  backgroundColor,
+  primaryColor,
+  primarySoftColor,
+  mutedIconColor,
+  biometricType,
+  isPending,
+  onAuthenticate,
+  onGoBack,
+}: LockScreenProps) {
+  const icon =
+    biometricType === "face"
+      ? "scan-outline"
+      : biometricType === "fingerprint"
+        ? "finger-print-outline"
+        : "keypad-outline";
+
+  const label =
+    biometricType === "face"
+      ? "Face ID"
+      : biometricType === "fingerprint"
+        ? "Fingerprint"
+        : "Passcode";
+
+  return (
+    <View className="flex-1 items-center justify-center bg-background px-8">
+      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+      <View
+        className="mb-6 h-24 w-24 items-center justify-center rounded-full"
+        style={{ backgroundColor: primarySoftColor }}
+      >
+        <Ionicons name="wallet-outline" size={40} color={primaryColor} />
+      </View>
+      <Text className="mb-2 text-center text-2xl font-bold text-foreground">
+        Wallet Locked
+      </Text>
+      <Text className="mb-8 text-center text-sm text-muted-foreground">
+        Verify your identity to view your balance and transactions.
+      </Text>
+      <TouchableOpacity
+        onPress={() => void onAuthenticate()}
+        disabled={isPending}
+        className="mb-4 items-center justify-center rounded-full px-10 py-4"
+        style={{ backgroundColor: primaryColor }}
+        activeOpacity={0.85}
+      >
+        <View className="flex-row items-center gap-2">
+          {isPending ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Ionicons name={icon as any} size={22} color="#fff" />
+          )}
+          <Text className="text-base font-bold text-white">
+            {isPending ? "Authenticating…" : `Use ${label}`}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onGoBack} className="mt-2 px-4 py-3">
+        <Text className="text-sm font-medium" style={{ color: mutedIconColor }}>
+          Go Back
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }

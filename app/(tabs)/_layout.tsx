@@ -50,12 +50,14 @@ function TabIcon({
   focused,
   activeColor,
   inactiveColor,
+  badge,
 }: {
   name: IoniconName;
   label: string;
   focused: boolean;
   activeColor: string;
   inactiveColor: string;
+  badge?: number;
 }) {
   const color = focused ? activeColor : inactiveColor;
 
@@ -68,7 +70,31 @@ function TabIcon({
         gap: 2,
       }}
     >
-      <Ionicons name={name} size={21} color={color} />
+      <View>
+        <Ionicons name={name} size={21} color={color} />
+        {badge && badge > 0 ? (
+          <View
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -6,
+              minWidth: 16,
+              height: 16,
+              borderRadius: 8,
+              backgroundColor: "#EF4444",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 3,
+            }}
+          >
+            <Text
+              style={{ fontSize: 9, fontWeight: "700", color: "#FFF", lineHeight: 11 }}
+            >
+              {badge > 99 ? "99+" : badge}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -87,6 +113,9 @@ function TabIcon({
 
 export default function TabsLayout() {
   const userRole = useAppSelector((s) => s.user.data?.role);
+  const totalUnread = useAppSelector((s) =>
+    s.channels.list.reduce((sum, ch) => sum + (ch.unreadCount ?? 0), 0),
+  );
   const insets = useSafeAreaInsets();
   const { cardColor, borderColor, primaryColor, mutedIconColor, isDark } = useAppTheme();
   const isTeacher = userRole === "TEACHER";
@@ -134,6 +163,7 @@ export default function TabsLayout() {
               focused={focused}
               activeColor={primaryColor}
               inactiveColor={inactiveColor}
+              badge={totalUnread}
             />
           ),
         }}

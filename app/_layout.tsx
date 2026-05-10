@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import { Appearance, AppState, AppStateStatus } from "react-native";
 import { Stack, router } from "expo-router";
 import { Provider } from "react-redux";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -39,6 +39,15 @@ if (sentryDsn) {
 }
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    SecureStore.getItemAsync("theme_preference")
+      .then((pref) => {
+        if (pref === "light") Appearance.setColorScheme("light");
+        else if (pref === "dark") Appearance.setColorScheme("dark");
+      })
+      .catch(() => {});
+  }, []);
+
   const fetchPlatformConfig = useCallback(async () => {
     try {
       const res = await api.get("/platform/config");
@@ -160,8 +169,11 @@ function RootLayout() {
                   <Stack.Screen name="payment/gateway" />
                   <Stack.Screen name="payment/manual" />
                   <Stack.Screen name="payment/plans" />
+                  <Stack.Screen name="notes" />
+                  <Stack.Screen name="profile/index" />
                   <Stack.Screen name="profile/edit" />
                   <Stack.Screen name="profile/activity" />
+                  <Stack.Screen name="profile/change-password" />
                   <Stack.Screen name="settings/call-settings" />
                   <Stack.Screen name="settings/notifications" />
                   <Stack.Screen name="settings/theme" />

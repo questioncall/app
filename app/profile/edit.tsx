@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { ComponentProps } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
@@ -50,6 +53,7 @@ export default function EditProfileScreen() {
   const [skills, setSkills] = useState("");
   const [interests, setInterests] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     setName(user?.name ?? "");
@@ -58,6 +62,77 @@ export default function EditProfileScreen() {
     setSkills(toCommaValue(user?.skills));
     setInterests(toCommaValue(user?.interests));
   }, [user]);
+
+  async function pickAndUploadImage(source: "camera" | "gallery") {
+    const permResult =
+      source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permResult.granted) {
+      Toast.show({ type: "error", text1: "Permission denied." });
+      return;
+    }
+
+    const result =
+      source === "camera"
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setUploadingImage(true);
+    try {
+      const uri = result.assets[0].uri;
+      const filename = uri.split("/").pop() ?? "avatar.jpg";
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : "image/jpeg";
+
+      const form = new FormData();
+      form.append("file", { uri, name: filename, type } as any);
+
+      const uploadRes = await api.post("/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const uploaded: string = uploadRes.data?.url ?? uploadRes.data?.secure_url ?? "";
+      if (uploaded) setImageUrl(uploaded);
+    } catch {
+      Toast.show({ type: "error", text1: "Failed to upload image." });
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  function handleAvatarPress() {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancel", "Take Photo", "Choose from Library"],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) void pickAndUploadImage("camera");
+          if (idx === 2) void pickAndUploadImage("gallery");
+        },
+      );
+    } else {
+      Alert.alert("Change Photo", "Select a source", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Camera", onPress: () => void pickAndUploadImage("camera") },
+        { text: "Gallery", onPress: () => void pickAndUploadImage("gallery") },
+      ]);
+    }
+  }
 
   async function handleSave() {
     const trimmedName = name.trim();
@@ -135,28 +210,63 @@ export default function EditProfileScreen() {
           </View>
 
           <View className="items-center">
-            <View className="relative">
-              {imageUrl ? (
-                <Image
-                  source={{ uri: imageUrl }}
-                  className="h-28 w-28 rounded-full"
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  className="h-28 w-28 items-center justify-center rounded-full"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  <Text className="text-3xl font-bold text-white">{initials}</Text>
-                </View>
-              )}
-              <View
-                className="absolute bottom-0 right-0 h-10 w-10 items-center justify-center rounded-full border-4 border-background"
-                style={{ backgroundColor: primaryColor }}
+            {/* Explicit 112×112 container so the absolute camera badge has a real parent */}
+            <View style={{ width: 112, height: 112 }}>
+              <TouchableOpacity
+                onPress={handleAvatarPress}
+                activeOpacity={0.8}
+                disabled={uploadingImage}
+                style={{ width: 112, height: 112, borderRadius: 56, overflow: "hidden" }}
               >
-                <Ionicons name="camera-outline" size={18} color="#FFFFFF" />
-              </View>
+                {imageUrl ? (
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={{ width: 112, height: 112 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: 112,
+                      height: 112,
+                      borderRadius: 56,
+                      backgroundColor: primaryColor,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text className="text-3xl font-bold text-white">{initials}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Camera badge — its own touch target */}
+              <TouchableOpacity
+                onPress={handleAvatarPress}
+                disabled={uploadingImage}
+                activeOpacity={0.8}
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 0,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: primaryColor,
+                  borderWidth: 3,
+                  borderColor: backgroundColor,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
             </View>
+
             <Text className="mt-4 text-xl font-bold text-foreground">
               {user?.name ?? "Your profile"}
             </Text>
@@ -177,15 +287,6 @@ export default function EditProfileScreen() {
               onChangeText={setName}
               placeholder="Enter your full name"
               mutedColor={mutedIconColor}
-            />
-            <Divider />
-            <ProfileInput
-              label="Avatar URL"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://..."
-              mutedColor={mutedIconColor}
-              autoCapitalize="none"
             />
             <Divider />
             <ProfileInput
