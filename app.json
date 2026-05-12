@@ -24,7 +24,15 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "permissions": ["CAMERA", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_PHONE_CALL",
+        "MANAGE_OWN_CALLS",
+        "USE_FULL_SCREEN_INTENT"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.siddthecoder.qustioncall",
@@ -35,6 +43,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/withCallKeep",
       "expo-router",
       "@sentry/react-native/expo",
       [

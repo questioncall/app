@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect , useRef } from "react";
 import { AppState } from "react-native";
 import Toast from "react-native-toast-message";
 
@@ -36,6 +36,9 @@ type ChannelUpdatedPayload = {
 export function RealtimeBridge() {
   const dispatch = useAppDispatch();
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
+  const activeChannelId = useAppSelector((s) => s.channels.activeChannelId);
+  const activeChannelIdRef = useRef(activeChannelId);
+  activeChannelIdRef.current = activeChannelId;
 
   useEffect(() => {
     if (!userId) {
@@ -126,12 +129,13 @@ export function RealtimeBridge() {
     channel.bind(CHANNEL_UPDATED_EVENT, (payload: ChannelUpdatedPayload) => {
       if (!payload?.channelId) return;
 
+      const isActive = activeChannelIdRef.current === payload.channelId;
       dispatch(
         updateChannelLastMessage({
           channelId: payload.channelId,
           lastMessagePreview: payload.lastMessagePreview,
           lastMessageAt: payload.lastMessageAt,
-          ...(payload.unreadCountCleared
+          ...(payload.unreadCountCleared || isActive
             ? { unreadCount: 0 }
             : payload.unreadCountIncrement
               ? { unreadCountIncrement: payload.unreadCountIncrement }

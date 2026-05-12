@@ -15,6 +15,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { clearIncomingCall } from "@/store/slices/incomingCallSlice";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
+import { displayIncomingCall, endCallKeepCall } from "@/lib/callkeep-setup";
 
 const RING_PATTERN = [0, 400, 200, 400, 200, 400];
 const AUTO_DISMISS_MS = 45_000;
@@ -43,6 +44,9 @@ export function IncomingCallOverlay() {
   useEffect(() => {
     if (!call) return;
 
+    // Show native call UI (lock screen / background)
+    displayIncomingCall(call.callSessionId, call.callerName, call.mode === "VIDEO");
+
     // Vibrate in ring pattern
     Vibration.vibrate(RING_PATTERN, true);
 
@@ -60,8 +64,10 @@ export function IncomingCallOverlay() {
     pulse.start();
 
     // Auto-dismiss as missed after 45 s
+    const sessionId = call.callSessionId;
     dismissTimer.current = setTimeout(() => {
-      void api.post(`/calls/${call.callSessionId}/missed`).catch(() => {});
+      void api.post(`/calls/${sessionId}/missed`).catch(() => {});
+      endCallKeepCall(sessionId);
       dismiss();
     }, AUTO_DISMISS_MS);
 
@@ -74,6 +80,7 @@ export function IncomingCallOverlay() {
   const handleAccept = async () => {
     if (!call) return;
     stopRing();
+    endCallKeepCall(call.callSessionId);
     try {
       await api.post(`/calls/${call.callSessionId}/accept`);
     } catch {
@@ -86,6 +93,7 @@ export function IncomingCallOverlay() {
   const handleDecline = async () => {
     if (!call) return;
     stopRing();
+    endCallKeepCall(call.callSessionId);
     void api.post(`/calls/${call.callSessionId}/reject`).catch(() => {});
     dismiss();
   };

@@ -22,6 +22,7 @@ import { VideoView } from "@livekit/react-native";
 
 import { api } from "@/lib/api";
 import { useAppSelector } from "@/hooks/redux";
+import { endCallKeepCall, reportCallConnected } from "@/lib/callkeep-setup";
 import {
   getPusherClient,
   getUserPusherName,
@@ -57,6 +58,7 @@ type TokenPayload = {
 const EXTENSION_MINUTES = 5;
 const MAX_EXTENSIONS = 3;
 const WARNING_THRESHOLD_MS = 5 * 60 * 1000;
+const CONNECTION_TIMEOUT_MS = 20_000;
 
 function formatCountdown(ms: number) {
   if (ms <= 0) return "0:00";
@@ -78,10 +80,14 @@ export default function CallScreen() {
   const roomRef = useRef<Room | null>(null);
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<LKVideoTrack | null>(null);
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<LKVideoTrack | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
+  // Refs to break the infinite-retry loop and enforce single-flight connections
+  const connectingRef = useRef(false);
+  const connectionBlockedRef = useRef(false);
 
   // Channel timer
   const [timerDeadline, setTimerDeadline] = useState<string | null>(null);
@@ -111,56 +117,70 @@ export default function CallScreen() {
 
   // ── Connect to LiveKit when call becomes ACTIVE ───────────────────────────
   const connectToRoom = useCallback(async () => {
-    if (!roomId || connecting || connected || endingRef.current) return;
+    if (
+      !roomId ||
+      connectingRef.current ||
+      connected ||
+      endingRef.current ||
+      connectionBlockedRef.current
+    )
+      return;
+    connectingRef.current = true;
     setConnecting(true);
+    setConnectionError(null);
+
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      connectionBlockedRef.current = true;
+      connectingRef.current = false;
+      setConnecting(false);
+      setConnectionError("Connection timed out. Check your network and try again.");
+      roomRef.current?.disconnect();
+      roomRef.current = null;
+    }, CONNECTION_TIMEOUT_MS);
 
     try {
       const res = await api.get(`/calls/${roomId}/token`);
       const data = res.data as TokenPayload;
 
+      if (timedOut) return;
+
       setChannelId(data.channelId);
       setTimerDeadline(data.timerDeadline);
       setTimeExtensionCount(data.timeExtensionCount);
 
-      const room = new Room({
-        adaptiveStream: true,
-        dynacast: true,
-      });
+      const room = new Room({ adaptiveStream: true, dynacast: true });
       roomRef.current = room;
 
       room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === Track.Kind.Video) {
-          setRemoteVideoTrack(track as LKVideoTrack);
-        }
+        if (track.kind === Track.Kind.Video) setRemoteVideoTrack(track as LKVideoTrack);
       });
-
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
-        if (track.kind === Track.Kind.Video) {
-          setRemoteVideoTrack(null);
-        }
+        if (track.kind === Track.Kind.Video) setRemoteVideoTrack(null);
       });
-
       room.on(RoomEvent.Disconnected, () => {
         if (!endingRef.current) {
           endingRef.current = true;
           router.back();
         }
       });
-
       room.on(RoomEvent.LocalTrackPublished, (pub) => {
-        if (pub.track?.kind === Track.Kind.Video) {
+        if (pub.track?.kind === Track.Kind.Video)
           setLocalVideoTrack(pub.track as LKVideoTrack);
-        }
       });
-
       room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
-        if (pub.track?.kind === Track.Kind.Video) {
-          setLocalVideoTrack(null);
-        }
+        if (pub.track?.kind === Track.Kind.Video) setLocalVideoTrack(null);
       });
 
       const isVideo = session?.mode === "VIDEO";
       await room.connect(data.serverUrl, data.token);
+
+      if (timedOut) {
+        room.disconnect();
+        return;
+      }
+
       await room.localParticipant.enableCameraAndMicrophone();
 
       if (!isVideo) {
@@ -171,24 +191,40 @@ export default function CallScreen() {
       const localVideoPub = room.localParticipant.getTrackPublication(
         Track.Source.Camera,
       );
-      if (localVideoPub?.track) {
-        setLocalVideoTrack(localVideoPub.track as LKVideoTrack);
-      }
+      if (localVideoPub?.track) setLocalVideoTrack(localVideoPub.track as LKVideoTrack);
 
+      clearTimeout(timeoutId);
       setConnected(true);
+      if (roomId) reportCallConnected(roomId);
     } catch (err: any) {
-      const msg = err?.response?.data?.error ?? err?.message ?? "Connection failed";
-      Toast.show({ type: "error", text1: msg });
+      clearTimeout(timeoutId);
+      if (!timedOut) {
+        const msg = err?.response?.data?.error ?? err?.message ?? "Connection failed";
+        connectionBlockedRef.current = true;
+        setConnectionError(msg);
+        roomRef.current?.disconnect();
+        roomRef.current = null;
+      }
     } finally {
-      setConnecting(false);
+      if (!timedOut) {
+        connectingRef.current = false;
+        setConnecting(false);
+      }
     }
-  }, [roomId, connecting, connected, session?.mode]);
+  }, [roomId, connected, session?.mode]);
 
   useEffect(() => {
-    if (session?.status === "ACTIVE" && !connected && !connecting) {
+    if (session?.status === "ACTIVE" && !connected && !connecting && !connectionError) {
       void connectToRoom();
     }
-  }, [session?.status, connected, connecting, connectToRoom]);
+  }, [session?.status, connected, connecting, connectionError, connectToRoom]);
+
+  const handleRetry = useCallback(() => {
+    connectionBlockedRef.current = false;
+    connectingRef.current = false;
+    setConnectionError(null);
+    void connectToRoom();
+  }, [connectToRoom]);
 
   // ── Cleanup room on unmount ───────────────────────────────────────────────
   useEffect(() => {
@@ -315,6 +351,7 @@ export default function CallScreen() {
     if (!session || endingRef.current) return;
     endingRef.current = true;
     setActing(true);
+    endCallKeepCall(session.callSessionId);
     try {
       await api.post(`/calls/${session.callSessionId}/end`);
     } catch {
@@ -340,7 +377,12 @@ export default function CallScreen() {
     const next = !camEnabled;
     await room.localParticipant.setCameraEnabled(next);
     setCamEnabled(next);
-    if (!next) setLocalVideoTrack(null);
+    if (next) {
+      const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+      if (pub?.track) setLocalVideoTrack(pub.track as LKVideoTrack);
+    } else {
+      setLocalVideoTrack(null);
+    }
   };
 
   const facingModeRef = useRef<"user" | "environment">("user");
@@ -481,11 +523,52 @@ export default function CallScreen() {
 
   // ── Render: ACTIVE — LiveKit room ─────────────────────────────────────────
   if (session.status === "ACTIVE") {
+    if (connectionError) {
+      return (
+        <View style={styles.centered}>
+          <Ionicons name="wifi-outline" size={56} color="#ffffff40" />
+          <Text
+            style={[
+              styles.whiteText,
+              { fontSize: 18, fontWeight: "600", marginTop: 16, textAlign: "center" },
+            ]}
+          >
+            Failed to connect
+          </Text>
+          <Text
+            style={[
+              styles.mutedText,
+              { textAlign: "center", fontSize: 14, marginTop: 4 },
+            ]}
+          >
+            {connectionError}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 28 }}>
+            <TouchableOpacity
+              onPress={handleRetry}
+              style={[styles.backBtn, { backgroundColor: "#3b82f660" }]}
+            >
+              <Text style={styles.whiteText}>Retry</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Text style={styles.whiteText}>Leave</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     if (connecting || !connected) {
       return (
         <View style={styles.centered}>
           <ActivityIndicator color="#fff" size="large" />
           <Text style={[styles.mutedText, { marginTop: 12 }]}>Connecting to room…</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.backBtn, { marginTop: 32 }]}
+          >
+            <Text style={[styles.mutedText, { marginTop: 0, fontSize: 14 }]}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       );
     }

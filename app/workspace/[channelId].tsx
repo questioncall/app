@@ -55,7 +55,7 @@ import {
   type ChatMessage,
   type ChannelDetail,
 } from "@/store/slices/channelSlice";
-import { markChannelRead } from "@/store/slices/channelsSlice";
+import { markChannelRead, setActiveChannelId } from "@/store/slices/channelsSlice";
 import {
   enqueueFailedMessage,
   dequeueMessage,
@@ -209,6 +209,15 @@ export default function WorkspaceScreen() {
     }
     return () => {
       dispatch(clearChannel());
+    };
+  }, [channelId, dispatch]);
+
+  // ─── Track active channel so the realtime bridge skips incrementing unread ──
+  useEffect(() => {
+    if (!channelId) return;
+    dispatch(setActiveChannelId(channelId));
+    return () => {
+      dispatch(setActiveChannelId(null));
     };
   }, [channelId, dispatch]);
 

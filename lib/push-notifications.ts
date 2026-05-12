@@ -2,17 +2,38 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { api } from "@/lib/api";
+import { displayIncomingCall } from "@/lib/callkeep-setup";
 
 const EAS_PROJECT_ID = "86d256ec-943f-49e8-adaf-659400e4edac";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as Record<string, string> | undefined;
+
+    // Incoming call → show native call screen instead of a push banner
+    if (data?.callSessionId) {
+      displayIncomingCall(
+        data.callSessionId,
+        data.callerName ?? "Incoming call",
+        data.mode === "VIDEO",
+      );
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      };
+    }
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 async function setupAndroidChannels() {

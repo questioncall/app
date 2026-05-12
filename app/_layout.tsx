@@ -29,6 +29,7 @@ import {
 } from "@/lib/push-notifications";
 
 import { ensureLiveKitRegistered } from "@/lib/livekit-setup";
+import { setupCallKeep } from "@/lib/callkeep-setup";
 
 ensureLiveKitRegistered();
 SplashScreen.preventAutoHideAsync();
@@ -44,6 +45,10 @@ if (sentryDsn) {
 }
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    setupCallKeep();
+  }, []);
+
   useEffect(() => {
     SecureStore.getItemAsync("theme_preference")
       .then((pref) => {

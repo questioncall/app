@@ -20,6 +20,7 @@ interface ChannelsState {
   error: string | null;
   lastFetchedAt: number | null;
   loadedForUserId: string | null;
+  activeChannelId: string | null;
 }
 
 const CHANNELS_CACHE_TTL_MS = 60 * 1000;
@@ -31,6 +32,7 @@ const initialState: ChannelsState = {
   error: null,
   lastFetchedAt: null,
   loadedForUserId: null,
+  activeChannelId: null,
 };
 
 const channelsSlice = createSlice({
@@ -101,6 +103,9 @@ const channelsSlice = createSlice({
       state.error = action.payload;
       state.isLoading = false;
     },
+    setActiveChannelId(state, action: PayloadAction<string | null>) {
+      state.activeChannelId = action.payload;
+    },
     clearChannelsCache(state) {
       state.list = [];
       state.lastFetchedAt = null;
@@ -121,6 +126,7 @@ export const {
   setChannelsLoading,
   setChannelsRefreshing,
   setChannelsError,
+  setActiveChannelId,
   clearChannelsCache,
 } = channelsSlice.actions;
 
