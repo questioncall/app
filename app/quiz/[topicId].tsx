@@ -5,6 +5,7 @@ import {
   AppState,
   AppStateStatus,
   BackHandler,
+  ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
@@ -30,6 +31,14 @@ import {
 const GRACE_PERIOD_MS = 2000;
 const MOUNT_IGNORE_MS = 500;
 
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
+
 export default function QuizSessionScreen() {
   const { topicId, quizType } = useLocalSearchParams<{
     topicId: string;
@@ -46,6 +55,7 @@ export default function QuizSessionScreen() {
     cardColor,
     borderColor,
     mutedIconColor,
+    isDark,
   } = useAppTheme();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -57,6 +67,7 @@ export default function QuizSessionScreen() {
   const lastBackgroundRef = useRef<number | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const submittedRef = useRef(false);
+  const dotsScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     sessionIdRef.current = session?.id ?? null;
@@ -66,9 +77,8 @@ export default function QuizSessionScreen() {
   useEffect(() => {
     if (!topicId) return;
     let cancelled = false;
-
+    dispatch(setSessionLoading(true));
     (async () => {
-      dispatch(setSessionLoading(true));
       try {
         const res = await api.post("/quiz/start", {
           quizType: quizType ?? "FREE",
@@ -79,14 +89,15 @@ export default function QuizSessionScreen() {
         dispatch(setSession(s));
       } catch (err: any) {
         if (cancelled) return;
-        const msg =
-          err?.response?.data?.error ??
-          err?.response?.data?.message ??
-          "Failed to start quiz";
-        dispatch(setSessionError(msg));
+        dispatch(
+          setSessionError(
+            err?.response?.data?.error ??
+              err?.response?.data?.message ??
+              "Failed to start quiz",
+          ),
+        );
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -96,15 +107,11 @@ export default function QuizSessionScreen() {
   useEffect(() => {
     if (!session?.timerDeadline) return;
     const deadline = new Date(session.timerDeadline).getTime();
-
     const tick = () => {
       const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
       setTimeLeft(remaining);
-      if (remaining <= 0 && !submittedRef.current) {
-        void handleAutoSubmit("TIME_EXPIRED");
-      }
+      if (remaining <= 0 && !submittedRef.current) void handleAutoSubmit("TIME_EXPIRED");
     };
-
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
@@ -114,21 +121,17 @@ export default function QuizSessionScreen() {
   // ── Anti-cheat: AppState ──
   useEffect(() => {
     if (!session || session.status === "SUBMITTED") return;
-
     const handleChange = (nextState: AppStateStatus) => {
       if (Date.now() - mountedAtRef.current < MOUNT_IGNORE_MS) return;
-
       if (nextState === "background" || nextState === "inactive") {
         lastBackgroundRef.current = Date.now();
       } else if (nextState === "active" && lastBackgroundRef.current) {
         const away = Date.now() - lastBackgroundRef.current;
         lastBackgroundRef.current = null;
-        if (away >= GRACE_PERIOD_MS) {
+        if (away >= GRACE_PERIOD_MS)
           reportViolation("TAB_HIDDEN", `Away for ${Math.round(away / 1000)}s`);
-        }
       }
     };
-
     const sub = AppState.addEventListener("change", handleChange);
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,12 +140,10 @@ export default function QuizSessionScreen() {
   // ── Anti-cheat: Hardware back ──
   useEffect(() => {
     if (!session || session.status === "SUBMITTED") return;
-
     const handler = () => {
       reportViolation("BACK_NAVIGATION", "Hardware back pressed during quiz");
       return true;
     };
-
     const sub = BackHandler.addEventListener("hardwareBackPress", handler);
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,12 +156,21 @@ export default function QuizSessionScreen() {
     return () => clearTimeout(t);
   }, [warningText]);
 
-  // ── Cleanup on unmount ──
-  useEffect(() => {
-    return () => {
+  // ── Cleanup ──
+  useEffect(
+    () => () => {
       dispatch(clearSession());
-    };
-  }, [dispatch]);
+    },
+    [dispatch],
+  );
+
+  // ── Scroll dots into view when question changes ──
+  useEffect(() => {
+    dotsScrollRef.current?.scrollTo({
+      x: Math.max(0, currentIndex - 3) * 36,
+      animated: true,
+    });
+  }, [currentIndex]);
 
   const reportViolation = useCallback(
     async (type: string, details?: string) => {
@@ -168,10 +178,8 @@ export default function QuizSessionScreen() {
       setWarningText(
         `Warning: Leaving the quiz is not allowed. (${(session?.violationCount ?? 0) + 1}/${session?.warningLimit ?? 3})`,
       );
-
       const sid = sessionIdRef.current;
       if (!sid) return;
-
       try {
         const res = await api.patch(`/quiz/${sid}/progress`, {
           violation: { type, details },
@@ -188,9 +196,7 @@ export default function QuizSessionScreen() {
   const handleSelectOption = useCallback(
     async (question: QuizQuestion, optionIndex: number) => {
       if (!session || session.status === "SUBMITTED") return;
-
       dispatch(selectAnswer({ questionId: question.id, optionIndex }));
-
       try {
         await api.patch(`/quiz/${session.id}/progress`, {
           answers: [{ questionId: question.id, selectedOptionIndex: optionIndex }],
@@ -205,7 +211,6 @@ export default function QuizSessionScreen() {
       if (submittedRef.current || !sessionIdRef.current) return;
       submittedRef.current = true;
       setSubmitting(true);
-
       try {
         const answers = (session?.questions ?? []).map((q) => ({
           questionId: q.id,
@@ -229,12 +234,10 @@ export default function QuizSessionScreen() {
     const unanswered = (session?.questions ?? []).filter(
       (q) => q.selectedOptionIndex === null,
     ).length;
-
     const doSubmit = async () => {
       if (submittedRef.current || !session) return;
       submittedRef.current = true;
       setSubmitting(true);
-
       try {
         const answers = session.questions.map((q) => ({
           questionId: q.id,
@@ -252,14 +255,14 @@ export default function QuizSessionScreen() {
     if (unanswered > 0) {
       Alert.alert(
         "Submit Quiz?",
-        `You have ${unanswered} unanswered question${unanswered > 1 ? "s" : ""}. Submit anyway?`,
+        `${unanswered} question${unanswered > 1 ? "s" : ""} unanswered. Submit anyway?`,
         [
           { text: "Cancel", style: "cancel" },
           { text: "Submit", style: "destructive", onPress: doSubmit },
         ],
       );
     } else {
-      Alert.alert("Submit Quiz?", "Are you sure you want to submit?", [
+      Alert.alert("Submit Quiz?", "Are you sure?", [
         { text: "Cancel", style: "cancel" },
         { text: "Submit", onPress: doSubmit },
       ]);
@@ -276,23 +279,13 @@ export default function QuizSessionScreen() {
     }
   }, [session?.status, session?.id, submitting]);
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const currentQuestion = session?.questions && session.questions[currentIndex];
-  const answeredCount =
-    session?.questions?.filter((q) => q.selectedOptionIndex !== null).length ?? 0;
-  const totalCount = session?.questionCount ?? 0;
-
+  // ─── Loading ───────────────────────────────────────────────────
   if (sessionLoading || (!session && !sessionError)) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor }}>
         <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
         <ActivityIndicator size="large" color={primaryColor} />
-        <Text className="mt-3 text-sm text-muted-foreground">Preparing your quiz...</Text>
+        <Text className="mt-3 text-sm text-muted-foreground">Preparing your quiz…</Text>
       </View>
     );
   }
@@ -304,218 +297,311 @@ export default function QuizSessionScreen() {
         style={{ backgroundColor }}
       >
         <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
-        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-        <Text className="mt-3 text-center text-base text-foreground">{sessionError}</Text>
+        <Ionicons name="alert-circle-outline" size={52} color="#ef4444" />
+        <Text className="mt-4 text-center text-base font-semibold text-foreground">
+          {sessionError}
+        </Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mt-4 rounded-full px-6 py-2.5"
+          className="mt-5 rounded-full px-7 py-3"
           style={{ backgroundColor: primaryColor }}
         >
-          <Text className="font-semibold text-white">Go Back</Text>
+          <Text className="font-bold text-white">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (!session || !currentQuestion) return null;
+  if (!session) return null;
 
+  const currentQuestion = session.questions[currentIndex];
+  const answeredCount = session.questions.filter(
+    (q) => q.selectedOptionIndex !== null,
+  ).length;
+  const totalCount = session.questionCount ?? session.questions.length;
   const isUrgent = timeLeft !== null && timeLeft <= 60;
+  const progressPct = totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
 
   return (
-    <View className="flex-1 bg-background" style={{ backgroundColor }}>
+    <View className="flex-1" style={{ backgroundColor }}>
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
 
+      {/* ── Violation warning banner ── */}
       {warningText ? (
-        <View className="absolute left-0 right-0 top-0 z-50 bg-red-600 px-4 pb-2 pt-14">
-          <Text className="text-center text-sm font-semibold text-white">
-            {warningText}
-          </Text>
+        <View
+          className="absolute left-0 right-0 top-0 z-50 items-center px-4 pb-3 pt-14"
+          style={{ backgroundColor: "#dc2626" }}
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="warning" size={16} color="#fff" />
+            <Text className="text-sm font-semibold text-white">{warningText}</Text>
+          </View>
         </View>
       ) : null}
 
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pb-2 pt-14">
-        <View className="flex-1">
-          <Text className="text-sm font-medium text-muted-foreground" numberOfLines={1}>
-            {session.subject} · {session.topic}
-          </Text>
-        </View>
-        <View
-          className="ml-3 flex-row items-center gap-1.5 rounded-full px-3 py-1"
-          style={{
-            backgroundColor: isUrgent ? "#fef2f2" : primarySoftColor,
-          }}
-        >
-          <Ionicons
-            name="timer-outline"
-            size={14}
-            color={isUrgent ? "#ef4444" : primaryColor}
-          />
-          <Text
-            className="text-sm font-bold"
-            style={{ color: isUrgent ? "#ef4444" : primaryColor }}
+      {/* ── Header ── */}
+      <View
+        className="px-4 pb-3 pt-14"
+        style={{ backgroundColor, borderBottomWidth: 1, borderBottomColor: borderColor }}
+      >
+        <View className="flex-row items-center justify-between">
+          {/* Topic info */}
+          <View className="mr-3 flex-1">
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              {session.subject}
+            </Text>
+            <Text className="text-sm font-bold text-foreground" numberOfLines={1}>
+              {session.topic}
+            </Text>
+          </View>
+
+          {/* Timer */}
+          <View
+            className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
+            style={{
+              backgroundColor: isUrgent ? "rgba(239,68,68,0.12)" : primarySoftColor,
+            }}
           >
-            {timeLeft !== null ? formatTime(timeLeft) : "--:--"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Progress bar */}
-      <View className="mx-4 mb-1 h-1.5 overflow-hidden rounded-full bg-muted">
-        <View
-          className="h-full rounded-full"
-          style={{
-            backgroundColor: primaryColor,
-            width: `${totalCount > 0 ? (answeredCount / totalCount) * 100 : 0}%`,
-          }}
-        />
-      </View>
-
-      <Text className="mx-4 mb-3 text-xs text-muted-foreground">
-        {answeredCount}/{totalCount} answered
-      </Text>
-
-      {/* Question */}
-      <View className="mx-4 flex-1">
-        <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-sm font-semibold text-muted-foreground">
-            Question {currentIndex + 1} of {totalCount}
-          </Text>
-          <View className="flex-row items-center gap-2">
-            <TouchableOpacity
-              onPress={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-              disabled={currentIndex === 0}
-              className="rounded-full p-1.5"
-              style={{
-                backgroundColor: currentIndex === 0 ? "transparent" : primarySoftColor,
-              }}
+            <Ionicons
+              name="timer-outline"
+              size={15}
+              color={isUrgent ? "#ef4444" : primaryColor}
+            />
+            <Text
+              className="text-base font-bold tabular-nums"
+              style={{ color: isUrgent ? "#ef4444" : primaryColor }}
             >
-              <Ionicons
-                name="chevron-back"
-                size={18}
-                color={currentIndex === 0 ? mutedIconColor : primaryColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setCurrentIndex((i) => Math.min(totalCount - 1, i + 1))}
-              disabled={currentIndex === totalCount - 1}
-              className="rounded-full p-1.5"
-              style={{
-                backgroundColor:
-                  currentIndex === totalCount - 1 ? "transparent" : primarySoftColor,
-              }}
-            >
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={currentIndex === totalCount - 1 ? mutedIconColor : primaryColor}
-              />
-            </TouchableOpacity>
+              {timeLeft !== null ? formatTime(timeLeft) : "--:--"}
+            </Text>
           </View>
         </View>
 
+        {/* Progress bar */}
+        <View className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+          <View
+            className="h-full rounded-full"
+            style={{ backgroundColor: primaryColor, width: `${progressPct}%` }}
+          />
+        </View>
+        <View className="mt-1 flex-row justify-between">
+          <Text className="text-xs text-muted-foreground">
+            {answeredCount}/{totalCount} answered
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            Q {currentIndex + 1} of {totalCount}
+          </Text>
+        </View>
+      </View>
+
+      {/* ── Question + Options (scrollable) ── */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Question number badge + text */}
         <View
           className="mb-4 rounded-2xl border p-4"
           style={{ backgroundColor: cardColor, borderColor }}
         >
-          <Text className="text-base leading-6 text-foreground">
-            {currentQuestion.questionText}
+          <View
+            className="mb-2 self-start rounded-full px-3 py-0.5"
+            style={{ backgroundColor: primarySoftColor }}
+          >
+            <Text className="text-xs font-bold" style={{ color: primaryColor }}>
+              Question {currentIndex + 1}
+            </Text>
+          </View>
+          <Text className="text-[16px] leading-7 text-foreground">
+            {currentQuestion?.questionText}
           </Text>
         </View>
 
-        {currentQuestion.options.map((option, idx) => {
+        {/* Options */}
+        {currentQuestion?.options.map((option, idx) => {
           const isSelected = currentQuestion.selectedOptionIndex === idx;
           return (
             <TouchableOpacity
               key={idx}
-              className="mb-2.5 flex-row items-center rounded-xl border px-4 py-3.5"
-              style={{
-                backgroundColor: isSelected ? primarySoftColor : cardColor,
-                borderColor: isSelected ? primaryColor : borderColor,
-                borderWidth: isSelected ? 1.5 : 1,
-              }}
               onPress={() => handleSelectOption(currentQuestion, idx)}
               activeOpacity={0.7}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                minHeight: 56,
+                marginBottom: 10,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                borderRadius: 16,
+                backgroundColor: isSelected ? primarySoftColor : cardColor,
+                borderWidth: isSelected ? 2 : 1,
+                borderColor: isSelected ? primaryColor : borderColor,
+              }}
             >
+              {/* Letter badge */}
               <View
-                className="mr-3 h-6 w-6 items-center justify-center rounded-full"
                 style={{
-                  backgroundColor: isSelected ? primaryColor : "transparent",
-                  borderWidth: isSelected ? 0 : 1.5,
-                  borderColor: isSelected ? primaryColor : mutedIconColor,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  marginRight: 12,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: isSelected ? primaryColor : `${primaryColor}15`,
                 }}
               >
                 {isSelected ? (
-                  <Ionicons name="checkmark" size={14} color="#fff" />
+                  <Ionicons name="checkmark" size={16} color="#fff" />
                 ) : (
                   <Text
-                    className="text-xs font-semibold"
-                    style={{ color: mutedIconColor }}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: primaryColor,
+                    }}
                   >
-                    {String.fromCharCode(65 + idx)}
+                    {OPTION_LABELS[idx]}
                   </Text>
                 )}
               </View>
               <Text
-                className="flex-1 text-sm"
-                style={{ color: isSelected ? primaryColor : undefined }}
+                style={{
+                  flex: 1,
+                  fontSize: 15,
+                  lineHeight: 22,
+                  color: isSelected ? primaryColor : isDark ? "#e5e5e5" : "#111827",
+                  fontWeight: isSelected ? "600" : "400",
+                }}
               >
                 {option}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
-      {/* Question dots + submit */}
-      <View className="border-t px-4 pb-8 pt-3" style={{ borderColor }}>
-        <View className="mb-3 flex-row flex-wrap justify-center gap-1.5">
-          {session.questions.map((q, i) => (
-            <TouchableOpacity
-              key={q.id}
-              onPress={() => setCurrentIndex(i)}
-              className="h-7 w-7 items-center justify-center rounded-full"
-              style={{
-                backgroundColor:
-                  i === currentIndex
+      {/* ── Bottom bar: question dots + nav + submit ── */}
+      <View
+        style={{
+          backgroundColor,
+          borderTopWidth: 1,
+          borderTopColor: borderColor,
+          paddingTop: 10,
+          paddingBottom: 28,
+          paddingHorizontal: 16,
+        }}
+      >
+        {/* Scrollable question dots */}
+        <ScrollView
+          ref={dotsScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 6, paddingVertical: 4, paddingHorizontal: 2 }}
+          style={{ marginBottom: 12 }}
+        >
+          {session.questions.map((q, i) => {
+            const isActive = i === currentIndex;
+            const isAnswered = q.selectedOptionIndex !== null;
+            return (
+              <TouchableOpacity
+                key={q.id}
+                onPress={() => setCurrentIndex(i)}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: isActive
                     ? primaryColor
-                    : q.selectedOptionIndex !== null
+                    : isAnswered
                       ? primarySoftColor
                       : "transparent",
-                borderWidth: i === currentIndex ? 0 : 1,
-                borderColor: q.selectedOptionIndex !== null ? primaryColor : borderColor,
-              }}
-            >
-              <Text
-                className="text-xs font-semibold"
-                style={{
-                  color:
-                    i === currentIndex
-                      ? "#fff"
-                      : q.selectedOptionIndex !== null
-                        ? primaryColor
-                        : mutedIconColor,
+                  borderWidth: isActive ? 0 : 1,
+                  borderColor: isAnswered ? primaryColor : borderColor,
                 }}
+                activeOpacity={0.7}
               >
-                {i + 1}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: isActive ? "#fff" : isAnswered ? primaryColor : mutedIconColor,
+                  }}
+                >
+                  {i + 1}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={submitting}
-          className="items-center rounded-xl py-3.5"
-          style={{ backgroundColor: primaryColor }}
-          activeOpacity={0.8}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-sm font-bold text-white">Submit Quiz</Text>
-          )}
-        </TouchableOpacity>
+        {/* Prev / Submit / Next row */}
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            disabled={currentIndex === 0}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: currentIndex === 0 ? `${borderColor}55` : primarySoftColor,
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={20}
+              color={currentIndex === 0 ? mutedIconColor : primaryColor}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={submitting}
+            style={{
+              flex: 1,
+              height: 46,
+              borderRadius: 23,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: primaryColor,
+            }}
+            activeOpacity={0.85}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
+                Submit Quiz
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setCurrentIndex((i) => Math.min(totalCount - 1, i + 1))}
+            disabled={currentIndex === totalCount - 1}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor:
+                currentIndex === totalCount - 1 ? `${borderColor}55` : primarySoftColor,
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={currentIndex === totalCount - 1 ? mutedIconColor : primaryColor}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

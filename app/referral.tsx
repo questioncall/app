@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Clipboard,
   FlatList,
+  Platform,
   RefreshControl,
   Share,
   StatusBar,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,319 +14,298 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 
-import { api } from "@/lib/api";
-import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { api } from "@/lib/api";
 
-interface ReferralEntry {
+type ReferralEntry = {
   _id: string;
   refereeName: string;
   bonus: number;
   date: string;
   status: string;
-}
+};
 
-interface ReferralStats {
+type ReferralData = {
   referralCode: string | null;
   bonusQuestions: number;
   totalReferred: number;
   totalBonusEarned: number;
   referrals: ReferralEntry[];
-}
+};
 
-function StatCard({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: string;
-  label: string;
-  value: string | number;
-  color: string;
-}) {
-  const { cardColor, borderColor } = useAppTheme();
-  return (
-    <View
-      className="flex-1 items-center rounded-2xl border p-4"
-      style={{ backgroundColor: cardColor, borderColor }}
-    >
-      <View
-        className="mb-2 h-10 w-10 items-center justify-center rounded-xl"
-        style={{ backgroundColor: `${color}18` }}
-      >
-        <Ionicons name={icon as any} size={20} color={color} />
-      </View>
-      <Text className="text-xl font-bold text-foreground">{value}</Text>
-      <Text className="mt-0.5 text-center text-[11px] text-muted-foreground">
-        {label}
-      </Text>
-    </View>
-  );
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function ReferralScreen() {
   const {
     statusBarStyle,
     backgroundColor,
-    primaryColor,
     cardColor,
     borderColor,
+    primaryColor,
+    primarySoftColor,
     mutedIconColor,
+    isDark,
   } = useAppTheme();
-  const user = useAppSelector((s) => s.user.data);
 
-  const [stats, setStats] = useState<ReferralStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [sending, setSending] = useState(false);
+  const [data, setData] = useState<ReferralData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const referralLink = `https://questioncall.com/register?ref=${stats?.referralCode ?? user?.referralCode ?? ""}`;
-
-  const fetchStats = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  const fetchReferral = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
     try {
       const res = await api.get("/user/referral");
-      setStats(res.data);
-    } catch {
-      // show whatever we have
+      setData(res.data as ReferralData);
+    } catch (err: any) {
+      setError(err?.response?.data?.error ?? "Failed to load referral info");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    void fetchStats();
-  }, [fetchStats]);
+    void fetchReferral();
+  }, [fetchReferral]);
 
-  function copyCode() {
-    const code = stats?.referralCode ?? user?.referralCode ?? "";
-    if (!code) return;
-    Clipboard.setString(code);
-    Toast.show({ type: "success", text1: "Referral code copied!" });
-  }
-
-  async function shareLink() {
+  const handleShare = async () => {
+    if (!data?.referralCode) return;
     try {
       await Share.share({
-        message: `Join QuestionCall and get bonus questions! Use my referral code: ${stats?.referralCode ?? user?.referralCode ?? ""}\n\n${referralLink}`,
-        url: referralLink,
+        message: `Join QuestionCall — the fastest way to get answers from expert teachers! 🎓\n\nUse my referral code: ${data.referralCode}\n\nDownload the app and sign up with my code to get bonus questions.`,
+        title: "Join QuestionCall",
       });
     } catch {
-      // dismissed
+      Toast.show({ type: "error", text1: "Could not open share dialog" });
     }
-  }
+  };
 
-  async function sendInvite() {
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Toast.show({ type: "error", text1: "Enter a valid email address." });
-      return;
-    }
-    setSending(true);
-    try {
-      await api.post("/referral/invite", {
-        emails: [email],
-        referralLink,
-      });
-      setInviteEmail("");
-      Toast.show({ type: "success", text1: `Invitation sent to ${email}!` });
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1: err?.response?.data?.error ?? "Failed to send invite.",
-      });
-    } finally {
-      setSending(false);
-    }
-  }
+  const handleCopyCode = () => {
+    if (!data?.referralCode) return;
+    Toast.show({
+      type: "success",
+      text1: "Your referral code",
+      text2: data.referralCode,
+    });
+  };
 
-  const code = stats?.referralCode ?? user?.referralCode ?? "—";
+  const renderReferralEntry = ({ item }: { item: ReferralEntry }) => (
+    <View
+      className="mb-2 flex-row items-center gap-3 rounded-xl p-3"
+      style={{ backgroundColor: cardColor, borderWidth: 1, borderColor }}
+    >
+      <View
+        className="h-9 w-9 items-center justify-center rounded-full"
+        style={{ backgroundColor: primarySoftColor }}
+      >
+        <Ionicons name="person-outline" size={16} color={primaryColor} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-sm font-semibold text-foreground">{item.refereeName}</Text>
+        <Text className="text-[11px] text-muted-foreground">{formatDate(item.date)}</Text>
+      </View>
+      <View className="items-end">
+        <View
+          className="flex-row items-center gap-1 rounded-full px-2.5 py-1"
+          style={{ backgroundColor: "#10b98120" }}
+        >
+          <Ionicons name="add-circle-outline" size={12} color="#10b981" />
+          <Text className="text-[11px] font-bold text-emerald-600">+{item.bonus} Q</Text>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1" style={{ backgroundColor }}>
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
 
-      <View className="flex-row items-center px-4 pb-2 pt-14">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-secondary"
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={20} color={primaryColor} />
-        </TouchableOpacity>
-        <Text className="flex-1 text-2xl font-bold text-foreground">Referrals</Text>
-        <Ionicons name="gift" size={22} color={primaryColor} />
+      {/* Header */}
+      <View
+        style={{
+          backgroundColor,
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
+          paddingTop: Platform.OS === "ios" ? 54 : (StatusBar.currentHeight ?? 24) + 12,
+          paddingBottom: 12,
+          paddingHorizontal: 16,
+        }}
+      >
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="arrow-back" size={24} color={isDark ? "#fff" : "#111"} />
+          </TouchableOpacity>
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-foreground">Invite Friends</Text>
+            <Text className="text-[11px] text-muted-foreground">
+              Earn bonus questions for each referral
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {loading ? (
+      {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={primaryColor} />
+          <ActivityIndicator color={primaryColor} size="large" />
+        </View>
+      ) : error ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text className="mt-3 text-center text-base text-foreground">{error}</Text>
+          <TouchableOpacity
+            onPress={() => fetchReferral()}
+            className="mt-4 rounded-full px-6 py-2.5"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Text className="font-semibold text-white">Retry</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={stats?.referrals ?? []}
-          keyExtractor={(item) => item._id}
+          data={data?.referrals ?? []}
+          keyExtractor={(r) => r._id}
+          renderItem={renderReferralEntry}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 16 }}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchStats(true)}
+              refreshing={isRefreshing}
+              onRefresh={() => {
+                setIsRefreshing(true);
+                void fetchReferral(true);
+              }}
               tintColor={primaryColor}
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
           ListHeaderComponent={
-            <>
+            <View className="mb-6 gap-4">
               {/* Referral code card */}
               <View
-                className="mb-5 mt-2 overflow-hidden rounded-3xl border"
-                style={{ backgroundColor: cardColor, borderColor }}
+                className="items-center gap-3 rounded-2xl p-5"
+                style={{
+                  backgroundColor: cardColor,
+                  borderWidth: 2,
+                  borderColor: `${primaryColor}40`,
+                }}
               >
-                <View className="items-center px-6 py-7">
-                  <View
-                    className="mb-3 h-14 w-14 items-center justify-center rounded-2xl"
-                    style={{ backgroundColor: `${primaryColor}18` }}
-                  >
-                    <Ionicons name="gift-outline" size={28} color={primaryColor} />
-                  </View>
-                  <Text className="mb-1 text-sm text-muted-foreground">
-                    Your referral code
-                  </Text>
-                  <View className="flex-row items-center gap-3">
-                    <Text className="text-3xl font-bold tracking-[6px] text-foreground">
-                      {code}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={copyCode}
-                      className="h-9 w-9 items-center justify-center rounded-xl bg-secondary"
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="copy-outline" size={17} color={primaryColor} />
-                    </TouchableOpacity>
-                  </View>
-                  <Text className="mt-2 text-center text-xs leading-4 text-muted-foreground">
-                    Friends who sign up with your code get bonus questions, and so do you!
-                  </Text>
-                  <TouchableOpacity
-                    onPress={shareLink}
-                    className="mt-5 w-full flex-row items-center justify-center gap-2 rounded-full py-3.5"
-                    style={{ backgroundColor: primaryColor }}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="share-social-outline" size={18} color="#FFF" />
-                    <Text className="font-bold text-white">Share Invite Link</Text>
-                  </TouchableOpacity>
+                <View
+                  className="h-16 w-16 items-center justify-center rounded-full"
+                  style={{ backgroundColor: primarySoftColor }}
+                >
+                  <Text className="text-3xl">🎁</Text>
                 </View>
+                <Text className="text-center text-base font-bold text-foreground">
+                  Invite friends, earn bonus questions
+                </Text>
+                <Text className="text-center text-sm text-muted-foreground">
+                  Share your referral code. When your friend signs up and gets verified,
+                  you both earn bonus questions.
+                </Text>
+
+                {data?.referralCode ? (
+                  <>
+                    <TouchableOpacity
+                      onPress={handleCopyCode}
+                      className="w-full items-center rounded-xl border-2 px-6 py-3"
+                      style={{ borderColor: primaryColor, borderStyle: "dashed" }}
+                    >
+                      <Text className="mb-1 text-[11px] text-muted-foreground">
+                        Your referral code
+                      </Text>
+                      <Text
+                        className="text-2xl font-black tracking-widest"
+                        style={{ color: primaryColor }}
+                      >
+                        {data.referralCode}
+                      </Text>
+                      <Text className="mt-1 text-[10px] text-muted-foreground">
+                        Tap to see code
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleShare}
+                      className="w-full flex-row items-center justify-center gap-2 rounded-full py-3"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      <Ionicons name="share-social-outline" size={18} color="#fff" />
+                      <Text className="text-base font-semibold text-white">
+                        Share Invite
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <View className="w-full rounded-xl bg-amber-500/10 px-4 py-3">
+                    <Text className="text-center text-sm text-amber-700 dark:text-amber-400">
+                      Your referral code is being generated. Check back soon.
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Stats row */}
-              <View className="mb-5 flex-row gap-3">
-                <StatCard
-                  icon="people-outline"
-                  label="Friends Joined"
-                  value={stats?.totalReferred ?? 0}
-                  color={primaryColor}
-                />
-                <StatCard
-                  icon="help-circle-outline"
-                  label="Bonus Questions"
-                  value={stats?.totalBonusEarned ?? 0}
-                  color="#10B981"
-                />
-                <StatCard
-                  icon="checkmark-circle-outline"
-                  label="Active Bonus"
-                  value={stats?.bonusQuestions ?? 0}
-                  color="#F59E0B"
-                />
-              </View>
-
-              {/* Invite by email */}
-              <View
-                className="mb-5 rounded-2xl border p-4"
-                style={{ backgroundColor: cardColor, borderColor }}
-              >
-                <Text className="mb-3 text-sm font-semibold text-foreground">
-                  Invite by email
-                </Text>
-                <View className="flex-row gap-2">
-                  <TextInput
-                    value={inviteEmail}
-                    onChangeText={setInviteEmail}
-                    placeholder="friend@email.com"
-                    placeholderTextColor={mutedIconColor}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    className="flex-1 rounded-xl border px-4 py-3 text-sm text-foreground"
-                    style={{ borderColor, backgroundColor }}
-                  />
-                  <TouchableOpacity
-                    onPress={sendInvite}
-                    disabled={sending}
-                    className="items-center justify-center rounded-xl px-4"
-                    style={{ backgroundColor: primaryColor }}
-                    activeOpacity={0.85}
-                  >
-                    {sending ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <Ionicons name="send" size={18} color="#FFF" />
-                    )}
-                  </TouchableOpacity>
+              <View className="flex-row gap-3">
+                <View
+                  className="flex-1 items-center rounded-xl p-4"
+                  style={{ backgroundColor: cardColor, borderWidth: 1, borderColor }}
+                >
+                  <Text className="text-2xl font-black" style={{ color: primaryColor }}>
+                    {data?.totalReferred ?? 0}
+                  </Text>
+                  <Text className="mt-0.5 text-center text-[11px] text-muted-foreground">
+                    Friends Referred
+                  </Text>
+                </View>
+                <View
+                  className="flex-1 items-center rounded-xl p-4"
+                  style={{ backgroundColor: cardColor, borderWidth: 1, borderColor }}
+                >
+                  <Text className="text-2xl font-black text-emerald-600">
+                    +{data?.totalBonusEarned ?? 0}
+                  </Text>
+                  <Text className="mt-0.5 text-center text-[11px] text-muted-foreground">
+                    Bonus Questions
+                  </Text>
+                </View>
+                <View
+                  className="flex-1 items-center rounded-xl p-4"
+                  style={{ backgroundColor: cardColor, borderWidth: 1, borderColor }}
+                >
+                  <Text className="text-2xl font-black" style={{ color: primaryColor }}>
+                    {data?.bonusQuestions ?? 0}
+                  </Text>
+                  <Text className="mt-0.5 text-center text-[11px] text-muted-foreground">
+                    Available Now
+                  </Text>
                 </View>
               </View>
 
-              {(stats?.referrals?.length ?? 0) > 0 ? (
-                <Text className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Joined via your code
+              {(data?.referrals?.length ?? 0) > 0 && (
+                <Text className="mt-2 text-sm font-semibold text-foreground">
+                  Referred Friends ({data?.totalReferred})
                 </Text>
-              ) : null}
-            </>
-          }
-          renderItem={({ item }) => (
-            <View
-              className="mb-2.5 flex-row items-center rounded-2xl border px-4 py-3"
-              style={{ backgroundColor: cardColor, borderColor }}
-            >
-              <View
-                className="mr-3 h-9 w-9 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${primaryColor}18` }}
-              >
-                <Text className="text-sm font-bold" style={{ color: primaryColor }}>
-                  {item.refereeName.slice(0, 1).toUpperCase()}
-                </Text>
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">
-                  {item.refereeName}
-                </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {new Date(item.date).toLocaleDateString("en-US", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </Text>
-              </View>
-              <View className="items-end">
-                <Text className="text-sm font-bold text-emerald-500">+{item.bonus}</Text>
-                <Text className="text-[10px] text-muted-foreground">bonus Qs</Text>
-              </View>
+              )}
             </View>
-          )}
+          }
           ListEmptyComponent={
-            stats && stats.referrals.length === 0 ? (
-              <View className="mt-4 items-center py-8">
-                <Ionicons name="people-outline" size={40} color={mutedIconColor} />
-                <Text className="mt-2 text-sm text-muted-foreground">
-                  No one has joined yet — share your code!
-                </Text>
-              </View>
-            ) : null
+            <View className="items-center py-8">
+              <Text className="mb-3 text-3xl">👥</Text>
+              <Text className="text-center text-base font-semibold text-foreground">
+                No referrals yet
+              </Text>
+              <Text className="mt-1 px-4 text-center text-sm text-muted-foreground">
+                Share your referral code with friends to earn bonus questions when they
+                join.
+              </Text>
+            </View>
           }
         />
       )}

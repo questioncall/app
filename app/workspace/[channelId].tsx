@@ -16,8 +16,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useImageViewer } from "@/components/image-viewer/image-viewer-context";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -115,10 +118,13 @@ export default function WorkspaceScreen() {
 
   const detail = cached?.detail ?? null;
   const messages = cached?.messages ?? [];
+  const { openImageViewer } = useImageViewer();
 
   const isAsker = userId === detail?.askerId;
   const isAcceptor = userId === detail?.acceptorId;
   const isActive = detail?.status === "ACTIVE";
+
+  const insets = useSafeAreaInsets();
 
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -127,6 +133,9 @@ export default function WorkspaceScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
+  const [startingCallType, setStartingCallType] = useState<"AUDIO" | "VIDEO" | null>(
+    null,
+  );
 
   const flatListRef = useRef<FlatList<any>>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -403,7 +412,7 @@ export default function WorkspaceScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       quality: 0.85,
     });
     if (result.canceled || !result.assets[0]) return;
@@ -445,7 +454,7 @@ export default function WorkspaceScreen() {
 
       const res = await api.post(`/channels/${channelId}/messages`, {
         mediaUrl,
-        mediaType: "image",
+        mediaType: "IMAGE",
       });
       dispatch(
         resolvePendingMessage({
@@ -594,6 +603,212 @@ export default function WorkspaceScreen() {
     }
   };
 
+  // ─── Voice recording implementation (expo-av) ──────────────────
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const playbackRef = useRef<Audio.Sound | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [pendingAudio, setPendingAudio] = useState<{
+    uri: string;
+    duration: number;
+  } | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+
+  const startVoiceRecording = async () => {
+    if (isRecording) return;
+    try {
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) {
+        Toast.show({ type: "error", text1: "Microphone permission required" });
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to start recording",
+        text2: String(err),
+      });
+    }
+  };
+
+  const stopVoiceRecording = async () => {
+    if (!isRecording || !recordingRef.current) return;
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    const duration = recordingDuration;
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+      if (uri) {
+        setPendingAudio({ uri, duration });
+      }
+    } catch {
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+      Toast.show({ type: "error", text1: "Failed to stop recording" });
+    }
+  };
+
+  const togglePreviewPlayback = async () => {
+    if (!pendingAudio) return;
+    if (isPlayingPreview && playbackRef.current) {
+      await playbackRef.current.stopAsync().catch(() => {});
+      await playbackRef.current.unloadAsync().catch(() => {});
+      playbackRef.current = null;
+      setIsPlayingPreview(false);
+      return;
+    }
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: pendingAudio.uri },
+        { shouldPlay: true },
+      );
+      playbackRef.current = sound;
+      setIsPlayingPreview(true);
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) return;
+        if (status.didJustFinish) {
+          setIsPlayingPreview(false);
+          void sound.unloadAsync();
+          playbackRef.current = null;
+        }
+      });
+    } catch {
+      Toast.show({ type: "error", text1: "Failed to play preview" });
+    }
+  };
+
+  const cancelPendingAudio = async () => {
+    if (playbackRef.current) {
+      await playbackRef.current.stopAsync().catch(() => {});
+      await playbackRef.current.unloadAsync().catch(() => {});
+      playbackRef.current = null;
+    }
+    setIsPlayingPreview(false);
+    setPendingAudio(null);
+  };
+
+  const formatRecordingTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  };
+
+  const sendVoiceMessage = async (audioUri: string) => {
+    if (!isActive) return;
+    const localId = `local_audio_${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: localId,
+      localId,
+      channelId: channelId!,
+      senderId: userId!,
+      senderName: "You",
+      content: "",
+      mediaUrl: audioUri,
+      mediaType: "AUDIO",
+      isSystemMessage: false,
+      isOwn: true,
+      isSeen: false,
+      isDelivered: false,
+      isMarkedAsAnswer: false,
+      isDeleted: false,
+      sentAt: new Date().toISOString(),
+      isSending: true,
+    };
+    dispatch(addPendingMessage(optimistic));
+
+    try {
+      const form = new FormData();
+      form.append("file", {
+        uri: audioUri,
+        name: `voice-${Date.now()}.m4a`,
+        type: "audio/m4a",
+      } as unknown as Blob);
+      const uploadRes = await api.post("/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30000,
+      });
+      const mediaUrl = uploadRes.data?.secure_url ?? uploadRes.data?.url;
+
+      const res = await api.post(`/channels/${channelId}/messages`, {
+        mediaUrl,
+        mediaType: "AUDIO",
+      });
+      dispatch(
+        resolvePendingMessage({
+          localId,
+          message: { ...(res.data as ChatMessage), isOwn: true, isDelivered: true },
+        }),
+      );
+      dequeueMessage(localId).catch(() => {});
+      Toast.show({ type: "success", text1: "Voice message sent" });
+    } catch {
+      dispatch(failPendingMessage(localId));
+      enqueueFailedMessage(optimistic).catch(() => {});
+      Toast.show({ type: "error", text1: "Failed to send voice message" });
+    }
+  };
+
+  // ─── Start call ───────────────────────────────────────────────
+  const handleStartCall = async (mode: "AUDIO" | "VIDEO") => {
+    if (!channelId || startingCallType) return;
+    setStartingCallType(mode);
+    try {
+      const res = await api.post("/calls/create", { channelId, mode });
+      const callSessionId = res.data?.callSessionId ?? res.data?.id;
+      if (callSessionId) {
+        router.push(`/call/${callSessionId}` as any);
+      }
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: err?.response?.data?.error ?? "Failed to start call",
+      });
+    } finally {
+      setStartingCallType(null);
+    }
+  };
+
+  // ─── Voice record toggle ──────────────────────────────────────
+  const handleVoiceRecord = () => {
+    if (isRecording) {
+      void stopVoiceRecording();
+    } else {
+      void startVoiceRecording();
+    }
+  };
+
+  // ─── Send pending audio ───────────────────────────────────────
+  const handleSendPendingAudio = async () => {
+    if (!pendingAudio || !isActive) return;
+    const { uri } = pendingAudio;
+    await cancelPendingAudio();
+    await sendVoiceMessage(uri);
+  };
+
   const handleLoadOlder = useCallback(() => {
     isLoadingOlderRef.current = true;
     setVisibleCount((c) => c + PAGE_SIZE);
@@ -717,7 +932,29 @@ export default function WorkspaceScreen() {
             </Text>
           ) : null}
 
-          {msg.mediaUrl ? (
+          {msg.mediaUrl && msg.mediaType === "IMAGE" ? (
+            <TouchableOpacity
+              onPress={() => openImageViewer(msg.mediaUrl!)}
+              activeOpacity={0.85}
+            >
+              <Image
+                source={{ uri: msg.mediaUrl }}
+                style={{
+                  width: 200,
+                  height: 150,
+                  borderRadius: 12,
+                  marginBottom: msg.content ? 6 : 0,
+                }}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          ) : msg.mediaUrl && msg.mediaType === "AUDIO" ? (
+            <View className="bg-muted/20 my-1 flex-row items-center gap-2 rounded-lg px-3 py-2">
+              <Ionicons name="volume-mute" size={16} color={primaryColor} />
+              <Text className="text-[12px] text-foreground">Voice message</Text>
+              <Ionicons name="play-circle" size={16} color={primaryColor} />
+            </View>
+          ) : msg.mediaUrl ? (
             <Image
               source={{ uri: msg.mediaUrl }}
               style={{
@@ -858,9 +1095,9 @@ export default function WorkspaceScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior="padding"
       className="flex-1 bg-background"
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
 
@@ -872,7 +1109,10 @@ export default function WorkspaceScreen() {
           backgroundColor,
           borderBottomWidth: 1,
           borderBottomColor: borderColor,
-          paddingTop: Platform.OS === "ios" ? 54 : (StatusBar.currentHeight ?? 24) + 8,
+          paddingTop:
+            Platform.OS === "ios"
+              ? Math.max(insets.top, 44)
+              : (StatusBar.currentHeight ?? 0) + 8,
           paddingBottom: 10,
           paddingHorizontal: 16,
         }}
@@ -908,7 +1148,55 @@ export default function WorkspaceScreen() {
             </Text>
           </View>
 
-          {isActive ? (
+          {isActive && countdown > 0 ? (
+            <View className="flex-row items-center gap-2">
+              <TouchableOpacity
+                onPress={() => handleStartCall("AUDIO")}
+                disabled={!!startingCallType}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: primarySoftColor,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {startingCallType === "AUDIO" ? (
+                  <ActivityIndicator size={14} color={primaryColor} />
+                ) : (
+                  <Ionicons name="call-outline" size={16} color={primaryColor} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleStartCall("VIDEO")}
+                disabled={!!startingCallType}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: primarySoftColor,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {startingCallType === "VIDEO" ? (
+                  <ActivityIndicator size={14} color={primaryColor} />
+                ) : (
+                  <Ionicons name="videocam-outline" size={16} color={primaryColor} />
+                )}
+              </TouchableOpacity>
+              <View
+                className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1"
+                style={{ backgroundColor: `${timerColor}18` }}
+              >
+                <Ionicons name="timer-outline" size={13} color={timerColor} />
+                <Text className="text-[11px] font-bold" style={{ color: timerColor }}>
+                  {formatCountdown(countdown)}
+                </Text>
+              </View>
+            </View>
+          ) : isActive ? (
             <View
               className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1"
               style={{ backgroundColor: `${timerColor}18` }}
@@ -981,10 +1269,33 @@ export default function WorkspaceScreen() {
         ) : null}
       </View>
 
+      {/* ── Answer submitted banner (asker view) ────────────── */}
+      {isAsker && detail.isAnswerSubmitted && isActive && (
+        <View
+          style={{
+            backgroundColor: "#10b98115",
+            borderBottomWidth: 1,
+            borderBottomColor: "#10b98130",
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+          <Text style={{ fontSize: 13, color: "#10b981", fontWeight: "500", flex: 1 }}>
+            Teacher submitted an answer — review and close the channel when ready.
+          </Text>
+        </View>
+      )}
+
       {/* ── Messages ────────────────────────────────────────── */}
       <FlatList
         ref={flatListRef}
         data={messagesWithDates}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         keyExtractor={(item, i) =>
           "__dateSeparator" in item
             ? `sep-${item.__dateSeparator}-${i}`
@@ -1022,48 +1333,108 @@ export default function WorkspaceScreen() {
             borderTopColor: borderColor,
             paddingHorizontal: 12,
             paddingTop: 8,
-            paddingBottom: Platform.OS === "ios" ? 28 : 12,
+            paddingBottom: Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 8) + 4,
           }}
         >
-          <View className="flex-row items-end gap-2">
-            <TouchableOpacity
-              onPress={handlePickImage}
-              className="mb-1 h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: primarySoftColor }}
-            >
-              <Ionicons name="image-outline" size={20} color={primaryColor} />
-            </TouchableOpacity>
-
-            <View
-              className="flex-1 rounded-2xl border px-3 py-2"
-              style={{ borderColor, backgroundColor: cardColor, maxHeight: 120 }}
-            >
-              <TextInput
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder="Type a message..."
-                placeholderTextColor={mutedIconColor}
-                multiline
-                className="text-[15px] text-foreground"
-                style={{ textAlignVertical: "top", maxHeight: 100 }}
-              />
+          {/* ── Recording in progress ── */}
+          {isRecording ? (
+            <View className="flex-row items-center gap-3 px-2 py-1">
+              <View className="h-2.5 w-2.5 rounded-full bg-red-500" />
+              <Text className="flex-1 font-mono text-base text-red-500">
+                Recording {formatRecordingTime(recordingDuration)}
+              </Text>
+              <TouchableOpacity
+                onPress={handleVoiceRecord}
+                className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <Ionicons name="stop" size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
+          ) : pendingAudio ? (
+            /* ── Audio preview ── */
+            <View className="flex-row items-center gap-2 px-1 py-1">
+              <TouchableOpacity
+                onPress={togglePreviewPlayback}
+                className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: primarySoftColor }}
+              >
+                <Ionicons
+                  name={isPlayingPreview ? "pause" : "play"}
+                  size={20}
+                  color={primaryColor}
+                />
+              </TouchableOpacity>
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-foreground">Voice message</Text>
+                <Text className="text-xs text-muted-foreground">
+                  {formatRecordingTime(pendingAudio.duration)}
+                </Text>
+              </View>
+              {/* Delete */}
+              <TouchableOpacity
+                onPress={cancelPendingAudio}
+                className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: isDark ? "#3f1212" : "#fee2e2" }}
+              >
+                <Ionicons name="trash-outline" size={18} color="#ef4444" />
+              </TouchableOpacity>
+              {/* Send */}
+              <TouchableOpacity
+                onPress={handleSendPendingAudio}
+                disabled={isSending}
+                className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {isSending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Ionicons name="send" size={18} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* ── Normal input ── */
+            <View className="flex-row items-end gap-2">
+              <TouchableOpacity
+                onPress={handlePickImage}
+                className="mb-1 h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: primarySoftColor }}
+              >
+                <Ionicons name="image-outline" size={20} color={primaryColor} />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={handleSend}
-              disabled={!inputText.trim() || isSending}
-              className="mb-1 h-10 w-10 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: inputText.trim() ? primaryColor : `${primaryColor}55`,
-              }}
-            >
-              {isSending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Ionicons name="send" size={18} color="#fff" />
-              )}
-            </TouchableOpacity>
-          </View>
+              <View
+                className="flex-1 rounded-2xl border px-3 py-2"
+                style={{ borderColor, backgroundColor: cardColor, maxHeight: 120 }}
+              >
+                <TextInput
+                  value={inputText}
+                  onChangeText={setInputText}
+                  placeholder="Type a message..."
+                  placeholderTextColor={mutedIconColor}
+                  multiline
+                  className="text-[15px] text-foreground"
+                  style={{ textAlignVertical: "top", maxHeight: 100 }}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={inputText.trim() ? handleSend : handleVoiceRecord}
+                disabled={isSending}
+                className="mb-1 h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {isSending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : inputText.trim() ? (
+                  <Ionicons name="send" size={18} color="#fff" />
+                ) : (
+                  <Ionicons name="mic-outline" size={20} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : (
         <View
@@ -1073,7 +1444,7 @@ export default function WorkspaceScreen() {
             borderTopColor: borderColor,
             paddingHorizontal: 16,
             paddingVertical: 14,
-            paddingBottom: Platform.OS === "ios" ? 28 : 14,
+            paddingBottom: Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 8) + 6,
           }}
         >
           <Text className="text-center text-sm text-muted-foreground">

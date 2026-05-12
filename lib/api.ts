@@ -6,6 +6,7 @@ import { clearAllChannelCache } from "@/store/slices/channelSlice";
 import { clearUser } from "@/store/slices/userSlice";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://questioncall.com/api";
+export const API_BASE_URL = API_URL.replace(/\/api\/?$/, "");
 
 export const SECURE_STORE_KEYS = {
   ACCESS_TOKEN: "qc_access_token",

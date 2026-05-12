@@ -9,7 +9,9 @@ import {
   Text,
   TouchableOpacity,
   View,
- Alert, TextInput } from "react-native";
+  Alert,
+  TextInput,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 
@@ -117,7 +119,7 @@ export default function CourseDetailScreen() {
       setError(null);
 
       try {
-        const res = await publicApi.get(`/courses/${courseId}`);
+        const res = await api.get(`/courses/${courseId}`);
         setCourse(res.data as CourseDetail);
       } catch (err: any) {
         setError(
@@ -184,29 +186,37 @@ export default function CourseDetailScreen() {
   );
 
   const handlePurchase = useCallback(() => {
-    if (!courseId) return;
-    if (course?.pricingModel === "PAID") {
-      Alert.alert("Choose Payment Method", "", [
-        {
-          text: "eSewa",
-          onPress: () =>
-            router.push({
-              pathname: "/payment/gateway" as any,
-              params: { courseId, mode: "course" },
-            }),
-        },
-        {
-          text: "Manual Transfer",
-          onPress: () =>
-            router.push({
-              pathname: "/payment/manual" as any,
-              params: { courseId },
-            }),
-        },
-        { text: "Cancel", style: "cancel" },
-      ]);
+    if (!courseId || !course) return;
+    if (course.pricingModel === "PAID") {
+      Alert.alert(
+        "Choose Payment Method",
+        `${course.title} · NPR ${course.price?.toLocaleString() ?? "—"}`,
+        [
+          {
+            text: "eSewa",
+            onPress: () =>
+              router.push({
+                pathname: "/payment/gateway" as any,
+                params: { courseId, mode: "course" },
+              }),
+          },
+          {
+            text: "Manual Transfer",
+            onPress: () =>
+              router.push({
+                pathname: "/payment/manual" as any,
+                params: {
+                  courseId,
+                  courseName: course.title,
+                  coursePrice: String(course.price ?? 0),
+                },
+              }),
+          },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
     }
-  }, [courseId, course?.pricingModel]);
+  }, [courseId, course]);
 
   const totalSections = course?.sections?.length ?? 0;
   const totalVideos = useMemo(
@@ -413,82 +423,144 @@ export default function CourseDetailScreen() {
             </Text>
 
             {activeCourse.sections.length > 0 ? (
-              activeCourse.sections.map((section) => (
-                <View
-                  key={section._id}
-                  className="mb-3 overflow-hidden rounded-2xl border border-border bg-card"
-                >
-                  <View className="border-b border-border px-4 py-4">
-                    <Text className="text-base font-semibold text-foreground">
-                      {section.title}
-                    </Text>
-                    {section.description ? (
-                      <Text className="mt-1 text-sm leading-6 text-muted-foreground">
-                        {section.description}
-                      </Text>
-                    ) : null}
-                    <View className="mt-3 flex-row flex-wrap gap-2">
-                      <View className="rounded-full border border-border bg-background px-2.5 py-1">
-                        <Text className="text-[10px] font-medium text-muted-foreground">
-                          {section.videos.length} videos
+              activeCourse.sections.map((section, sectionIndex) => {
+                const isLocked = !isEnrolled && activeCourse.pricingModel !== "FREE";
+                const showVideos = !isLocked || sectionIndex === 0;
+
+                return (
+                  <View
+                    key={section._id}
+                    className="mb-3 overflow-hidden rounded-2xl border border-border bg-card"
+                  >
+                    <View className="border-b border-border px-4 py-4">
+                      <View className="flex-row items-center justify-between">
+                        <Text className="flex-1 text-base font-semibold text-foreground">
+                          {section.title}
                         </Text>
+                        {isLocked && sectionIndex > 0 ? (
+                          <Ionicons name="lock-closed" size={14} color={mutedIconColor} />
+                        ) : null}
                       </View>
-                      <View className="rounded-full border border-border bg-background px-2.5 py-1">
-                        <Text className="text-[10px] font-medium text-muted-foreground">
-                          {formatDuration(section.durationMinutes)}
+                      {section.description && !isLocked ? (
+                        <Text className="mt-1 text-sm leading-6 text-muted-foreground">
+                          {section.description}
                         </Text>
+                      ) : null}
+                      <View className="mt-3 flex-row flex-wrap gap-2">
+                        <View className="rounded-full border border-border bg-background px-2.5 py-1">
+                          <Text className="text-[10px] font-medium text-muted-foreground">
+                            {section.videos.length} videos
+                          </Text>
+                        </View>
+                        <View className="rounded-full border border-border bg-background px-2.5 py-1">
+                          <Text className="text-[10px] font-medium text-muted-foreground">
+                            {formatDuration(section.durationMinutes)}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  <View className="divide-y divide-border">
-                    {section.videos.length > 0 ? (
-                      section.videos.map((video) => (
-                        <View
-                          key={video._id}
-                          className="flex-row items-center gap-3 px-4 py-3"
-                        >
-                          <View className="bg-muted/20 h-14 w-20 overflow-hidden rounded-xl border border-border">
-                            {video.thumbnailUrl ? (
-                              <Image
-                                source={{ uri: video.thumbnailUrl }}
-                                className="h-full w-full"
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <View className="flex-1 items-center justify-center">
-                                <Ionicons
-                                  name="play-circle-outline"
-                                  size={24}
-                                  color={mutedIconColor}
-                                />
+                    {showVideos ? (
+                      <View className="divide-y divide-border">
+                        {section.videos.length > 0 ? (
+                          section.videos.map((video, videoIndex) => {
+                            const videoLocked =
+                              isLocked && !(sectionIndex === 0 && videoIndex === 0);
+                            const canPlay = isEnrolled && !videoLocked;
+
+                            const videoRow = (
+                              <View
+                                className="flex-row items-center gap-3 px-4 py-3"
+                                style={{ opacity: videoLocked ? 0.5 : 1 }}
+                              >
+                                <View className="bg-muted/20 h-14 w-20 overflow-hidden rounded-xl border border-border">
+                                  {video.thumbnailUrl && !videoLocked ? (
+                                    <Image
+                                      source={{ uri: video.thumbnailUrl }}
+                                      className="h-full w-full"
+                                      resizeMode="cover"
+                                    />
+                                  ) : (
+                                    <View className="flex-1 items-center justify-center">
+                                      <Ionicons
+                                        name={
+                                          videoLocked
+                                            ? "lock-closed-outline"
+                                            : "play-circle-outline"
+                                        }
+                                        size={24}
+                                        color={mutedIconColor}
+                                      />
+                                    </View>
+                                  )}
+                                </View>
+
+                                <View className="min-w-0 flex-1">
+                                  <Text
+                                    className="text-sm font-medium text-foreground"
+                                    numberOfLines={2}
+                                  >
+                                    {video.title}
+                                  </Text>
+                                  <Text className="mt-1 text-xs text-muted-foreground">
+                                    {formatDuration(video.durationMinutes)}
+                                  </Text>
+                                </View>
+
+                                {videoLocked ? null : (
+                                  <Ionicons
+                                    name="play-circle"
+                                    size={22}
+                                    color={primaryColor}
+                                  />
+                                )}
                               </View>
-                            )}
-                          </View>
+                            );
 
-                          <View className="min-w-0 flex-1">
-                            <Text
-                              className="text-sm font-medium text-foreground"
-                              numberOfLines={2}
-                            >
-                              {video.title}
-                            </Text>
-                            <Text className="mt-1 text-xs text-muted-foreground">
-                              {formatDuration(video.durationMinutes)}
+                            return canPlay ? (
+                              <TouchableOpacity
+                                key={video._id}
+                                activeOpacity={0.7}
+                                onPress={() =>
+                                  router.push({
+                                    pathname: "/course/video" as any,
+                                    params: {
+                                      courseId: courseId!,
+                                      videoId: video._id,
+                                      title: video.title,
+                                    },
+                                  })
+                                }
+                              >
+                                {videoRow}
+                              </TouchableOpacity>
+                            ) : (
+                              <View key={video._id}>{videoRow}</View>
+                            );
+                          })
+                        ) : (
+                          <View className="px-4 py-4">
+                            <Text className="text-sm text-muted-foreground">
+                              No videos in this section yet.
                             </Text>
                           </View>
-                        </View>
-                      ))
+                        )}
+                      </View>
                     ) : (
-                      <View className="px-4 py-4">
-                        <Text className="text-sm text-muted-foreground">
-                          No videos in this section yet.
+                      <View className="flex-row items-center gap-2 px-4 py-3">
+                        <Ionicons
+                          name="lock-closed-outline"
+                          size={14}
+                          color={mutedIconColor}
+                        />
+                        <Text className="text-xs text-muted-foreground">
+                          Unlock to view {section.videos.length} videos
                         </Text>
                       </View>
                     )}
                   </View>
-                </View>
-              ))
+                );
+              })
             ) : (
               <View className="rounded-2xl border border-dashed border-border bg-card p-5">
                 <Text className="text-sm font-medium text-foreground">

@@ -13,6 +13,7 @@ import {
   Easing,
   FlatList,
   Image,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -24,7 +25,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import Toast from "react-native-toast-message";
@@ -36,7 +38,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api, publicApi } from "@/lib/api";
 import { scheduleAnswerDeadlineReminder } from "@/lib/local-notifications";
-import { isVideoUrl } from "@/lib/media-helpers";
+import { getMediaKind } from "@/lib/media-helpers";
 import {
   getPusherClient,
   QUESTION_CREATED_EVENT,
@@ -174,8 +176,14 @@ function hasMediaQuestion(question: FeedQuestion) {
     (question.images?.length ?? 0) > 0 ||
     (question.answer?.mediaUrls?.length ?? 0) > 0 ||
     question.answerFormat.includes("PHOTO") ||
-    question.answerFormat.includes("VIDEO")
+    question.answerFormat.includes("VIDEO") ||
+    question.answerFormat.includes("AUDIO")
   );
+}
+
+function matchesAllTerms(haystack: string, query: string): boolean {
+  const terms = query.split(/\s+/).filter(Boolean);
+  return terms.every((term) => haystack.includes(term));
 }
 
 function matchesQuestionSearch(question: FeedQuestion, query: string) {
@@ -196,7 +204,7 @@ function matchesQuestionSearch(question: FeedQuestion, query: string) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-  return haystack.includes(query);
+  return matchesAllTerms(haystack, query);
 }
 
 function matchesCourseSearch(course: Course, query: string) {
@@ -211,15 +219,114 @@ function matchesCourseSearch(course: Course, query: string) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-  return haystack.includes(query);
+  return matchesAllTerms(haystack, query);
 }
 
 function normalizeQuestionCards(questions: FeedQuestion[]) {
   return [...questions];
 }
 
+// ─── Inline audio player used inside AnswerDetails ─────────────────────────
+function AnswerAudioPlayer({
+  uri,
+  borderColor,
+  primaryColor,
+  mutedIconColor,
+}: {
+  uri: string;
+  borderColor: string;
+  primaryColor: string;
+  mutedIconColor: string;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const player = useAudioPlayer(uri);
+  const status = useAudioPlayerStatus(player);
+  const isPlaying = status.playing;
+
+  useEffect(() => {
+    if (status.didJustFinish) {
+      player.seekTo(0);
+    }
+  }, [status.didJustFinish, player]);
+
+  useEffect(() => {
+    return () => {
+      player.remove();
+    };
+  }, [player]);
+
+  const handleToggle = async () => {
+    if (isPlaying) {
+      player.pause();
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await setAudioModeAsync({ playsInSilentMode: true });
+      player.play();
+    } catch {
+      // silent
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filename = uri.split("/").pop()?.split("?")[0] ?? "Audio";
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        borderWidth: 1,
+        borderColor,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginRight: 8,
+        minWidth: 180,
+        maxWidth: 240,
+      }}
+    >
+      <TouchableOpacity
+        onPress={handleToggle}
+        disabled={isLoading}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: `${primaryColor}18`,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color={primaryColor} />
+        ) : (
+          <Ionicons name={isPlaying ? "pause" : "play"} size={16} color={primaryColor} />
+        )}
+      </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{ fontSize: 12, fontWeight: "600", color: undefined }}
+          className="text-foreground"
+          numberOfLines={1}
+        >
+          {filename}
+        </Text>
+        <Text style={{ fontSize: 11, color: mutedIconColor, marginTop: 1 }}>
+          {isPlaying ? "Playing…" : "Tap to play"}
+        </Text>
+      </View>
+      <Ionicons name="musical-note-outline" size={14} color={mutedIconColor} />
+    </View>
+  );
+}
+
 function AnswerDetails({
   item,
+  primaryColor,
   mutedIconColor,
   borderColor,
   onImagePress,
@@ -230,6 +337,17 @@ function AnswerDetails({
   borderColor: string;
   onImagePress: (url: string) => void;
 }) {
+  const mediaUrls = item.answer?.mediaUrls ?? [];
+
+  // Split by kind so videos/images stay in a horizontal strip,
+  // audio and docs render as full-width rows.
+  const visualMedia = mediaUrls.filter((u) => {
+    const k = getMediaKind(u);
+    return k === "image" || k === "video";
+  });
+  const audioMedia = mediaUrls.filter((u) => getMediaKind(u) === "audio");
+  const docMedia = mediaUrls.filter((u) => getMediaKind(u) === "document");
+
   return (
     <View className="border-t border-emerald-500/15 px-3 py-3">
       {item.answer?.content ? (
@@ -238,41 +356,107 @@ function AnswerDetails({
         </Text>
       ) : null}
 
-      {(item.answer?.mediaUrls?.length ?? 0) > 0 ? (
+      {/* ── Images + Videos (horizontal strip) ── */}
+      {visualMedia.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           className="mt-2"
           contentContainerStyle={{ paddingRight: 4 }}
         >
-          {item.answer?.mediaUrls?.map((url, i) => {
-            const video = isVideoUrl(url);
+          {visualMedia.map((url, i) => (
+            <View key={i} style={{ marginRight: 8 }}>
+              {getMediaKind(url) === "video" ? (
+                <InlineVideo
+                  uri={url}
+                  width={200}
+                  height={140}
+                  borderColor={borderColor}
+                />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => onImagePress(url)}
+                  className="overflow-hidden rounded-xl border border-border"
+                >
+                  <Image source={{ uri: url }} className="h-28 w-40" resizeMode="cover" />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {/* ── Audio files ── */}
+      {audioMedia.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-2"
+          contentContainerStyle={{ paddingRight: 4 }}
+        >
+          {audioMedia.map((url, i) => (
+            <AnswerAudioPlayer
+              key={i}
+              uri={url}
+              borderColor={borderColor}
+              primaryColor={primaryColor}
+              mutedIconColor={mutedIconColor}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {/* ── Documents ── */}
+      {docMedia.length > 0 ? (
+        <View className="mt-2 gap-2">
+          {docMedia.map((url, i) => {
+            const filename = url.split("/").pop()?.split("?")[0] ?? "Document";
+            const ext = filename.split(".").pop()?.toUpperCase() ?? "FILE";
             return (
-              <View key={i} style={{ marginRight: 8 }}>
-                {video ? (
-                  <InlineVideo
-                    uri={url}
-                    width={160}
-                    height={112}
-                    borderColor={borderColor}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => onImagePress(url)}
-                    className="overflow-hidden rounded-xl border border-border"
+              <TouchableOpacity
+                key={i}
+                onPress={() => Linking.openURL(url).catch(() => {})}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor,
+                  borderRadius: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                }}
+              >
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    backgroundColor: `${primaryColor}15`,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="document-outline" size={18} color={primaryColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    className="text-[13px] font-semibold text-foreground"
+                    numberOfLines={1}
                   >
-                    <Image
-                      source={{ uri: url }}
-                      className="h-28 w-40"
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
+                    {filename}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: mutedIconColor, marginTop: 1 }}>
+                    {ext} · Tap to open
+                  </Text>
+                </View>
+                <Ionicons name="open-outline" size={14} color={mutedIconColor} />
+              </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       ) : null}
 
       <View className="mt-3 flex-row items-center gap-1.5 border-t border-emerald-500/15 pt-2.5">
@@ -334,7 +518,7 @@ export default function FeedScreen() {
   const isTeacher = userRole === "TEACHER";
   const roleKey = userRole ?? null;
   const userId = user?._id ?? null;
-  const defaultSort: FeedSort = isTeacher ? "new" : "hot";
+  const defaultSort: FeedSort = "new";
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeView, setActiveView] = useState<FeedView>("all");
@@ -554,7 +738,11 @@ export default function FeedScreen() {
     }, [loadFeed, scrollToTop]),
   );
 
-  const visibleQuestions = useMemo(() => {
+  // Step 1: stable sorted ID list — only recomputed on fetch/refresh or
+  // filter/sort change, NOT on every optimistic reaction update. This stops
+  // items from jumping position when the user taps Like / Insightful.
+  const stableSortKey = feedState.lastFetchedAt;
+  const stableOrderedIds = useMemo(() => {
     const filtered = feedQuestions.filter((q) => {
       if (!matchesQuestionSearch(q, normalizedSearch)) return false;
       switch (activeView) {
@@ -570,30 +758,37 @@ export default function FeedScreen() {
           return true;
       }
     });
-
     const createdAtDiff = (a: FeedQuestion, b: FeedQuestion) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     const scoreHot = (q: FeedQuestion) =>
       q.reactionCount * 2 + q.commentCount * 3 + q.answerCount * 4;
+    return filtered
+      .sort((a, b) => {
+        if (activeSort === "new") return createdAtDiff(a, b);
+        if (activeSort === "discussed")
+          return (
+            b.commentCount - a.commentCount ||
+            b.reactionCount - a.reactionCount ||
+            createdAtDiff(a, b)
+          );
+        return scoreHot(b) - scoreHot(a) || createdAtDiff(a, b);
+      })
+      .map((q) => getFeedQuestionId(q));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSort, stableSortKey, normalizedSearch, activeView]);
 
-    return filtered.sort((a, b) => {
-      if (activeSort === "new") return createdAtDiff(a, b);
-      if (activeSort === "discussed")
-        return (
-          b.commentCount - a.commentCount ||
-          b.reactionCount - a.reactionCount ||
-          createdAtDiff(a, b)
-        );
-      return scoreHot(b) - scoreHot(a) || createdAtDiff(a, b);
-    });
-  }, [activeSort, feedQuestions, normalizedSearch, activeView]);
+  // Step 2: apply stable order to live question data so reaction counts
+  // update in-place without reshuffling positions.
+  const visibleQuestions = useMemo(() => {
+    const lookup = new Map(feedQuestions.map((q) => [getFeedQuestionId(q), q]));
+    return stableOrderedIds.map((id) => lookup.get(id)).filter(Boolean) as FeedQuestion[];
+  }, [stableOrderedIds, feedQuestions]);
 
   const visibleCourses = useMemo(() => {
     const matched = courseList.filter((c) => matchesCourseSearch(c, normalizedSearch));
     return matched.slice(0, 6);
   }, [courseList, normalizedSearch]);
-  const shouldHideCoursesForSearch =
-    normalizedSearch.length > 0 && visibleQuestions.length > 0;
+  const shouldHideCoursesForSearch = false;
 
   const handleRefresh = async () => {
     dispatch(setFeedRefreshing(true));
@@ -979,7 +1174,7 @@ export default function FeedScreen() {
             <TextInput
               value={searchTerm}
               onChangeText={setSearchTerm}
-              placeholder="Search questions..."
+              placeholder="Search questions & courses..."
               placeholderTextColor={mutedIconColor}
               autoCapitalize="none"
               autoCorrect={false}
@@ -1179,373 +1374,390 @@ export default function FeedScreen() {
   );
 
   // ─── Question Card ───────────────────────────────────────────────
-  const renderQuestionItem = ({ item }: { item: FeedQuestion }) => {
-    const questionId = getFeedQuestionId(item);
-    const isOwnQuestion = userId === item.askerId;
-    const canAccept =
-      isTeacher && !isOwnQuestion && (item.status === "OPEN" || item.status === "RESET");
-    const canComment = Boolean(userId) && !isOwnQuestion;
-    const isAnswerExpanded = expandedAnswers.has(questionId);
-    const isCommentsExpanded = expandedComments.has(questionId);
-    const comments = dedupeComments(commentsMap[questionId] || []);
-    const userReaction = userId
-      ? item.reactions.find((r) => r.userId === userId)
-      : undefined;
-    const reactionSummary = getReactionSummary(item);
-    const hasAnswer = Boolean(item.answer);
-    const isSolved = item.status === "SOLVED";
-    const isAccepted = item.status === "ACCEPTED";
+  const renderQuestionItem = useCallback(
+    ({ item }: { item: FeedQuestion }) => {
+      const questionId = getFeedQuestionId(item);
+      const isOwnQuestion = userId === item.askerId;
+      const canAccept =
+        isTeacher &&
+        !isOwnQuestion &&
+        (item.status === "OPEN" || item.status === "RESET");
+      const canComment = Boolean(userId) && !isOwnQuestion;
+      const isAnswerExpanded = expandedAnswers.has(questionId);
+      const isCommentsExpanded = expandedComments.has(questionId);
+      const comments = dedupeComments(commentsMap[questionId] || []);
+      const userReaction = userId
+        ? item.reactions.find((r) => r.userId === userId)
+        : undefined;
+      const reactionSummary = getReactionSummary(item);
+      const hasAnswer = Boolean(item.answer);
+      const isSolved = item.status === "SOLVED";
+      const isAccepted = item.status === "ACCEPTED";
 
-    const isPrivate = item.answerVisibility === "PRIVATE";
-    const isOptimistic = feedState.optimisticIds.includes(questionId);
-    const isReset = item.status === "RESET" && item.resetCount > 0;
-    const canDelete =
-      isOwnQuestion &&
-      (item.status === "OPEN" || item.status === "RESET") &&
-      !isOptimistic;
+      const isPrivate = item.answerVisibility === "PRIVATE";
+      const isOptimistic = feedState.optimisticIds.includes(questionId);
+      const isReset = item.status === "RESET" && item.resetCount > 0;
+      const canDelete =
+        isOwnQuestion &&
+        (item.status === "OPEN" || item.status === "RESET") &&
+        !isOptimistic;
 
-    return (
-      <View
-        className="overflow-hidden bg-card"
-        style={{
-          backgroundColor: cardColor,
-          borderBottomWidth: 1,
-          borderBottomColor: borderColor,
-          opacity: isOptimistic ? 0.7 : 1,
-        }}
-      >
-        <View className="px-4 py-4">
-          {/* ── Author Row ─────────────────────────── */}
-          <View className="flex-row items-center gap-3">
-            <View className="bg-primary/10 h-10 w-10 overflow-hidden rounded-full border border-border">
-              {item.askerImage ? (
-                <Image
-                  source={{ uri: item.askerImage }}
-                  className="h-full w-full"
-                  resizeMode="cover"
-                />
-              ) : (
-                <View className="flex-1 items-center justify-center">
-                  <Text className="text-sm font-bold text-primary">
-                    {item.askerName.charAt(0).toUpperCase()}
+      return (
+        <View
+          className="overflow-hidden bg-card"
+          style={{
+            backgroundColor: cardColor,
+            borderBottomWidth: 1,
+            borderBottomColor: borderColor,
+            opacity: isOptimistic ? 0.7 : 1,
+          }}
+        >
+          <View className="px-4 py-4">
+            {/* ── Author Row ─────────────────────────── */}
+            <View className="flex-row items-center gap-3">
+              <View className="bg-primary/10 h-10 w-10 overflow-hidden rounded-full border border-border">
+                {item.askerImage ? (
+                  <Image
+                    source={{ uri: item.askerImage }}
+                    className="h-full w-full"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View className="flex-1 items-center justify-center">
+                    <Text className="text-sm font-bold text-primary">
+                      {item.askerName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View className="flex-1">
+                <Text
+                  className="text-[14px] font-semibold text-foreground"
+                  numberOfLines={1}
+                >
+                  {item.askerName}
+                </Text>
+                <View className="flex-row items-center gap-1.5">
+                  <Text className="text-[12px] text-muted-foreground">
+                    {formatTimeAgo(item.createdAt)}
+                  </Text>
+                  {isPrivate ? (
+                    <>
+                      <Text className="text-[12px] text-muted-foreground">·</Text>
+                      <View className="flex-row items-center gap-0.5">
+                        <Ionicons name="lock-closed" size={10} color={mutedIconColor} />
+                        <Text className="text-[11px] text-muted-foreground">Private</Text>
+                      </View>
+                    </>
+                  ) : null}
+                </View>
+              </View>
+              {isOptimistic ? (
+                <View className="flex-row items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1">
+                  <ActivityIndicator size={10} color="#f59e0b" />
+                  <Text className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                    Posting…
                   </Text>
                 </View>
-              )}
+              ) : isSolved ? (
+                <View className="flex-row items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1">
+                  <Ionicons name="checkmark-circle" size={12} color="#10b981" />
+                  <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    Solved
+                  </Text>
+                </View>
+              ) : isAccepted ? (
+                <View className="flex-row items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1">
+                  <Ionicons name="ellipse" size={8} color="#38bdf8" />
+                  <Text className="text-[10px] font-semibold text-sky-600 dark:text-sky-400">
+                    Active
+                  </Text>
+                </View>
+              ) : null}
             </View>
-            <View className="flex-1">
+
+            {/* ── Question Content ───────────────────── */}
+            <Text
+              className="mt-3 text-[17px] font-semibold leading-6 text-foreground"
+              style={{ letterSpacing: -0.2 }}
+            >
+              {item.title}
+            </Text>
+
+            {item.body ? (
               <Text
-                className="text-[14px] font-semibold text-foreground"
-                numberOfLines={1}
+                className="mt-1.5 text-[14px] leading-[22px] text-muted-foreground"
+                numberOfLines={3}
               >
-                {item.askerName}
+                {item.body}
               </Text>
-              <View className="flex-row items-center gap-1.5">
-                <Text className="text-[12px] text-muted-foreground">
-                  {formatTimeAgo(item.createdAt)}
-                </Text>
-                {isPrivate ? (
-                  <>
-                    <Text className="text-[12px] text-muted-foreground">·</Text>
-                    <View className="flex-row items-center gap-0.5">
-                      <Ionicons name="lock-closed" size={10} color={mutedIconColor} />
-                      <Text className="text-[11px] text-muted-foreground">Private</Text>
-                    </View>
-                  </>
-                ) : null}
-              </View>
-            </View>
-            {isOptimistic ? (
-              <View className="flex-row items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1">
-                <ActivityIndicator size={10} color="#f59e0b" />
-                <Text className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                  Posting…
-                </Text>
-              </View>
-            ) : isSolved ? (
-              <View className="flex-row items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1">
-                <Ionicons name="checkmark-circle" size={12} color="#10b981" />
-                <Text className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                  Solved
-                </Text>
-              </View>
+            ) : null}
+
+            {(item.images?.length ?? 0) > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="mt-3"
+                contentContainerStyle={{ paddingRight: 4 }}
+              >
+                {item.images?.map((url, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    activeOpacity={0.85}
+                    onPress={() => openImageViewer(url)}
+                    className="mr-2 overflow-hidden rounded-xl border border-border"
+                  >
+                    <Image
+                      source={{ uri: url }}
+                      className="h-24 w-24"
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : null}
+
+            {/* ── Answer Preview / Expand ────────────── */}
+            {isSolved && hasAnswer ? (
+              <Animated.View className="mt-3 overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05]">
+                <TouchableOpacity
+                  onPress={() => toggleAnswer(questionId)}
+                  activeOpacity={0.85}
+                >
+                  <View className="flex-row items-center gap-2 px-3.5 py-3">
+                    <Ionicons name="checkmark-circle" size={17} color="#10b981" />
+                    <Text
+                      className="flex-1 text-[14px] font-medium text-foreground"
+                      numberOfLines={1}
+                    >
+                      {isAnswerExpanded
+                        ? "Hide accepted answer"
+                        : item.answer?.content
+                          ? item.answer.content.length > 80
+                            ? item.answer.content.slice(0, 80) + "…"
+                            : item.answer.content
+                          : "View accepted answer"}
+                    </Text>
+                    <Ionicons
+                      name={isAnswerExpanded ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={mutedIconColor}
+                    />
+                  </View>
+
+                  {isAnswerExpanded ? (
+                    <Animated.View
+                      entering={FadeIn.duration(140)}
+                      exiting={FadeOut.duration(100)}
+                    >
+                      <AnswerDetails
+                        item={item}
+                        primaryColor={primaryColor}
+                        mutedIconColor={mutedIconColor}
+                        borderColor={borderColor}
+                        onImagePress={openImageViewer}
+                      />
+                    </Animated.View>
+                  ) : null}
+                </TouchableOpacity>
+              </Animated.View>
             ) : isAccepted ? (
-              <View className="flex-row items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-1">
-                <Ionicons name="ellipse" size={8} color="#38bdf8" />
-                <Text className="text-[10px] font-semibold text-sky-600 dark:text-sky-400">
-                  Active
-                </Text>
-              </View>
-            ) : isReset ? (
-              <View className="flex-row items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-1">
-                <Ionicons name="refresh" size={11} color="#f97316" />
-                <Text className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-                  Attempt {item.resetCount + 1}
+              <View className="mt-3 rounded-xl border border-sky-500/20 bg-sky-500/[0.05] px-3 py-2.5">
+                <Text className="text-xs text-muted-foreground">
+                  {item.acceptedByName
+                    ? `${item.acceptedByName} is working on this...`
+                    : "Being answered..."}
                 </Text>
               </View>
             ) : null}
-          </View>
 
-          {/* ── Question Content ───────────────────── */}
-          <Text
-            className="mt-3 text-[17px] font-semibold leading-6 text-foreground"
-            style={{ letterSpacing: -0.2 }}
-          >
-            {item.title}
-          </Text>
-
-          {item.body ? (
-            <Text
-              className="mt-1.5 text-[14px] leading-[22px] text-muted-foreground"
-              numberOfLines={3}
+            {/* ── Bottom Bar: Reactions + Comments ──── */}
+            <View
+              className="mt-3 flex-row items-center justify-between border-t pt-2.5"
+              style={{ borderTopColor: borderColor }}
             >
-              {item.body}
-            </Text>
-          ) : null}
-
-          {(item.images?.length ?? 0) > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="mt-3"
-              contentContainerStyle={{ paddingRight: 4 }}
-            >
-              {item.images?.map((url, i) => (
-                <TouchableOpacity
-                  key={i}
-                  activeOpacity={0.85}
-                  onPress={() => openImageViewer(url)}
-                  className="mr-2 overflow-hidden rounded-xl border border-border"
-                >
-                  <Image source={{ uri: url }} className="h-24 w-24" resizeMode="cover" />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : null}
-
-          {/* ── Answer Preview / Expand ────────────── */}
-          {isSolved && hasAnswer ? (
-            <Animated.View
-              layout={LinearTransition.duration(180)}
-              className="mt-3 overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05]"
-            >
-              <TouchableOpacity
-                onPress={() => toggleAnswer(questionId)}
-                activeOpacity={0.85}
-              >
-                <View className="flex-row items-center gap-2 px-3.5 py-3">
-                  <Ionicons name="checkmark-circle" size={17} color="#10b981" />
-                  <Text
-                    className="flex-1 text-[14px] font-medium text-foreground"
-                    numberOfLines={1}
-                  >
-                    {isAnswerExpanded
-                      ? "Hide accepted answer"
-                      : item.answer?.content
-                        ? item.answer.content.length > 80
-                          ? item.answer.content.slice(0, 80) + "…"
-                          : item.answer.content
-                        : "View accepted answer"}
-                  </Text>
-                  <Ionicons
-                    name={isAnswerExpanded ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color={mutedIconColor}
-                  />
-                </View>
-
-                {isAnswerExpanded ? (
-                  <Animated.View
-                    entering={FadeIn.duration(140)}
-                    exiting={FadeOut.duration(100)}
-                  >
-                    <AnswerDetails
-                      item={item}
-                      primaryColor={primaryColor}
-                      mutedIconColor={mutedIconColor}
-                      borderColor={borderColor}
-                      onImagePress={openImageViewer}
-                    />
-                  </Animated.View>
-                ) : null}
-              </TouchableOpacity>
-            </Animated.View>
-          ) : isAccepted ? (
-            <View className="mt-3 rounded-xl border border-sky-500/20 bg-sky-500/[0.05] px-3 py-2.5">
-              <Text className="text-xs text-muted-foreground">
-                {item.acceptedByName
-                  ? `${item.acceptedByName} is working on this...`
-                  : "Being answered..."}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* ── Bottom Bar: Reactions + Comments ──── */}
-          <View
-            className="mt-3 flex-row items-center justify-between border-t pt-2.5"
-            style={{ borderTopColor: borderColor }}
-          >
-            {/* Reactions */}
-            <View className="flex-row items-center gap-1">
-              {REACTION_BUTTONS.map(({ type, icon, activeIcon }) => {
-                const isActive = userReaction?.type === type;
-                const count = reactionSummary[type];
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => handleReact(questionId, type)}
-                    className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5"
-                    style={{
-                      backgroundColor: isActive ? `${primaryColor}18` : "transparent",
-                    }}
-                  >
-                    <Ionicons
-                      name={isActive ? activeIcon : icon}
-                      size={16}
-                      color={isActive ? primaryColor : mutedIconColor}
-                    />
-                    {count > 0 ? (
-                      <Text
-                        className="text-xs font-medium"
-                        style={{ color: isActive ? primaryColor : mutedIconColor }}
-                      >
-                        {count}
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Right side: comment count + accept */}
-            <View className="flex-row items-center gap-2">
-              <TouchableOpacity
-                onPress={() => toggleComments(questionId)}
-                className="flex-row items-center gap-1.5"
-              >
-                <Ionicons
-                  name={isCommentsExpanded ? "chatbubble" : "chatbubble-outline"}
-                  size={15}
-                  color={isCommentsExpanded ? primaryColor : mutedIconColor}
-                />
-                <Text
-                  className="text-xs"
-                  style={{ color: isCommentsExpanded ? primaryColor : mutedIconColor }}
-                >
-                  {item.commentCount}
-                </Text>
-              </TouchableOpacity>
-
-              {canDelete ? (
-                <TouchableOpacity
-                  disabled={deletingId === questionId}
-                  onPress={() => handleDelete(questionId, item.title)}
-                  className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5"
-                  style={{ backgroundColor: "#ef444418" }}
-                >
-                  {deletingId === questionId ? (
-                    <ActivityIndicator color="#ef4444" size="small" />
-                  ) : (
-                    <Ionicons name="trash-outline" size={14} color="#ef4444" />
-                  )}
-                </TouchableOpacity>
-              ) : null}
-
-              {canAccept ? (
-                <TouchableOpacity
-                  disabled={acceptingId === questionId}
-                  onPress={() => handleAccept(questionId)}
-                  className="flex-row items-center gap-1 rounded-full px-3 py-1.5"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {acceptingId === questionId ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark-outline" size={13} color="#fff" />
-                      <Text className="text-xs font-semibold text-white">Accept</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-
-          {/* ── Comments Panel ─────────────────────── */}
-          {isCommentsExpanded ? (
-            <View className="border-border/60 bg-muted/10 mt-3 rounded-xl border p-3">
-              {comments.length === 0 ? (
-                <Text className="text-sm text-muted-foreground">No comments yet.</Text>
-              ) : (
-                <View className="gap-3">
-                  {comments.map((comment) => (
-                    <View key={comment._id} className="flex-row gap-2.5">
-                      {comment.studentId?.userImage ? (
-                        <Image
-                          source={{ uri: comment.studentId.userImage }}
-                          className="h-7 w-7 rounded-full border border-border"
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View className="bg-primary/10 h-7 w-7 items-center justify-center rounded-full">
-                          <Text className="text-[11px] font-bold text-primary">
-                            {(comment.studentId?.name || "U").charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
-                      <View className="flex-1">
-                        <View className="flex-row items-center gap-1.5">
-                          <Text className="text-[13px] font-semibold text-foreground">
-                            {comment.studentId?.name || "Anonymous"}
-                          </Text>
-                          <Text className="text-[11px] text-muted-foreground">
-                            {formatTimeAgo(comment.createdAt)}
-                          </Text>
-                        </View>
-                        <Text className="mt-0.5 text-sm leading-5 text-foreground">
-                          {comment.content}
+              {/* Reactions */}
+              <View className="flex-row items-center gap-1">
+                {REACTION_BUTTONS.map(({ type, icon, activeIcon }) => {
+                  const isActive = userReaction?.type === type;
+                  const count = reactionSummary[type];
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      onPress={() => handleReact(questionId, type)}
+                      className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5"
+                      style={{
+                        backgroundColor: isActive ? `${primaryColor}18` : "transparent",
+                      }}
+                    >
+                      <Ionicons
+                        name={isActive ? activeIcon : icon}
+                        size={16}
+                        color={isActive ? primaryColor : mutedIconColor}
+                      />
+                      {count > 0 ? (
+                        <Text
+                          className="text-xs font-medium"
+                          style={{ color: isActive ? primaryColor : mutedIconColor }}
+                        >
+                          {count}
                         </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-              {canComment ? (
-                <View className="border-border/60 mt-3 flex-row items-end gap-2 border-t pt-3">
-                  <TextInput
-                    value={commentInput[questionId] || ""}
-                    onChangeText={(text) =>
-                      setCommentInput((prev) => ({ ...prev, [questionId]: text }))
-                    }
-                    placeholder="Write a comment..."
-                    placeholderTextColor={mutedIconColor}
-                    multiline
-                    className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
-                    style={{ textAlignVertical: "top", minHeight: 38, maxHeight: 100 }}
+              {/* Right side: comment count + accept */}
+              <View className="flex-row items-center gap-2">
+                <TouchableOpacity
+                  onPress={() => toggleComments(questionId)}
+                  className="flex-row items-center gap-1.5"
+                >
+                  <Ionicons
+                    name={isCommentsExpanded ? "chatbubble" : "chatbubble-outline"}
+                    size={15}
+                    color={isCommentsExpanded ? primaryColor : mutedIconColor}
                   />
-                  <TouchableOpacity
-                    disabled={
-                      isSubmittingComment === questionId ||
-                      !commentInput[questionId]?.trim()
-                    }
-                    onPress={() => handleSubmitComment(questionId)}
-                    className="h-9 w-9 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: primaryColor }}
+                  <Text
+                    className="text-xs"
+                    style={{ color: isCommentsExpanded ? primaryColor : mutedIconColor }}
                   >
-                    {isSubmittingComment === questionId ? (
-                      <ActivityIndicator color="#fff" size="small" />
+                    {item.commentCount}
+                  </Text>
+                </TouchableOpacity>
+
+                {canDelete ? (
+                  <TouchableOpacity
+                    disabled={deletingId === questionId}
+                    onPress={() => handleDelete(questionId, item.title)}
+                    className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5"
+                    style={{ backgroundColor: "#ef444418" }}
+                  >
+                    {deletingId === questionId ? (
+                      <ActivityIndicator color="#ef4444" size="small" />
                     ) : (
-                      <Ionicons name="send" size={15} color="#fff" />
+                      <Ionicons name="trash-outline" size={14} color="#ef4444" />
                     )}
                   </TouchableOpacity>
-                </View>
-              ) : null}
+                ) : null}
+
+                {canAccept ? (
+                  <TouchableOpacity
+                    disabled={acceptingId === questionId}
+                    onPress={() => handleAccept(questionId)}
+                    className="flex-row items-center gap-1 rounded-full px-3 py-1.5"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {acceptingId === questionId ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-outline" size={13} color="#fff" />
+                        <Text className="text-xs font-semibold text-white">Accept</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
-          ) : null}
+
+            {/* ── Comments Panel ─────────────────────── */}
+            {isCommentsExpanded ? (
+              <View className="border-border/60 bg-muted/10 mt-3 rounded-xl border p-3">
+                {comments.length === 0 ? (
+                  <Text className="text-sm text-muted-foreground">No comments yet.</Text>
+                ) : (
+                  <View className="gap-3">
+                    {comments.map((comment) => (
+                      <View key={comment._id} className="flex-row gap-2.5">
+                        {comment.studentId?.userImage ? (
+                          <Image
+                            source={{ uri: comment.studentId.userImage }}
+                            className="h-7 w-7 rounded-full border border-border"
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View className="bg-primary/10 h-7 w-7 items-center justify-center rounded-full">
+                            <Text className="text-[11px] font-bold text-primary">
+                              {(comment.studentId?.name || "U").charAt(0).toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+                        <View className="flex-1">
+                          <View className="flex-row items-center gap-1.5">
+                            <Text className="text-[13px] font-semibold text-foreground">
+                              {comment.studentId?.name || "Anonymous"}
+                            </Text>
+                            <Text className="text-[11px] text-muted-foreground">
+                              {formatTimeAgo(comment.createdAt)}
+                            </Text>
+                          </View>
+                          <Text className="mt-0.5 text-sm leading-5 text-foreground">
+                            {comment.content}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {canComment ? (
+                  <View className="border-border/60 mt-3 flex-row items-end gap-2 border-t pt-3">
+                    <TextInput
+                      value={commentInput[questionId] || ""}
+                      onChangeText={(text) =>
+                        setCommentInput((prev) => ({ ...prev, [questionId]: text }))
+                      }
+                      placeholder="Write a comment..."
+                      placeholderTextColor={mutedIconColor}
+                      multiline
+                      className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                      style={{ textAlignVertical: "top", minHeight: 38, maxHeight: 100 }}
+                    />
+                    <TouchableOpacity
+                      disabled={
+                        isSubmittingComment === questionId ||
+                        !commentInput[questionId]?.trim()
+                      }
+                      onPress={() => handleSubmitComment(questionId)}
+                      className="h-9 w-9 items-center justify-center rounded-xl"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {isSubmittingComment === questionId ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Ionicons name="send" size={15} color="#fff" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
         </View>
-      </View>
-    );
-  };
+      );
+       
+    },
+    [
+      userId,
+      isTeacher,
+      expandedAnswers,
+      expandedComments,
+      commentsMap,
+      commentInput,
+      feedState.optimisticIds,
+      acceptingId,
+      deletingId,
+      isSubmittingComment,
+      cardColor,
+      borderColor,
+      primaryColor,
+      mutedIconColor,
+      iconColor,
+      primarySoftColor,
+    ],
+  );
 
   // ─── Empty State ─────────────────────────────────────────────────
   const renderEmptyState = useCallback(() => {
@@ -1651,6 +1863,7 @@ export default function FeedScreen() {
       <FlatList
         ref={flatListRef}
         data={visibleQuestions}
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         keyExtractor={getQuestionKey}
         renderItem={renderQuestionItem}
         ListHeaderComponent={renderHeader}

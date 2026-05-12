@@ -7,6 +7,7 @@ import {
   NEW_CHANNEL_EVENT,
   NOTIFICATION_EVENT,
   SUBSCRIPTION_UPDATED_EVENT,
+  CALL_INCOMING_EVENT,
   getPusherClient,
   getPusherConfig,
   getUserPusherName,
@@ -20,6 +21,7 @@ import {
   setRealtimeStatus,
   setRealtimeUserChannel,
 } from "@/store/slices/realtimeSlice";
+import { setIncomingCall } from "@/store/slices/incomingCallSlice";
 import { updateChannelLastMessage, upsertChannel } from "@/store/slices/channelsSlice";
 import { updateUser } from "@/store/slices/userSlice";
 
@@ -134,6 +136,20 @@ export function RealtimeBridge() {
             : payload.unreadCountIncrement
               ? { unreadCountIncrement: payload.unreadCountIncrement }
               : {}),
+        }),
+      );
+    });
+
+    channel.bind(CALL_INCOMING_EVENT, (payload: any) => {
+      if (!payload?.callSessionId) return;
+      dispatch(
+        setIncomingCall({
+          callSessionId: String(payload.callSessionId),
+          channelId: String(payload.channelId ?? ""),
+          callerName: String(payload.callerName ?? "Unknown"),
+          callerImage: payload.callerImage ?? null,
+          callerId: String(payload.callerId ?? ""),
+          mode: payload.mode === "VIDEO" ? "VIDEO" : "AUDIO",
         }),
       );
     });

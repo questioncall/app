@@ -20,10 +20,23 @@ import Toast from "react-native-toast-message";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
-import { api } from "@/lib/api";
+import { api, API_BASE_URL } from "@/lib/api";
 
 export default function ManualPaymentScreen() {
-  const { planSlug: paramPlan } = useLocalSearchParams<{ planSlug?: string }>();
+  const {
+    planSlug: paramPlan,
+    courseId: paramCourseId,
+    courseName: paramCourseName,
+    coursePrice: paramCoursePrice,
+  } = useLocalSearchParams<{
+    planSlug?: string;
+    courseId?: string;
+    courseName?: string;
+    coursePrice?: string;
+  }>();
+
+  const isCourseMode = !!paramCourseId;
+
   const user = useAppSelector((s) => s.user.data);
   const { config } = usePlatformConfig();
   const {
@@ -37,8 +50,9 @@ export default function ManualPaymentScreen() {
   } = useAppTheme();
 
   const plans = config?.plans ?? [];
-  const adminEsewa = config?.adminEsewaNumber ?? "";
-  const qrCodeUrl = config?.manualPaymentQrCodeUrl ?? "";
+  const adminEsewa = config?.manualPaymentEsewaNumber ?? "";
+  const rawQrUrl = config?.manualPaymentQrCodeUrl ?? "";
+  const qrCodeUrl = rawQrUrl.startsWith("/") ? `${API_BASE_URL}${rawQrUrl}` : rawQrUrl;
 
   const [selectedPlan, setSelectedPlan] = useState(paramPlan ?? "");
   const [transactionId, setTransactionId] = useState("");
@@ -47,15 +61,29 @@ export default function ManualPaymentScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const plan = useMemo(
-    () => plans.find((p) => p.slug === selectedPlan) ?? null,
-    [plans, selectedPlan],
+    () => (isCourseMode ? null : (plans.find((p) => p.slug === selectedPlan) ?? null)),
+    [plans, selectedPlan, isCourseMode],
   );
 
-  const canSubmit =
-    selectedPlan.length > 0 &&
-    transactionId.trim().length > 0 &&
-    transactorName.trim().length > 0 &&
-    !isSubmitting;
+  // In course mode the "amount" comes from params; in plan mode from the selected plan
+  const displayAmount = isCourseMode
+    ? `NPR ${Number(paramCoursePrice ?? 0).toLocaleString()}`
+    : plan
+      ? `NPR ${plan.price}`
+      : null;
+
+  const displayLabel = isCourseMode
+    ? (paramCourseName ?? "Course Purchase")
+    : plan
+      ? `${plan.name} Plan · ${plan.maxQuestions} questions`
+      : null;
+
+  const canSubmit = isCourseMode
+    ? transactionId.trim().length > 0 && transactorName.trim().length > 0 && !isSubmitting
+    : selectedPlan.length > 0 &&
+      transactionId.trim().length > 0 &&
+      transactorName.trim().length > 0 &&
+      !isSubmitting;
 
   const pickScreenshot = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -71,64 +99,79 @@ export default function ManualPaymentScreen() {
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
 
-    Alert.alert(
-      "Confirm Payment",
-      `Submit payment for ${plan?.name ?? selectedPlan} plan (NPR ${plan?.price ?? "—"})?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Submit",
-          onPress: async () => {
-            setIsSubmitting(true);
-            try {
-              const formData = new FormData();
-              formData.append("transactionId", transactionId.trim());
-              formData.append("transactorName", transactorName.trim());
+    const confirmMsg = isCourseMode
+      ? `Submit payment for ${paramCourseName ?? "course"} (NPR ${paramCoursePrice ?? "—"})?`
+      : `Submit payment for ${plan?.name ?? selectedPlan} plan (NPR ${plan?.price ?? "—"})?`;
+
+    Alert.alert("Confirm Payment", confirmMsg, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Submit",
+        onPress: async () => {
+          setIsSubmitting(true);
+          try {
+            const formData = new FormData();
+            formData.append("transactionId", transactionId.trim());
+            formData.append("transactorName", transactorName.trim());
+            if (isCourseMode) {
+              formData.append("courseId", paramCourseId!);
+            } else {
               formData.append("planSlug", selectedPlan);
-
-              if (screenshot) {
-                const uri = screenshot.uri;
-                const ext = uri.split(".").pop() ?? "jpg";
-                formData.append("screenshot", {
-                  uri,
-                  name: `payment-screenshot.${ext}`,
-                  type: `image/${ext === "png" ? "png" : "jpeg"}`,
-                } as any);
-              }
-
-              await api.post("/payments/manual", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-                timeout: 30000,
-              });
-
-              Toast.show({
-                type: "success",
-                text1: "Payment Submitted",
-                text2: "We'll verify your payment shortly.",
-              });
-
-              router.back();
-            } catch (err: any) {
-              const status = err?.response?.status;
-              const msg = err?.response?.data?.error ?? "Payment submission failed.";
-
-              if (status === 409) {
-                Toast.show({
-                  type: "error",
-                  text1: "Duplicate Transaction",
-                  text2: msg,
-                });
-              } else {
-                Toast.show({ type: "error", text1: "Error", text2: msg });
-              }
-            } finally {
-              setIsSubmitting(false);
             }
-          },
+
+            if (screenshot) {
+              const uri = screenshot.uri;
+              const ext = uri.split(".").pop() ?? "jpg";
+              formData.append("screenshot", {
+                uri,
+                name: `payment-screenshot.${ext}`,
+                type: `image/${ext === "png" ? "png" : "jpeg"}`,
+              } as any);
+            }
+
+            await api.post("/payments/manual", formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+              timeout: 30000,
+            });
+
+            Toast.show({
+              type: "success",
+              text1: "Payment Submitted",
+              text2: "We'll verify your payment shortly.",
+            });
+
+            router.back();
+          } catch (err: any) {
+            const status = err?.response?.status;
+            const msg = err?.response?.data?.error ?? "Payment submission failed.";
+
+            if (status === 409) {
+              Toast.show({
+                type: "error",
+                text1: "Duplicate Transaction",
+                text2: msg,
+              });
+            } else {
+              Toast.show({ type: "error", text1: "Error", text2: msg });
+            }
+          } finally {
+            setIsSubmitting(false);
+          }
         },
-      ],
-    );
-  }, [canSubmit, plan, selectedPlan, transactionId, transactorName, screenshot]);
+      },
+    ]);
+  }, [
+    canSubmit,
+    isCourseMode,
+    paramCourseId,
+    paramCourseName,
+    paramCoursePrice,
+    plan,
+    selectedPlan,
+    transactionId,
+    transactorName,
+    screenshot,
+  ]);
 
   return (
     <View className="flex-1 bg-background">
@@ -151,6 +194,33 @@ export default function ManualPaymentScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Course info banner — only in course mode */}
+          {isCourseMode ? (
+            <View
+              className="flex-row items-center rounded-2xl border p-3"
+              style={{
+                borderColor: `${primaryColor}40`,
+                backgroundColor: primarySoftColor,
+              }}
+            >
+              <View
+                className="mr-3 h-11 w-11 items-center justify-center rounded-xl"
+                style={{ backgroundColor: `${primaryColor}20` }}
+              >
+                <Ionicons name="book" size={20} color={primaryColor} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-xs text-muted-foreground">Purchasing Course</Text>
+                <Text className="text-sm font-bold text-foreground" numberOfLines={2}>
+                  {paramCourseName ?? "Course"}
+                </Text>
+              </View>
+              <Text className="text-base font-bold" style={{ color: primaryColor }}>
+                NPR {Number(paramCoursePrice ?? 0).toLocaleString()}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Step 1: Payment info */}
           <View
             className="rounded-2xl border p-4"
@@ -190,73 +260,77 @@ export default function ManualPaymentScreen() {
               </View>
             ) : null}
 
-            {plan ? (
+            {displayAmount ? (
               <View className="mt-3 rounded-xl border p-3" style={{ borderColor }}>
                 <Text className="text-xs text-muted-foreground">Amount to Pay</Text>
                 <Text
                   className="mt-0.5 text-2xl font-bold"
                   style={{ color: primaryColor }}
                 >
-                  NPR {plan.price}
+                  {displayAmount}
                 </Text>
-                <Text className="text-xs text-muted-foreground">
-                  {plan.name} Plan · {plan.maxQuestions} questions
-                </Text>
+                {displayLabel ? (
+                  <Text className="text-xs text-muted-foreground">{displayLabel}</Text>
+                ) : null}
               </View>
             ) : null}
           </View>
 
-          {/* Step 2: Select plan */}
-          <View
-            className="rounded-2xl border p-4"
-            style={{ borderColor, backgroundColor: cardColor }}
-          >
-            <View className="mb-3 flex-row items-center gap-2">
-              <View
-                className="h-6 w-6 items-center justify-center rounded-full"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <Text className="text-xs font-bold text-white">2</Text>
-              </View>
-              <Text className="text-base font-semibold text-foreground">Select Plan</Text>
-            </View>
-
-            <View className="gap-2">
-              {plans.map((p) => (
-                <TouchableOpacity
-                  key={p.slug}
-                  className="flex-row items-center rounded-xl border p-3"
-                  style={{
-                    borderColor: selectedPlan === p.slug ? primaryColor : borderColor,
-                    backgroundColor:
-                      selectedPlan === p.slug ? primarySoftColor : "transparent",
-                  }}
-                  onPress={() => setSelectedPlan(p.slug)}
+          {/* Step 2: Select plan — only shown when NOT in course mode */}
+          {!isCourseMode ? (
+            <View
+              className="rounded-2xl border p-4"
+              style={{ borderColor, backgroundColor: cardColor }}
+            >
+              <View className="mb-3 flex-row items-center gap-2">
+                <View
+                  className="h-6 w-6 items-center justify-center rounded-full"
+                  style={{ backgroundColor: primaryColor }}
                 >
-                  <Ionicons
-                    name={
-                      selectedPlan === p.slug ? "radio-button-on" : "radio-button-off"
-                    }
-                    size={20}
-                    color={selectedPlan === p.slug ? primaryColor : mutedIconColor}
-                  />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-sm font-semibold text-foreground">
-                      {p.name}
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">
-                      {p.maxQuestions} questions
-                    </Text>
-                  </View>
-                  <Text className="font-bold" style={{ color: primaryColor }}>
-                    NPR {p.price}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+                  <Text className="text-xs font-bold text-white">2</Text>
+                </View>
+                <Text className="text-base font-semibold text-foreground">
+                  Select Plan
+                </Text>
+              </View>
 
-          {/* Step 3: Transaction details */}
+              <View className="gap-2">
+                {plans.map((p) => (
+                  <TouchableOpacity
+                    key={p.slug}
+                    className="flex-row items-center rounded-xl border p-3"
+                    style={{
+                      borderColor: selectedPlan === p.slug ? primaryColor : borderColor,
+                      backgroundColor:
+                        selectedPlan === p.slug ? primarySoftColor : "transparent",
+                    }}
+                    onPress={() => setSelectedPlan(p.slug)}
+                  >
+                    <Ionicons
+                      name={
+                        selectedPlan === p.slug ? "radio-button-on" : "radio-button-off"
+                      }
+                      size={20}
+                      color={selectedPlan === p.slug ? primaryColor : mutedIconColor}
+                    />
+                    <View className="ml-3 flex-1">
+                      <Text className="text-sm font-semibold text-foreground">
+                        {p.name}
+                      </Text>
+                      <Text className="text-xs text-muted-foreground">
+                        {p.maxQuestions} questions
+                      </Text>
+                    </View>
+                    <Text className="font-bold" style={{ color: primaryColor }}>
+                      NPR {p.price}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {/* Step 3 (or 2 in course mode): Transaction details */}
           <View
             className="rounded-2xl border p-4"
             style={{ borderColor, backgroundColor: cardColor }}
@@ -266,7 +340,9 @@ export default function ManualPaymentScreen() {
                 className="h-6 w-6 items-center justify-center rounded-full"
                 style={{ backgroundColor: primaryColor }}
               >
-                <Text className="text-xs font-bold text-white">3</Text>
+                <Text className="text-xs font-bold text-white">
+                  {isCourseMode ? "2" : "3"}
+                </Text>
               </View>
               <Text className="text-base font-semibold text-foreground">
                 Enter Payment Details
@@ -342,15 +418,69 @@ export default function ManualPaymentScreen() {
           </TouchableOpacity>
 
           {/* Info */}
-          <View className="rounded-2xl border p-4" style={{ borderColor }}>
-            <Text className="mb-2 text-sm font-semibold text-foreground">Important</Text>
-            <Text className="text-xs leading-5 text-muted-foreground">
-              {"•"} Send the exact amount shown above to the eSewa number{"\n"}
-              {"•"} Copy the transaction ID from your eSewa receipt{"\n"}
-              {"•"} Admin will verify and activate your plan within 24 hours{"\n"}
-              {"•"} If already submitted, updating the same transaction ID will update
-              your existing request
-            </Text>
+          <View
+            className="rounded-2xl p-4"
+            style={{
+              backgroundColor: `${primaryColor}10`,
+              borderWidth: 1,
+              borderColor: `${primaryColor}30`,
+            }}
+          >
+            <View className="mb-3 flex-row items-center gap-2">
+              <Ionicons name="shield-checkmark-outline" size={18} color={primaryColor} />
+              <Text className="text-base font-bold text-foreground">Important</Text>
+            </View>
+            <View className="gap-2.5">
+              <View className="flex-row items-start gap-2">
+                <Ionicons
+                  name="checkmark-circle"
+                  size={15}
+                  color={primaryColor}
+                  style={{ marginTop: 1 }}
+                />
+                <Text className="flex-1 text-sm leading-5 text-foreground">
+                  Send the <Text className="font-semibold">exact amount</Text> shown above
+                  to the eSewa number
+                </Text>
+              </View>
+              <View className="flex-row items-start gap-2">
+                <Ionicons
+                  name="checkmark-circle"
+                  size={15}
+                  color={primaryColor}
+                  style={{ marginTop: 1 }}
+                />
+                <Text className="flex-1 text-sm leading-5 text-foreground">
+                  Copy the <Text className="font-semibold">transaction ID</Text> from your
+                  eSewa receipt
+                </Text>
+              </View>
+              <View className="flex-row items-start gap-2">
+                <Ionicons
+                  name="time-outline"
+                  size={15}
+                  color={primaryColor}
+                  style={{ marginTop: 1 }}
+                />
+                <Text className="flex-1 text-sm leading-5 text-foreground">
+                  Admin verifies within{" "}
+                  <Text className="font-semibold">minutes to a few hours</Text> — max 24
+                  hours
+                </Text>
+              </View>
+              <View className="flex-row items-start gap-2">
+                <Ionicons
+                  name="refresh-circle-outline"
+                  size={15}
+                  color={primaryColor}
+                  style={{ marginTop: 1 }}
+                />
+                <Text className="flex-1 text-sm leading-5 text-foreground">
+                  Submitting again with the same transaction ID updates your existing
+                  request
+                </Text>
+              </View>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -19,11 +19,13 @@ import { api, SECURE_STORE_KEYS } from "@/lib/api";
 import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
 import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
 import { RealtimeBridge } from "@/components/realtime/realtime-bridge";
+import { IncomingCallOverlay } from "@/components/calls/incoming-call-overlay";
 import { ImageViewerProvider } from "@/components/image-viewer/image-viewer-context";
 import {
   registerForPushNotifications,
   subscribePushToken,
   addNotificationResponseListener,
+  configureNotificationHandler,
 } from "@/lib/push-notifications";
 
 SplashScreen.preventAutoHideAsync();
@@ -79,6 +81,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
       if (accessToken && refreshToken) {
         store.dispatch(setTokens({ accessToken, refreshToken }));
+        configureNotificationHandler();
         await Promise.all([fetchPlatformConfig(), fetchCurrentUser()]);
         registerForPushNotifications().then((token) => {
           if (token) void subscribePushToken(token);
@@ -122,8 +125,17 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     const subscription = AppState.addEventListener("change", handleAppStateChange);
     const notificationSub = addNotificationResponseListener((response) => {
       const data = response.notification.request.content.data;
-      if (data?.url && typeof data.url === "string") {
-        router.push(data.url as any);
+      const url = data?.url ?? data?.href;
+      if (url && typeof url === "string") {
+        const isChannelRoute =
+          url.startsWith("/workspace/") ||
+          url.startsWith("/channel/") ||
+          url.startsWith("/call/");
+        if (isChannelRoute) {
+          router.replace(url as any);
+        } else {
+          router.push(url as any);
+        }
       }
     });
     return () => {
@@ -146,6 +158,7 @@ function RootLayout() {
             <AppInitializer>
               <Sprint2Bootstrap />
               <RealtimeBridge />
+              <IncomingCallOverlay />
               <GlobalNoticeModal />
               <ImageViewerProvider>
                 <Stack

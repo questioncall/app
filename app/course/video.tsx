@@ -33,8 +33,16 @@ export default function CourseVideoScreen() {
     (async () => {
       try {
         const res = await api.get(`/courses/${courseId}/videos/${videoId}`);
-        setVideoSrc(res.data.playbackUrl ?? res.data.url ?? null);
-      } catch {
+        const d = res.data;
+        // Prefer web-constructed playbackUrl which already includes Mux logic
+        const src = d.playbackUrl ?? d.muxPlaybackId ?? d.videoUrl ?? d.url ?? null;
+        if (!src) {
+          setError("Video URL not available");
+          return;
+        }
+        setVideoSrc(src);
+      } catch (err) {
+        console.error("[Video load error]", err);
         setError("Unable to load video. You may not have access.");
       }
     })();
@@ -118,7 +126,7 @@ export default function CourseVideoScreen() {
           <VideoView
             player={player}
             style={{ width: "100%", height: "100%" }}
-            allowsFullscreen
+            fullscreenOptions={{ supportedOrientations: "landscape" }}
             allowsPictureInPicture
             nativeControls
           />

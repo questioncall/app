@@ -14,6 +14,8 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import type { QuizSession } from "@/store/slices/quizSlice";
 
+const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
+
 export default function QuizResultsScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const {
@@ -54,6 +56,7 @@ export default function QuizResultsScreen() {
       <View className="flex-1 items-center justify-center" style={{ backgroundColor }}>
         <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
         <ActivityIndicator size="large" color={primaryColor} />
+        <Text className="mt-3 text-sm text-muted-foreground">Loading results…</Text>
       </View>
     );
   }
@@ -65,16 +68,16 @@ export default function QuizResultsScreen() {
         style={{ backgroundColor }}
       >
         <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
-        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-        <Text className="mt-3 text-center text-base text-foreground">
+        <Ionicons name="alert-circle-outline" size={52} color="#ef4444" />
+        <Text className="mt-4 text-center text-base font-semibold text-foreground">
           {error ?? "Session not found"}
         </Text>
         <TouchableOpacity
           onPress={() => router.replace("/quiz")}
-          className="mt-4 rounded-full px-6 py-2.5"
+          className="mt-5 rounded-full px-7 py-3"
           style={{ backgroundColor: primaryColor }}
         >
-          <Text className="font-semibold text-white">Back to Quizzes</Text>
+          <Text className="font-bold text-white">Back to Quizzes</Text>
         </TouchableOpacity>
       </View>
     );
@@ -82,13 +85,15 @@ export default function QuizResultsScreen() {
 
   const passed = session.score >= session.passPercent;
   const correctCount = session.questions.filter((q) => q.isCorrect).length;
+  const wrongCount = session.questionCount - correctCount;
+  const skippedCount = session.questionCount - (session.answeredCount ?? 0);
 
   const submitLabel =
     session.submitReason === "TIME_EXPIRED"
       ? "Time expired"
       : session.submitReason === "ANTI_CHEAT"
-        ? "Auto-submitted (violation limit)"
-        : "Submitted";
+        ? "Auto-submitted (anti-cheat)"
+        : "Manually submitted";
 
   const renderQuestion = ({
     item,
@@ -99,86 +104,96 @@ export default function QuizResultsScreen() {
   }) => {
     const isExpanded = expandedId === item.id;
     const answered = item.selectedOptionIndex !== null;
+    const statusColor = item.isCorrect
+      ? "#22c55e"
+      : answered
+        ? "#ef4444"
+        : mutedIconColor;
+    const statusIcon = item.isCorrect ? "checkmark" : answered ? "close" : "remove";
 
     return (
       <TouchableOpacity
-        className="mx-4 mb-3 overflow-hidden rounded-2xl border"
+        className="mb-3 overflow-hidden rounded-2xl border"
         style={{ backgroundColor: cardColor, borderColor }}
         onPress={() => setExpandedId(isExpanded ? null : item.id)}
         activeOpacity={0.7}
       >
         <View className="p-4">
-          <View className="flex-row items-start">
+          <View className="flex-row items-start gap-3">
+            {/* Status icon */}
             <View
-              className="mr-3 mt-0.5 h-6 w-6 items-center justify-center rounded-full"
-              style={{
-                backgroundColor: item.isCorrect
-                  ? "#22c55e"
-                  : answered
-                    ? "#ef4444"
-                    : mutedIconColor,
-              }}
+              className="mt-0.5 h-7 w-7 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: statusColor }}
             >
-              <Ionicons
-                name={item.isCorrect ? "checkmark" : answered ? "close" : "remove"}
-                size={14}
-                color="#fff"
-              />
+              <Ionicons name={statusIcon} size={14} color="#fff" />
             </View>
-            <View className="flex-1">
-              <Text className="text-sm font-medium text-foreground">
-                {index + 1}. {item.questionText}
-              </Text>
-            </View>
+
+            {/* Question text */}
+            <Text className="flex-1 text-sm leading-5 text-foreground">
+              {index + 1}. {item.questionText}
+            </Text>
+
             <Ionicons
               name={isExpanded ? "chevron-up" : "chevron-down"}
               size={16}
               color={mutedIconColor}
+              style={{ marginTop: 2 }}
             />
           </View>
 
           {isExpanded ? (
-            <View className="mt-3 pl-9">
+            <View className="mt-4 pl-10">
               {item.options.map((opt, idx) => {
                 const isCorrectOption = idx === item.correctOptionIndex;
                 const isUserPick = idx === item.selectedOptionIndex;
 
-                let optBg = "transparent";
-                let optBorder = borderColor;
-                let optTextColor: string | undefined;
+                let bg = "transparent";
+                let bc = borderColor;
+                let textColor: string | undefined;
+                let labelColor = mutedIconColor;
 
                 if (isCorrectOption) {
-                  optBg = "rgba(34,197,94,0.1)";
-                  optBorder = "#22c55e";
-                  optTextColor = "#16a34a";
+                  bg = "rgba(34,197,94,0.1)";
+                  bc = "#22c55e";
+                  textColor = "#15803d";
+                  labelColor = "#22c55e";
                 } else if (isUserPick && !item.isCorrect) {
-                  optBg = "rgba(239,68,68,0.1)";
-                  optBorder = "#ef4444";
-                  optTextColor = "#dc2626";
+                  bg = "rgba(239,68,68,0.1)";
+                  bc = "#ef4444";
+                  textColor = "#dc2626";
+                  labelColor = "#ef4444";
                 }
 
                 return (
                   <View
                     key={idx}
-                    className="mb-2 flex-row items-center rounded-lg border px-3 py-2.5"
-                    style={{
-                      backgroundColor: optBg,
-                      borderColor: optBorder,
-                    }}
+                    className="mb-2 flex-row items-center rounded-xl border px-3 py-2.5"
+                    style={{ backgroundColor: bg, borderColor: bc }}
                   >
-                    <Text
-                      className="mr-2 text-xs font-semibold"
-                      style={{ color: optTextColor ?? mutedIconColor }}
+                    <View
+                      className="mr-2.5 h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: `${labelColor}20` }}
                     >
-                      {String.fromCharCode(65 + idx)}
-                    </Text>
-                    <Text className="flex-1 text-sm" style={{ color: optTextColor }}>
+                      <Text
+                        className="text-[11px] font-bold"
+                        style={{ color: labelColor }}
+                      >
+                        {OPTION_LABELS[idx]}
+                      </Text>
+                    </View>
+                    <Text
+                      className="flex-1 text-sm leading-5"
+                      style={{ color: textColor }}
+                    >
                       {opt}
                     </Text>
-                    {isUserPick ? (
-                      <Text className="ml-1 text-xs text-muted-foreground">
-                        Your answer
-                      </Text>
+                    {isUserPick && !isCorrectOption ? (
+                      <Ionicons
+                        name="close-circle"
+                        size={16}
+                        color="#ef4444"
+                        style={{ marginLeft: 4 }}
+                      />
                     ) : null}
                     {isCorrectOption ? (
                       <Ionicons
@@ -193,11 +208,21 @@ export default function QuizResultsScreen() {
               })}
 
               {item.explanation ? (
-                <View className="mt-1 rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
-                  <Text className="text-xs font-semibold text-blue-700 dark:text-blue-400">
-                    Explanation
-                  </Text>
-                  <Text className="mt-1 text-sm text-blue-800 dark:text-blue-300">
+                <View
+                  className="mt-2 rounded-xl p-3"
+                  style={{
+                    backgroundColor: `${primaryColor}10`,
+                    borderWidth: 1,
+                    borderColor: `${primaryColor}30`,
+                  }}
+                >
+                  <View className="mb-1 flex-row items-center gap-1.5">
+                    <Ionicons name="bulb-outline" size={13} color={primaryColor} />
+                    <Text className="text-xs font-bold" style={{ color: primaryColor }}>
+                      Explanation
+                    </Text>
+                  </View>
+                  <Text className="text-sm leading-5 text-foreground">
                     {item.explanation}
                   </Text>
                 </View>
@@ -217,119 +242,142 @@ export default function QuizResultsScreen() {
         data={session.questions}
         keyExtractor={(item) => item.id}
         renderItem={renderQuestion}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View className="px-4 pb-4 pt-14">
-            {/* Header */}
-            <View className="mb-4 flex-row items-center">
-              <TouchableOpacity onPress={() => router.replace("/quiz")} className="mr-3">
-                <Ionicons name="chevron-back" size={24} color={primaryColor} />
+          <View className="pb-4 pt-14">
+            {/* Header row */}
+            <View className="mb-5 flex-row items-center">
+              <TouchableOpacity
+                onPress={() => router.replace("/quiz")}
+                className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-secondary"
+                activeOpacity={0.8}
+              >
+                <Ionicons name="arrow-back" size={20} color={primaryColor} />
               </TouchableOpacity>
               <Text className="flex-1 text-xl font-bold text-foreground">
                 Quiz Results
               </Text>
+              <View
+                className="rounded-full px-3 py-1"
+                style={{
+                  backgroundColor: passed
+                    ? "rgba(34,197,94,0.12)"
+                    : "rgba(239,68,68,0.12)",
+                }}
+              >
+                <Text
+                  className="text-xs font-bold"
+                  style={{ color: passed ? "#22c55e" : "#ef4444" }}
+                >
+                  {passed ? "PASSED" : "FAILED"}
+                </Text>
+              </View>
             </View>
 
             {/* Score card */}
             <View
-              className="mb-4 items-center rounded-2xl border p-6"
+              className="mb-4 overflow-hidden rounded-3xl border"
               style={{ backgroundColor: cardColor, borderColor }}
             >
+              {/* Score arc area */}
               <View
-                className="mb-3 h-20 w-20 items-center justify-center rounded-full"
+                className="items-center py-7"
                 style={{
                   backgroundColor: passed
-                    ? "rgba(34,197,94,0.15)"
-                    : "rgba(239,68,68,0.15)",
+                    ? "rgba(34,197,94,0.06)"
+                    : "rgba(239,68,68,0.06)",
                 }}
               >
-                <Text
-                  className="text-2xl font-bold"
-                  style={{ color: passed ? "#22c55e" : "#ef4444" }}
-                >
-                  {Math.round(session.score)}%
-                </Text>
-              </View>
-
-              <Text
-                className="text-lg font-bold"
-                style={{ color: passed ? "#22c55e" : "#ef4444" }}
-              >
-                {passed ? "Passed!" : "Not Passed"}
-              </Text>
-
-              <Text className="mt-1 text-sm text-muted-foreground">
-                {correctCount}/{session.questionCount} correct · Pass:{" "}
-                {session.passPercent}%
-              </Text>
-
-              <Text className="mt-0.5 text-xs text-muted-foreground">{submitLabel}</Text>
-
-              {session.pointsAwarded > 0 ? (
                 <View
-                  className="mt-3 flex-row items-center gap-1.5 rounded-full px-4 py-1.5"
-                  style={{ backgroundColor: primarySoftColor }}
+                  className="mb-3 h-24 w-24 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: passed
+                      ? "rgba(34,197,94,0.15)"
+                      : "rgba(239,68,68,0.15)",
+                    borderWidth: 3,
+                    borderColor: passed ? "#22c55e" : "#ef4444",
+                  }}
                 >
-                  <Ionicons name="star" size={14} color={primaryColor} />
-                  <Text className="text-sm font-bold" style={{ color: primaryColor }}>
-                    +{session.pointsAwarded} points
+                  <Text
+                    className="text-3xl font-bold"
+                    style={{ color: passed ? "#22c55e" : "#ef4444" }}
+                  >
+                    {Math.round(session.score)}%
                   </Text>
                 </View>
-              ) : null}
 
-              {session.violationCount > 0 ? (
-                <Text className="mt-2 text-xs text-amber-600">
-                  {session.violationCount} violation
-                  {session.violationCount > 1 ? "s" : ""} recorded
+                <Text className="text-base font-semibold text-muted-foreground">
+                  Pass mark: {session.passPercent}%
                 </Text>
-              ) : null}
+                <Text className="mt-0.5 text-xs text-muted-foreground">
+                  {submitLabel}
+                </Text>
+
+                {session.pointsAwarded > 0 ? (
+                  <View
+                    className="mt-3 flex-row items-center gap-1.5 rounded-full px-4 py-1.5"
+                    style={{ backgroundColor: primarySoftColor }}
+                  >
+                    <Ionicons name="star" size={14} color={primaryColor} />
+                    <Text className="text-sm font-bold" style={{ color: primaryColor }}>
+                      +{session.pointsAwarded} points earned
+                    </Text>
+                  </View>
+                ) : null}
+
+                {session.violationCount > 0 ? (
+                  <View className="mt-2 flex-row items-center gap-1">
+                    <Ionicons name="warning-outline" size={13} color="#f59e0b" />
+                    <Text className="text-xs text-amber-600">
+                      {session.violationCount} violation
+                      {session.violationCount > 1 ? "s" : ""} recorded
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* Stats row */}
+              <View className="flex-row">
+                {[
+                  { label: "Correct", value: correctCount, color: "#22c55e" },
+                  { label: "Wrong", value: wrongCount, color: "#ef4444" },
+                  { label: "Skipped", value: skippedCount, color: mutedIconColor },
+                  { label: "Total", value: session.questionCount, color: primaryColor },
+                ].map((stat, i, arr) => (
+                  <View
+                    key={stat.label}
+                    className="flex-1 items-center py-4"
+                    style={{
+                      borderRightWidth: i < arr.length - 1 ? 1 : 0,
+                      borderRightColor: borderColor,
+                      borderTopWidth: 1,
+                      borderTopColor: borderColor,
+                    }}
+                  >
+                    <Text className="text-xl font-bold" style={{ color: stat.color }}>
+                      {stat.value}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">{stat.label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
-            {/* Stats row */}
-            <View className="mb-4 flex-row gap-3">
-              <View
-                className="flex-1 items-center rounded-xl border py-3"
-                style={{ borderColor }}
-              >
-                <Text className="text-lg font-bold text-foreground">
-                  {session.answeredCount}
-                </Text>
-                <Text className="text-xs text-muted-foreground">Answered</Text>
-              </View>
-              <View
-                className="flex-1 items-center rounded-xl border py-3"
-                style={{ borderColor }}
-              >
-                <Text className="text-lg font-bold text-green-600">{correctCount}</Text>
-                <Text className="text-xs text-muted-foreground">Correct</Text>
-              </View>
-              <View
-                className="flex-1 items-center rounded-xl border py-3"
-                style={{ borderColor }}
-              >
-                <Text className="text-lg font-bold text-red-500">
-                  {session.questionCount - correctCount}
-                </Text>
-                <Text className="text-xs text-muted-foreground">Wrong</Text>
-              </View>
-            </View>
-
-            <Text className="mb-2 text-sm font-semibold text-muted-foreground">
+            <Text className="mb-3 text-sm font-semibold text-muted-foreground">
               Question Review
             </Text>
           </View>
         }
         ListFooterComponent={
-          <View className="mx-4 mt-2">
-            <TouchableOpacity
-              onPress={() => router.replace("/quiz")}
-              className="items-center rounded-xl py-3.5"
-              style={{ backgroundColor: primaryColor }}
-              activeOpacity={0.8}
-            >
-              <Text className="text-sm font-bold text-white">Back to Quizzes</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => router.replace("/quiz")}
+            className="mt-2 items-center rounded-2xl py-4"
+            style={{ backgroundColor: primaryColor }}
+            activeOpacity={0.85}
+          >
+            <Text className="text-base font-bold text-white">Back to Quizzes</Text>
+          </TouchableOpacity>
         }
       />
     </View>

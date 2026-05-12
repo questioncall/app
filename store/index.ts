@@ -13,6 +13,7 @@ import onboardingReducer from "./slices/onboardingSlice";
 import realtimeReducer from "./slices/realtimeSlice";
 import walletReducer from "./slices/walletSlice";
 import quizReducer from "./slices/quizSlice";
+import incomingCallReducer from "./slices/incomingCallSlice";
 
 export const store = configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export const store = configureStore({
     realtime: realtimeReducer,
     wallet: walletReducer,
     quiz: quizReducer,
+    incomingCall: incomingCallReducer,
   },
 });
 

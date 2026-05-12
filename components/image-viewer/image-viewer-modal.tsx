@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { Image, Modal, Pressable, useWindowDimensions, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -110,7 +114,7 @@ export function ImageViewerModal({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)" }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.97)" }}>
         <GestureDetector gesture={composed}>
           <Animated.View
             style={[
@@ -146,7 +150,7 @@ export function ImageViewerModal({
         >
           <Ionicons name="close" size={22} color="#fff" />
         </Pressable>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

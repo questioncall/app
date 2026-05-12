@@ -69,12 +69,6 @@ const FORMAT_OPTIONS: {
     icon: "image-outline",
     description: "Photo-based answer",
   },
-  {
-    value: "VIDEO",
-    label: "Video",
-    icon: "videocam-outline",
-    description: "Video walkthrough",
-  },
 ];
 
 const MAX_IMAGES = 4;

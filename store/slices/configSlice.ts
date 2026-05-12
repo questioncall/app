@@ -69,7 +69,7 @@ export interface PlatformConfig {
 
   // Payment
   manualPaymentQrCodeUrl?: string;
-  adminEsewaNumber?: string;
+  manualPaymentEsewaNumber?: string;
 
   // Onboarding
   onboardingVideos?: Record<string, string>;

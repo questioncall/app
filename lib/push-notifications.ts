@@ -3,6 +3,8 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { api } from "@/lib/api";
 
+const EAS_PROJECT_ID = "86d256ec-943f-49e8-adaf-659400e4edac";
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -12,6 +14,42 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+async function setupAndroidChannels() {
+  await Notifications.setNotificationChannelAsync("chat", {
+    name: "Chat Messages",
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: "#3B82F6",
+    sound: "default",
+  });
+  await Notifications.setNotificationChannelAsync("questions", {
+    name: "Question Updates",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: "#3B82F6",
+  });
+  await Notifications.setNotificationChannelAsync("calls", {
+    name: "Incoming Calls",
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 500, 250, 500],
+    lightColor: "#22c55e",
+    enableLights: true,
+    enableVibrate: true,
+    sound: "default",
+  });
+  await Notifications.setNotificationChannelAsync("wallet", {
+    name: "Wallet & Payments",
+    importance: Notifications.AndroidImportance.DEFAULT,
+    lightColor: "#F59E0B",
+  });
+  await Notifications.setNotificationChannelAsync("default", {
+    name: "General",
+    importance: Notifications.AndroidImportance.DEFAULT,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: "#3B82F6",
+  });
+}
 
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
@@ -31,16 +69,11 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "Default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#4F46E5",
-    });
+    await setupAndroidChannels();
   }
 
   const tokenData = await Notifications.getExpoPushTokenAsync({
-    projectId: undefined,
+    projectId: EAS_PROJECT_ID,
   }).catch(() => null);
 
   if (!tokenData) {
@@ -89,4 +122,20 @@ export function addNotificationReceivedListener(
   handler: (notification: Notifications.Notification) => void,
 ) {
   return Notifications.addNotificationReceivedListener(handler);
+}
+
+/**
+ * Configure notification handler to always show alerts even when app is in foreground.
+ * This ensures notifications appear globally outside the app as well.
+ */
+export async function configureNotificationHandler() {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
 }

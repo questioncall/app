@@ -3,6 +3,8 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
+  Platform,
   Image,
   Alert,
   StatusBar,
@@ -24,6 +26,8 @@ import type { ComponentProps } from "react";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
+const GREEN = "#10b981";
+
 interface MenuItemProps {
   icon: IoniconName;
   label: string;
@@ -36,47 +40,51 @@ interface MenuItemProps {
 function MenuItem({ icon, label, subtitle, onPress, danger, badge }: MenuItemProps) {
   const { primaryColor, primarySoftColor, mutedIconColor } = useAppTheme();
   const itemColor = danger ? "#EF4444" : primaryColor;
+  const rippleColor = danger ? "rgba(239,68,68,0.15)" : `${primaryColor}25`;
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      className="flex-row items-center px-4 py-3.5"
-      activeOpacity={0.7}
+      android_ripple={{ color: rippleColor, borderless: false }}
+      style={({ pressed }) =>
+        Platform.OS === "ios" && pressed ? { backgroundColor: "rgba(0,0,0,0.05)" } : {}
+      }
     >
-      <View
-        className="mr-3 h-9 w-9 items-center justify-center rounded-xl"
-        style={{
-          backgroundColor: danger ? "rgba(239,68,68,0.12)" : primarySoftColor,
-        }}
-      >
-        <Ionicons name={icon} size={18} color={itemColor} />
-      </View>
-      <View className="flex-1">
-        <Text
-          className={`text-base font-medium ${
-            danger ? "text-red-500 dark:text-red-300" : "text-foreground"
-          }`}
-        >
-          {label}
-        </Text>
-        {subtitle ? (
-          <Text className="mt-0.5 text-xs text-muted-foreground">{subtitle}</Text>
-        ) : null}
-      </View>
-      {badge ? (
+      {/* Inner view owns all layout — never mix className on Pressable itself */}
+      <View className="flex-row items-center px-4 py-3.5">
         <View
-          className="mr-2 rounded-full px-2 py-0.5"
-          style={{ backgroundColor: primaryColor }}
+          className="mr-3 h-9 w-9 items-center justify-center rounded-xl"
+          style={{ backgroundColor: danger ? "rgba(239,68,68,0.12)" : primarySoftColor }}
         >
-          <Text className="text-xs font-semibold text-white">{badge}</Text>
+          <Ionicons name={icon} size={18} color={itemColor} />
         </View>
-      ) : null}
-      <Ionicons
-        name="chevron-forward"
-        size={16}
-        color={danger ? "#EF4444" : mutedIconColor}
-      />
-    </TouchableOpacity>
+        <View className="flex-1">
+          <Text
+            className={`text-base font-medium ${
+              danger ? "text-red-500 dark:text-red-300" : "text-foreground"
+            }`}
+          >
+            {label}
+          </Text>
+          {subtitle ? (
+            <Text className="mt-0.5 text-xs text-muted-foreground">{subtitle}</Text>
+          ) : null}
+        </View>
+        {badge ? (
+          <View
+            className="mr-2 rounded-full px-2 py-0.5"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Text className="text-xs font-semibold text-white">{badge}</Text>
+          </View>
+        ) : null}
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={danger ? "#EF4444" : mutedIconColor}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -98,8 +106,15 @@ export default function MenuScreen() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.user.data);
   const config = useAppSelector((s) => s.config.data);
-  const { statusBarStyle, backgroundColor, primaryColor, primarySoftColor } =
-    useAppTheme();
+  const {
+    statusBarStyle,
+    backgroundColor,
+    cardColor,
+    borderColor,
+    primaryColor,
+    primarySoftColor,
+    isDark,
+  } = useAppTheme();
   const isTeacher = user?.role === "TEACHER";
 
   async function handleSignOut() {
@@ -139,63 +154,119 @@ export default function MenuScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 28 }}
       >
-        {/* Profile Card */}
-        <View className="mx-4 my-3 flex-row items-center rounded-2xl border border-border bg-card p-4">
-          {user?.image ? (
-            <Image source={{ uri: user.image }} className="mr-4 h-14 w-14 rounded-full" />
-          ) : (
+        {/* ── Combined Profile + Points card (cut-corner style) ─── */}
+        <View className="mx-4 my-3">
+          <View
+            style={{
+              borderRadius: 18,
+              borderBottomRightRadius: 0,
+              borderWidth: 1.5,
+              borderColor: `${GREEN}45`,
+              backgroundColor: cardColor,
+              overflow: "hidden",
+            }}
+          >
+            {/* Green left accent strip */}
             <View
-              className="mr-4 h-14 w-14 items-center justify-center rounded-full"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <Text className="text-2xl font-bold text-white">
-                {(user?.name ?? "U")[0].toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-card-foreground" numberOfLines={1}>
-              {user?.name ?? "Loading..."}
-            </Text>
-            <View className="mt-0.5 flex-row items-center gap-2">
-              <View
-                className="rounded-full px-2 py-0.5"
-                style={{ backgroundColor: primarySoftColor }}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 3,
+                backgroundColor: GREEN,
+              }}
+            />
+
+            {/* Profile row */}
+            <View className="flex-row items-center px-4 pb-3 pt-4">
+              {user?.image ? (
+                <Image
+                  source={{ uri: user.image }}
+                  className="mr-3 h-14 w-14 rounded-full"
+                />
+              ) : (
+                <View
+                  className="mr-3 h-14 w-14 items-center justify-center rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <Text className="text-2xl font-bold text-white">
+                    {(user?.name ?? "U")[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-foreground" numberOfLines={1}>
+                  {user?.name ?? "Loading..."}
+                </Text>
+                <View className="mt-1 flex-row items-center gap-2">
+                  <View
+                    className="rounded-full px-2 py-0.5"
+                    style={{ backgroundColor: primarySoftColor }}
+                  >
+                    <Text
+                      className="text-xs font-semibold"
+                      style={{ color: primaryColor }}
+                    >
+                      {user?.role ?? "—"}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-muted-foreground">
+                    {user?.planSlug ?? "free"}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => router.push("/profile" as any)}
+                className="rounded-xl px-3 py-1.5"
+                style={{ backgroundColor: `${primaryColor}18` }}
+                activeOpacity={0.7}
               >
                 <Text className="text-xs font-semibold" style={{ color: primaryColor }}>
-                  {user?.role ?? "—"}
+                  View
                 </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Separator with green tint */}
+            <View
+              style={{ height: 1, marginHorizontal: 14, backgroundColor: `${GREEN}25` }}
+            />
+
+            {/* Points row */}
+            <View className="px-4 pb-4 pt-3">
+              <Text className="mb-1 text-xs text-muted-foreground">
+                {isTeacher ? "Point Balance" : "Quiz Points"}
+              </Text>
+              <View className="flex-row items-baseline gap-1">
+                <Text className="text-[30px] font-black" style={{ color: GREEN }}>
+                  {pointBalance.toLocaleString()}
+                </Text>
+                <Text className="text-sm text-muted-foreground">pts</Text>
               </View>
-              <Text className="text-xs text-muted-foreground">
-                {user?.planSlug ?? "free"}
+              <Text className="mt-0.5 text-sm text-muted-foreground">
+                ≈ NPR {nprEquivalent}
               </Text>
             </View>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push("/profile" as any)}
-            className="rounded-xl bg-secondary px-3 py-2"
-          >
-            <Text className="text-xs font-medium text-secondary-foreground">View</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Wallet card */}
-        <View
-          className="mx-4 mb-2 rounded-2xl border border-border p-4"
-          style={{ backgroundColor: primarySoftColor }}
-        >
-          <Text className="mb-1 text-xs text-muted-foreground">
-            {isTeacher ? "Point Balance" : "Quiz Points"}
-          </Text>
-          <Text className="text-3xl font-bold text-foreground">
-            {pointBalance.toLocaleString()}{" "}
-            <Text className="text-base font-normal text-muted-foreground">pts</Text>
-          </Text>
-          <Text className="mt-0.5 text-sm text-muted-foreground">
-            ≈ NPR {nprEquivalent}
-          </Text>
+            {/* Cut corner — green triangle at bottom-right */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+                width: 0,
+                height: 0,
+                borderStyle: "solid",
+                borderBottomWidth: 36,
+                borderLeftWidth: 36,
+                borderBottomColor: GREEN,
+                borderLeftColor: "transparent",
+              }}
+            />
+          </View>
         </View>
 
         {/* Profile section */}
