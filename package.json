@@ -27,6 +27,8 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^5.2.13",
+    "@livekit/react-native": "^2.10.3",
+    "@livekit/react-native-webrtc": "^144.0.0",
     "@react-native-community/netinfo": "11.4.1",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",

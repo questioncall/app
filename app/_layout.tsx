@@ -28,6 +28,9 @@ import {
   configureNotificationHandler,
 } from "@/lib/push-notifications";
 
+import { ensureLiveKitRegistered } from "@/lib/livekit-setup";
+
+ensureLiveKitRegistered();
 SplashScreen.preventAutoHideAsync();
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;

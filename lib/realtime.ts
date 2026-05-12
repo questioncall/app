@@ -37,6 +37,7 @@ export const CALL_INCOMING_EVENT = "call:incoming";
 export const CALL_ACCEPTED_EVENT = "call:accepted";
 export const CALL_REJECTED_EVENT = "call:rejected";
 export const CALL_CANCELLED_EVENT = "call:cancelled";
+export const CALL_ENDED_EVENT = "call:ended";
 export const CALL_MISSED_EVENT = "call:missed";
 
 export function getUserPusherName(userId: string) {

@@ -12,7 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.siddthecoder.qustioncall",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "QuestionCall needs camera access for video calls.",
+        "NSMicrophoneUsageDescription": "QuestionCall needs microphone access for voice and video calls."
       }
     },
     "android": {
@@ -22,6 +24,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": ["CAMERA", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.siddthecoder.qustioncall",
