@@ -1,0 +1,2 @@
+# Patch files must keep LF line endings (EAS Build runs on Linux)
+*.patch eol=lf
