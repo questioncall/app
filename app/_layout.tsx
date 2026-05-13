@@ -54,10 +54,12 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     SecureStore.getItemAsync("theme_preference")
       .then((pref) => {
-        if (pref === "light") Appearance.setColorScheme("light");
-        else if (pref === "dark") Appearance.setColorScheme("dark");
+        if (pref === "dark") Appearance.setColorScheme("dark");
+        else Appearance.setColorScheme("light");
       })
-      .catch(() => {});
+      .catch(() => {
+        Appearance.setColorScheme("light");
+      });
   }, []);
 
   const fetchPlatformConfig = useCallback(async () => {

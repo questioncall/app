@@ -89,6 +89,9 @@ export default function CallScreen() {
   const connectingRef = useRef(false);
   const connectionBlockedRef = useRef(false);
 
+  // OPT-6: Store token from accept response to skip separate /token fetch
+  const prefetchedTokenRef = useRef<TokenPayload | null>(null);
+
   // Channel timer
   const [timerDeadline, setTimerDeadline] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
@@ -115,7 +118,8 @@ export default function CallScreen() {
     void fetchSession();
   }, [fetchSession]);
 
-  // ── Connect to LiveKit when call becomes ACTIVE ───────────────────────────
+  // ── Connect to LiveKit ─────────────────────────────────────────────────────
+  // Supports both ACTIVE (both users) and RINGING (caller only, OPT-3).
   const connectToRoom = useCallback(async () => {
     if (
       !roomId ||
@@ -141,8 +145,15 @@ export default function CallScreen() {
     }, CONNECTION_TIMEOUT_MS);
 
     try {
-      const res = await api.get(`/calls/${roomId}/token`);
-      const data = res.data as TokenPayload;
+      // OPT-6: Use prefetched token from accept response if available
+      let data: TokenPayload;
+      if (prefetchedTokenRef.current) {
+        data = prefetchedTokenRef.current;
+        prefetchedTokenRef.current = null;
+      } else {
+        const res = await api.get(`/calls/${roomId}/token`);
+        data = res.data as TokenPayload;
+      }
 
       if (timedOut) return;
 
@@ -160,6 +171,11 @@ export default function CallScreen() {
         if (track.kind === Track.Kind.Video) setRemoteVideoTrack(null);
       });
       room.on(RoomEvent.Disconnected, () => {
+        // Immediately null out the ref so no further operations touch this room
+        roomRef.current = null;
+        setConnected(false);
+        setLocalVideoTrack(null);
+        setRemoteVideoTrack(null);
         if (!endingRef.current) {
           endingRef.current = true;
           router.back();
@@ -199,9 +215,15 @@ export default function CallScreen() {
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (!timedOut) {
+        // Filter out NegotiationError from closed PC manager — this is
+        // expected when the room was torn down during connection.
         const msg = err?.response?.data?.error ?? err?.message ?? "Connection failed";
-        connectionBlockedRef.current = true;
-        setConnectionError(msg);
+        const isStaleNegotiation =
+          typeof msg === "string" && msg.includes("PC manager is closed");
+        if (!isStaleNegotiation) {
+          connectionBlockedRef.current = true;
+          setConnectionError(msg);
+        }
         roomRef.current?.disconnect();
         roomRef.current = null;
       }
@@ -213,11 +235,29 @@ export default function CallScreen() {
     }
   }, [roomId, connected, session?.mode]);
 
+  // OPT-3: Caller can connect during RINGING; callee auto-accepts on RINGING
   useEffect(() => {
-    if (session?.status === "ACTIVE" && !connected && !connecting && !connectionError) {
+    if (connected || connecting || connectionError) return;
+    if (session?.status === "ACTIVE") {
       void connectToRoom();
+    } else if (session?.status === "RINGING" && session.callerId && userId) {
+      if (session.callerId === userId) {
+        // Caller pre-joins the LiveKit room while ringing
+        void connectToRoom();
+      } else {
+        // Callee arrived at call screen (from overlay) — auto-accept
+        void handleAccept();
+      }
     }
-  }, [session?.status, connected, connecting, connectionError, connectToRoom]);
+  }, [
+    session?.status,
+    session?.callerId,
+    userId,
+    connected,
+    connecting,
+    connectionError,
+    connectToRoom,
+  ]);
 
   const handleRetry = useCallback(() => {
     connectionBlockedRef.current = false;
@@ -230,8 +270,12 @@ export default function CallScreen() {
   useEffect(() => {
     return () => {
       const room = roomRef.current;
-      if (room && room.state !== ConnectionState.Disconnected) {
-        room.disconnect();
+      if (room) {
+        // Remove all listeners first to prevent Disconnected handler from firing
+        room.removeAllListeners();
+        if (room.state !== ConnectionState.Disconnected) {
+          room.disconnect();
+        }
       }
       roomRef.current = null;
     };
@@ -320,7 +364,18 @@ export default function CallScreen() {
     if (!session) return;
     setActing(true);
     try {
-      await api.post(`/calls/${session.callSessionId}/accept`);
+      const res = await api.post(`/calls/${session.callSessionId}/accept`);
+      // OPT-6: Accept response includes token — store it so connectToRoom skips /token fetch
+      const data = res.data as any;
+      if (data?.token && data?.serverUrl) {
+        prefetchedTokenRef.current = {
+          token: data.token,
+          serverUrl: data.serverUrl,
+          channelId: data.channelId,
+          timerDeadline: data.timerDeadline,
+          timeExtensionCount: data.timeExtensionCount ?? 0,
+        };
+      }
       setSession((prev) => (prev ? { ...prev, status: "ACTIVE" } : prev));
       Vibration.cancel();
     } catch (err: any) {
@@ -352,12 +407,20 @@ export default function CallScreen() {
     endingRef.current = true;
     setActing(true);
     endCallKeepCall(session.callSessionId);
+
+    // Disconnect room FIRST to prevent NegotiationError from stale PC
+    const room = roomRef.current;
+    if (room) {
+      room.removeAllListeners();
+      room.disconnect();
+      roomRef.current = null;
+    }
+
     try {
       await api.post(`/calls/${session.callSessionId}/end`);
     } catch {
       // best-effort
     } finally {
-      roomRef.current?.disconnect();
       setActing(false);
       router.back();
     }
@@ -365,36 +428,48 @@ export default function CallScreen() {
 
   const toggleMic = async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || room.state === ConnectionState.Disconnected) return;
     const next = !micEnabled;
-    await room.localParticipant.setMicrophoneEnabled(next);
-    setMicEnabled(next);
+    try {
+      await room.localParticipant.setMicrophoneEnabled(next);
+      setMicEnabled(next);
+    } catch {
+      // Room may have disconnected mid-toggle
+    }
   };
 
   const toggleCam = async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || room.state === ConnectionState.Disconnected) return;
     const next = !camEnabled;
-    await room.localParticipant.setCameraEnabled(next);
-    setCamEnabled(next);
-    if (next) {
-      const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
-      if (pub?.track) setLocalVideoTrack(pub.track as LKVideoTrack);
-    } else {
-      setLocalVideoTrack(null);
+    try {
+      await room.localParticipant.setCameraEnabled(next);
+      setCamEnabled(next);
+      if (next) {
+        const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+        if (pub?.track) setLocalVideoTrack(pub.track as LKVideoTrack);
+      } else {
+        setLocalVideoTrack(null);
+      }
+    } catch {
+      // Room may have disconnected mid-toggle
     }
   };
 
   const facingModeRef = useRef<"user" | "environment">("user");
   const switchCamera = async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || room.state === ConnectionState.Disconnected) return;
     const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
     if (pub?.track && "restartTrack" in pub.track) {
       facingModeRef.current = facingModeRef.current === "user" ? "environment" : "user";
-      await (pub.track as any).restartTrack({
-        facingMode: facingModeRef.current,
-      });
+      try {
+        await (pub.track as any).restartTrack({
+          facingMode: facingModeRef.current,
+        });
+      } catch {
+        // Room may have disconnected mid-switch
+      }
     }
   };
 

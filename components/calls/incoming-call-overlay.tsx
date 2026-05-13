@@ -81,12 +81,10 @@ export function IncomingCallOverlay() {
     if (!call) return;
     stopRing();
     endCallKeepCall(call.callSessionId);
-    try {
-      await api.post(`/calls/${call.callSessionId}/accept`);
-    } catch {
-      // best-effort: the call screen will handle stale status
-    }
     dispatch(clearIncomingCall());
+    // Navigate to the call screen — it will handle the accept API call
+    // itself, which lets it capture the token from the response (OPT-6)
+    // and avoid a redundant GET /token round-trip.
     router.push(`/call/${call.callSessionId}` as any);
   };
 

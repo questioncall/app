@@ -6,6 +6,16 @@ import { displayIncomingCall } from "@/lib/callkeep-setup";
 
 const EAS_PROJECT_ID = "86d256ec-943f-49e8-adaf-659400e4edac";
 
+/**
+ * Single, unified notification handler.
+ *
+ * • Incoming-call pushes (identified by `callSessionId` in data) are routed
+ *   to the native call UI via CallKeep and suppressed from the banner.
+ * • Every other notification is shown normally as a banner/alert.
+ *
+ * IMPORTANT: Do NOT call `setNotificationHandler` anywhere else — doing so
+ * would overwrite this handler and lose the call-specific routing.
+ */
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const data = notification.request.content.data as Record<string, string> | undefined;
@@ -26,6 +36,7 @@ Notifications.setNotificationHandler({
       };
     }
 
+    // All other notifications — show alert, sound, badge
     return {
       shouldShowAlert: true,
       shouldPlaySound: true,
@@ -74,6 +85,7 @@ async function setupAndroidChannels() {
 
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
+    console.log("[push] Not a physical device — skipping push registration");
     return null;
   }
 
@@ -86,6 +98,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== "granted") {
+    console.warn("[push] Notification permission not granted:", finalStatus);
     return null;
   }
 
@@ -95,16 +108,26 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   const tokenData = await Notifications.getExpoPushTokenAsync({
     projectId: EAS_PROJECT_ID,
-  }).catch(() => null);
+  }).catch((err) => {
+    console.warn("[push] getExpoPushTokenAsync failed:", err?.message ?? err);
+    return null;
+  });
 
   if (!tokenData) {
-    const deviceToken = await Notifications.getDevicePushTokenAsync().catch(() => null);
+    console.warn("[push] No Expo push token, trying device token fallback");
+    const deviceToken = await Notifications.getDevicePushTokenAsync().catch((err) => {
+      console.warn("[push] getDevicePushTokenAsync failed:", err?.message ?? err);
+      return null;
+    });
     if (deviceToken?.data) {
+      console.log("[push] Using device push token (FCM)");
       return String(deviceToken.data);
     }
+    console.warn("[push] No push token obtained at all");
     return null;
   }
 
+  console.log("[push] Expo push token obtained:", tokenData.data.slice(0, 30) + "…");
   return tokenData.data;
 }
 
@@ -146,17 +169,12 @@ export function addNotificationReceivedListener(
 }
 
 /**
- * Configure notification handler to always show alerts even when app is in foreground.
- * This ensures notifications appear globally outside the app as well.
+ * No-op — the unified handler is now set at module scope and must not be
+ * overwritten. Kept as an export so existing call-sites don't break.
+ *
+ * @deprecated The module-level handler already shows alerts for all
+ * non-call notifications. Do not call `setNotificationHandler` again.
  */
 export async function configureNotificationHandler() {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+  // Intentionally empty — handler is already configured at module load.
 }
