@@ -3,27 +3,35 @@
     "version": ">= 16.22.0",
     "appVersionSource": "remote"
   },
+
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal"
     },
+
     "staging": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
     },
+
     "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "autoIncrement": true,
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
+    },
+
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
+
   "submit": {
     "production": {}
   }
