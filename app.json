@@ -45,7 +45,7 @@
     "plugins": [
       "./plugins/withCallKeep",
       "expo-router",
-      ["@sentry/react-native/expo", { "uploadSourceMaps": false }],
+      // ["@sentry/react-native/expo", { "uploadSourceMaps": false }],
       [
         "expo-splash-screen",
         {
