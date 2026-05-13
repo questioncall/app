@@ -31,6 +31,8 @@ import {
 import { ensureLiveKitRegistered } from "@/lib/livekit-setup";
 import { setupCallKeep } from "@/lib/callkeep-setup";
 
+import { GlobalUploadOverlay } from "@/components/sprint2/global-upload-overlay";
+
 ensureLiveKitRegistered();
 SplashScreen.preventAutoHideAsync();
 
@@ -208,6 +210,7 @@ function RootLayout() {
                   <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
                 </Stack>
               </ImageViewerProvider>
+              <GlobalUploadOverlay />
               <Toast />
             </AppInitializer>
           </GestureHandlerRootView>

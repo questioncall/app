@@ -4,6 +4,8 @@ interface UploadItem {
   id: string;
   uri: string;
   type: "image" | "file";
+  /** Human-readable label shown in the upload overlay */
+  label?: string;
   progress: number;
   url?: string;
   error?: string;
@@ -29,20 +31,14 @@ const uploadSlice = createSlice({
         status: "pending",
       });
     },
-    updateUploadProgress(
-      state,
-      action: PayloadAction<{ id: string; progress: number }>
-    ) {
+    updateUploadProgress(state, action: PayloadAction<{ id: string; progress: number }>) {
       const upload = state.uploads.find((u) => u.id === action.payload.id);
       if (upload) {
         upload.progress = action.payload.progress;
         upload.status = "uploading";
       }
     },
-    completeUpload(
-      state,
-      action: PayloadAction<{ id: string; url: string }>
-    ) {
+    completeUpload(state, action: PayloadAction<{ id: string; url: string }>) {
       const upload = state.uploads.find((u) => u.id === action.payload.id);
       if (upload) {
         upload.url = action.payload.url;

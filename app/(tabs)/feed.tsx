@@ -1197,6 +1197,55 @@ export default function FeedScreen() {
             ) : null}
           </View>
 
+          {/* Notes button */}
+          <Pressable
+            onPress={() => router.push("/notes" as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={({ pressed }) => ({
+              height: 40,
+              width: 40,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor,
+              backgroundColor: pressed ? primarySoftColor : cardColor,
+              opacity: pressed ? 0.8 : 1,
+              transform: [{ scale: pressed ? 0.92 : 1 }],
+            })}
+          >
+            {({ pressed }: { pressed: boolean }) => (
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                {pressed && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: `${primaryColor}20`,
+                    }}
+                  />
+                )}
+                <Ionicons
+                  name="document-text-outline"
+                  size={18}
+                  color={pressed ? primaryColor : iconColor}
+                />
+              </View>
+            )}
+          </Pressable>
+
+          {/* Separator */}
+          <View
+            style={{
+              width: 1,
+              height: 20,
+              backgroundColor: borderColor,
+              borderRadius: 1,
+            }}
+          />
+
           {/* Filter button */}
           <Pressable
             onPress={openFilterModal}
