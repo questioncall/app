@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   FlatList,
   Modal,
-  Platform,
   ScrollView,
   StatusBar,
   Text,

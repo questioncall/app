@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 import { store } from "@/store";
 import {
   selectIsCoursesStale,
@@ -52,7 +52,6 @@ export default function CoursesScreen() {
   const {
     statusBarStyle,
     backgroundColor,
-    cardColor,
     borderColor,
     primaryColor,
     primarySoftColor,
@@ -111,15 +110,19 @@ export default function CoursesScreen() {
 
   const textColor = isDark ? "#f1f5f9" : "#0f172a";
   const subtleCardBg = isDark ? "#1e293b" : "#ffffff";
-  const subtleShadow = isDark
-    ? {}
-    : {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        elevation: 2,
-      };
+  const subtleShadow = useMemo(
+    () =>
+      isDark
+        ? {}
+        : {
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.06,
+            shadowRadius: 4,
+            elevation: 2,
+          },
+    [isDark],
+  );
 
   const isEnrolled = useCallback(
     (item: Course) => typeof item.overallProgressPercent === "number",
@@ -289,23 +292,26 @@ export default function CoursesScreen() {
   ]);
 
   /* ── Enrolled badge helper ─── */
-  const enrolledBadge = (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 3,
-        backgroundColor: `${ENROLLED_GREEN}15`,
-        borderRadius: 6,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-      }}
-    >
-      <Ionicons name="checkmark-circle" size={10} color={ENROLLED_GREEN} />
-      <Text style={{ fontSize: 10, fontWeight: "700", color: ENROLLED_GREEN }}>
-        Enrolled
-      </Text>
-    </View>
+  const enrolledBadge = useMemo(
+    () => (
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 3,
+          backgroundColor: `${ENROLLED_GREEN}15`,
+          borderRadius: 6,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+        }}
+      >
+        <Ionicons name="checkmark-circle" size={10} color={ENROLLED_GREEN} />
+        <Text style={{ fontSize: 10, fontWeight: "700", color: ENROLLED_GREEN }}>
+          Enrolled
+        </Text>
+      </View>
+    ),
+    [],
   );
 
   /* ── List item ─── */
@@ -562,7 +568,6 @@ export default function CoursesScreen() {
       primaryColor,
       primarySoftColor,
       mutedIconColor,
-      isDark,
       subtleCardBg,
       isEnrolled,
       subtleShadow,

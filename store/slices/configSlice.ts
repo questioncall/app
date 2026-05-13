@@ -29,7 +29,7 @@ export interface PlatformConfig {
   quizViolationWarningLimit: number;
 
   // Daily target tiers
-  dailyTargets: { answers: number; bonus: number }[];
+  dailyTargets: { target: number; bonus: number }[];
 
   // Wallet
   pointToNprRate: number;

@@ -439,9 +439,7 @@ export default function CallScreen() {
 
   const isIncoming = session.callerId !== null && session.callerId !== userId;
   const isVideo = session.mode === "VIDEO";
-  const isTerminal = ["ENDED", "REJECTED", "MISSED", "CANCELLED"].includes(
-    session.status,
-  );
+
   const extensionsRemaining = Math.max(0, MAX_EXTENSIONS - timeExtensionCount);
   const canExtend =
     channelId != null &&

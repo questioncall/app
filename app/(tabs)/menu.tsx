@@ -106,15 +106,8 @@ export default function MenuScreen() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.user.data);
   const config = useAppSelector((s) => s.config.data);
-  const {
-    statusBarStyle,
-    backgroundColor,
-    cardColor,
-    borderColor,
-    primaryColor,
-    primarySoftColor,
-    isDark,
-  } = useAppTheme();
+  const { statusBarStyle, backgroundColor, cardColor, primaryColor, primarySoftColor } =
+    useAppTheme();
   const isTeacher = user?.role === "TEACHER";
 
   async function handleSignOut() {
@@ -318,7 +311,7 @@ export default function MenuScreen() {
                 icon="flag-outline"
                 label="Daily Target"
                 subtitle={`${user?.dailyAnswersCount ?? 0} answers today`}
-                onPress={() => Alert.alert("Daily Target", "Tracker — coming soon!")}
+                onPress={() => router.push("/daily-target" as any)}
               />
             </>
           ) : null}
@@ -375,13 +368,17 @@ export default function MenuScreen() {
         {/* Account */}
         <SectionHeader title="Account" />
         <View className="mx-4 overflow-hidden rounded-2xl border border-border bg-card">
-          <MenuItem
-            icon="diamond-outline"
-            label="Subscription Plans"
-            subtitle={`Current: ${user?.planSlug ?? "Free"}`}
-            onPress={() => router.push("/payment/plans" as any)}
-          />
-          <Divider />
+          {!isTeacher ? (
+            <>
+              <MenuItem
+                icon="diamond-outline"
+                label="Subscription Plans"
+                subtitle={`Current: ${user?.planSlug ?? "Free"}`}
+                onPress={() => router.push("/payment/plans" as any)}
+              />
+              <Divider />
+            </>
+          ) : null}
           <MenuItem
             icon="notifications-outline"
             label="Notifications"

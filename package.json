@@ -19,7 +19,7 @@
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "prettier --write",
-      "expo lint --fix"
+      "npx expo lint --fix"
     ],
     "*.{json,md}": [
       "prettier --write"

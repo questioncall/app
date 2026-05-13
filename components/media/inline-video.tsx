@@ -100,7 +100,7 @@ function ActiveVideo({
         player={player}
         style={{ width, height }}
         contentFit="cover"
-        fullscreenOptions={{ supportedOrientations: "landscape" }}
+        fullscreenOptions={{ enable: true, orientation: "landscape" }}
         nativeControls
       />
     </View>

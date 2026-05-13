@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 
 const PROGRESS_PING_INTERVAL_MS = 10_000;
@@ -16,8 +15,6 @@ export default function CourseVideoScreen() {
     title?: string;
     videoUrl?: string;
   }>();
-
-  const { statusBarStyle, backgroundColor, primaryColor, mutedIconColor } = useAppTheme();
 
   const [videoSrc, setVideoSrc] = useState<string | null>(videoUrl ?? null);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +123,7 @@ export default function CourseVideoScreen() {
           <VideoView
             player={player}
             style={{ width: "100%", height: "100%" }}
-            fullscreenOptions={{ supportedOrientations: "landscape" }}
+            fullscreenOptions={{ enable: true, orientation: "landscape" }}
             allowsPictureInPicture
             nativeControls
           />

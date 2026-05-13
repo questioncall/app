@@ -520,7 +520,8 @@ export default function FeedScreen() {
   const userId = user?._id ?? null;
   const defaultSort: FeedSort = "new";
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [activeView, setActiveView] = useState<FeedView>("all");
   const [activeSort, setActiveSort] = useState<FeedSort>(defaultSort);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -534,6 +535,14 @@ export default function FeedScreen() {
 
   // Modal slide-up animation
   const modalSlide = useRef(new RNAnimated.Value(0)).current;
+
+  // Debounce search: wait 300ms after user stops typing before filtering
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // FlatList ref — used to auto-scroll to top when a new question is prepended
   // (own post, or other people's posts arriving via Pusher).
@@ -563,7 +572,7 @@ export default function FeedScreen() {
 
   const feedQuestions = normalizeQuestionCards(feedState.questions);
   const courseList = coursesState.list;
-  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const normalizedSearch = debouncedSearchTerm.trim().toLowerCase();
   const hasActiveFilters =
     normalizedSearch.length > 0 || activeView !== "all" || activeSort !== defaultSort;
   const isInitialFeedLoading = feedState.isLoading && feedQuestions.length === 0;
@@ -1035,7 +1044,7 @@ export default function FeedScreen() {
                   {hasActiveFilters ? (
                     <TouchableOpacity
                       onPress={() => {
-                        setSearchTerm("");
+                        setSearchInput("");
                         setActiveView("all");
                         setActiveSort(defaultSort);
                       }}
@@ -1172,8 +1181,8 @@ export default function FeedScreen() {
               style={{ marginRight: 6 }}
             />
             <TextInput
-              value={searchTerm}
-              onChangeText={setSearchTerm}
+              value={searchInput}
+              onChangeText={setSearchInput}
               placeholder="Search questions & courses..."
               placeholderTextColor={mutedIconColor}
               autoCapitalize="none"
@@ -1181,8 +1190,8 @@ export default function FeedScreen() {
               returnKeyType="search"
               className="flex-1 py-2.5 text-sm text-foreground"
             />
-            {searchTerm ? (
-              <TouchableOpacity onPress={() => setSearchTerm("")}>
+            {searchInput ? (
+              <TouchableOpacity onPress={() => setSearchInput("")}>
                 <Ionicons name="close-circle" size={16} color={mutedIconColor} />
               </TouchableOpacity>
             ) : null}
@@ -1357,19 +1366,19 @@ export default function FeedScreen() {
     ),
     [
       feedState.error,
-      searchTerm,
+      searchInput,
       activeFilterCount,
       coursesState.isLoading,
       visibleCourses,
       shouldHideCoursesForSearch,
       visibleQuestions.length,
-      backgroundColor,
       borderColor,
       cardColor,
       iconColor,
       mutedIconColor,
       primaryColor,
       primarySoftColor,
+      openFilterModal,
     ],
   );
 
@@ -1396,7 +1405,6 @@ export default function FeedScreen() {
 
       const isPrivate = item.answerVisibility === "PRIVATE";
       const isOptimistic = feedState.optimisticIds.includes(questionId);
-      const isReset = item.status === "RESET" && item.resetCount > 0;
       const canDelete =
         isOwnQuestion &&
         (item.status === "OPEN" || item.status === "RESET") &&
@@ -1737,7 +1745,6 @@ export default function FeedScreen() {
           </View>
         </View>
       );
-       
     },
     [
       userId,
@@ -1754,8 +1761,12 @@ export default function FeedScreen() {
       borderColor,
       primaryColor,
       mutedIconColor,
-      iconColor,
-      primarySoftColor,
+      handleAccept,
+      handleDelete,
+      handleReact,
+      handleSubmitComment,
+      openImageViewer,
+      toggleComments,
     ],
   );
 
@@ -1831,7 +1842,7 @@ export default function FeedScreen() {
           {hasActiveFilters ? (
             <TouchableOpacity
               onPress={() => {
-                setSearchTerm("");
+                setSearchInput("");
                 setActiveView("all");
                 setActiveSort(defaultSort);
               }}

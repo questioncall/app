@@ -30,7 +30,8 @@ import { updateUser } from "@/store/slices/userSlice";
 
 export default function WithdrawScreen() {
   usePreventScreenCapture();
-  const { isUnlocked } = useBiometricGate();
+  const { isUnlocked, isPending, biometricType, authenticate, handleGoBack } =
+    useBiometricGate();
   const dispatch = useAppDispatch();
   const wallet = useAppSelector((s) => s.wallet);
   const user = useAppSelector((s) => s.user.data);
@@ -115,13 +116,59 @@ export default function WithdrawScreen() {
   }, [canSubmit, pointsNum, nprPreview, esewaNumber, saveNumber, dispatch]);
 
   if (!isUnlocked) {
+    const icon =
+      biometricType === "face"
+        ? "scan-outline"
+        : biometricType === "fingerprint"
+          ? "finger-print-outline"
+          : "keypad-outline";
+    const label =
+      biometricType === "face"
+        ? "Face ID"
+        : biometricType === "fingerprint"
+          ? "Fingerprint"
+          : "Passcode";
+
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className="flex-1 items-center justify-center bg-background px-8">
         <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
-        <Ionicons name="lock-closed" size={48} color={mutedIconColor} />
-        <Text className="mt-4 text-base text-muted-foreground">
-          Authenticate to continue
+        <View
+          className="mb-6 h-24 w-24 items-center justify-center rounded-full"
+          style={{ backgroundColor: primarySoftColor }}
+        >
+          <Ionicons name="cash-outline" size={40} color={primaryColor} />
+        </View>
+        <Text className="mb-2 text-center text-2xl font-bold text-foreground">
+          Identity Required
         </Text>
+        <Text className="mb-8 text-center text-sm text-muted-foreground">
+          Verify your identity before making a withdrawal.
+        </Text>
+        <TouchableOpacity
+          onPress={() => void authenticate()}
+          disabled={isPending}
+          className="mb-4 items-center justify-center rounded-full px-10 py-4"
+          style={{
+            backgroundColor: canSubmit || !isPending ? primaryColor : `${primaryColor}80`,
+          }}
+          activeOpacity={0.85}
+        >
+          <View className="flex-row items-center gap-2">
+            {isPending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name={icon as any} size={22} color="#fff" />
+            )}
+            <Text className="text-base font-bold text-white">
+              {isPending ? "Authenticating…" : `Use ${label}`}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleGoBack} className="mt-2 px-4 py-3">
+          <Text className="text-sm font-medium" style={{ color: mutedIconColor }}>
+            Go Back
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }

@@ -20,7 +20,7 @@ import Toast from "react-native-toast-message";
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { api, publicApi } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { Course } from "@/store/slices/coursesSlice";
 
 type CourseVideo = {
@@ -150,7 +150,7 @@ export default function CourseDetailScreen() {
       try {
         const body: any = {};
         if (code?.trim()) body.couponCode = code.trim();
-        const res = await api.post(`/courses/${courseId}/enroll`, body);
+        await api.post(`/courses/${courseId}/enroll`, body);
         setIsEnrolled(true);
         Toast.show({ type: "success", text1: "Enrolled!", text2: "Happy learning." });
         void loadCourse(true);

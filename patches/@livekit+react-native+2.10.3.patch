@@ -1,0 +1,39 @@
+diff --git a/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LiveKitReactNative.kt b/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LiveKitReactNative.kt
+index 1234567..abcdefg 100644
+--- a/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LiveKitReactNative.kt
++++ b/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LiveKitReactNative.kt
+@@ -97,11 +97,17 @@ object LiveKitReactNative {
+         adm?.release()
+         adm = null
+
+         _audioProcessingController = null
+
+-        // adm needs to be re-setup with a new one each time.
+-        setupAdm(context)
+-        options.audioDeviceModule = adm
++        // Guard: if setup() was never called (e.g. during Metro hot-reload the singleton
++        // state may be reset before setup() re-runs), skip re-initialization to avoid
++        // IllegalStateException from audioRecordSamplesDispatcher being null.
++        if (_audioRecordSamplesDispatcher == null) return
+
++        // adm needs to be re-setup with a new one each time.
++        setupAdm(context)
++        options.audioDeviceModule = adm
+     }
+ }
+diff --git a/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LivekitReactNativeModule.kt b/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LivekitReactNativeModule.kt
+index 1234567..abcdefg 100644
+--- a/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LivekitReactNativeModule.kt
++++ b/node_modules/@livekit/react-native/android/src/main/java/com/livekit/reactnative/LivekitReactNativeModule.kt
+@@ -230,7 +230,12 @@ class LivekitReactNativeModule(reactContext: ReactApplicationContext) : ReactCon
+     }
+
+     override fun invalidate() {
+-        LiveKitReactNative.invalidate(reactApplicationContext)
++        try {
++            LiveKitReactNative.invalidate(reactApplicationContext)
++        } catch (e: IllegalStateException) {
++            Log.w(name, "Ignoring IllegalStateException during module invalidation (hot-reload): ${e.message}")
++        }
+     }
+ }

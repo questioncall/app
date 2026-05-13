@@ -76,7 +76,9 @@ export default function WalletScreen() {
   } = useAppTheme();
 
   const isTeacher = user?.role === "TEACHER";
-  const [activeTab, setActiveTab] = useState<HistoryTab>("withdrawals");
+  const [activeTab, setActiveTab] = useState<HistoryTab>(
+    isTeacher ? "payouts" : "withdrawals",
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchWallet = useCallback(
@@ -106,14 +108,15 @@ export default function WalletScreen() {
   }, [fetchWallet]);
 
   const data = wallet.data;
+  const nprRate = data?.pointToNprRate ?? 1;
 
   const tabs: { key: HistoryTab; label: string }[] = useMemo(
     () =>
       isTeacher
         ? [
-            { key: "withdrawals", label: "Withdrawals" },
-            { key: "earnings", label: "Earnings" },
             { key: "payouts", label: "Payouts" },
+            { key: "earnings", label: "Earnings" },
+            { key: "withdrawals", label: "Withdrawals" },
           ]
         : [{ key: "withdrawals", label: "Withdrawals" }],
     [isTeacher],
@@ -169,7 +172,7 @@ export default function WalletScreen() {
   }
 
   const pointBalance = data?.pointBalance ?? 0;
-  const nprEquivalent = data?.nprEquivalent ?? 0;
+  const nprBalance = data?.nprEquivalent ?? Math.round(pointBalance * nprRate);
 
   const renderWithdrawalItem = ({ item }: { item: WithdrawalHistoryItem }) => (
     <View
@@ -178,12 +181,12 @@ export default function WalletScreen() {
     >
       <View className="flex-row items-center justify-between">
         <Text className="text-base font-semibold text-foreground">
-          {item.pointsRequested.toLocaleString()} pts
+          NPR {item.nprEquivalent.toLocaleString()}
         </Text>
         <StatusBadge status={item.status} />
       </View>
       <Text className="mt-1 text-sm text-muted-foreground">
-        NPR {item.nprEquivalent.toLocaleString()} · eSewa: {item.esewaNumber}
+        {item.pointsRequested.toLocaleString()} pts · eSewa: {item.esewaNumber}
       </Text>
       <Text className="mt-1 text-xs text-muted-foreground">
         {formatDate(item.createdAt)}
@@ -199,6 +202,7 @@ export default function WalletScreen() {
 
   const renderEarningItem = ({ item }: { item: EarningHistoryItem }) => {
     const isPositive = item.pointsDelta >= 0;
+    const nprAmount = item.nprAmount ?? Math.round(item.pointsDelta * nprRate);
     return (
       <View
         className="mx-4 mb-3 rounded-2xl border p-4"
@@ -219,66 +223,71 @@ export default function WalletScreen() {
             className="text-base font-bold"
             style={{ color: isPositive ? "#22c55e" : "#ef4444" }}
           >
-            {isPositive ? "+" : ""}
-            {item.pointsDelta.toLocaleString()} pts
+            {isPositive ? "+" : ""}NPR {Math.abs(nprAmount).toLocaleString()}
           </Text>
         </View>
         <Text className="mt-1 text-xs text-muted-foreground">
-          {formatDate(item.occurredAt)}
-          {item.nprAmount != null ? ` · NPR ${item.nprAmount.toLocaleString()}` : ""}
+          {formatDate(item.occurredAt)} · {item.pointsDelta.toLocaleString()} pts
         </Text>
       </View>
     );
   };
 
-  const renderPayoutItem = ({ item }: { item: any }) => (
-    <View
-      className="mx-4 mb-3 rounded-2xl border p-4"
-      style={{ backgroundColor: cardColor, borderColor }}
-    >
-      <View className="flex-row items-center justify-between">
-        <View className="mr-3 flex-1">
-          <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
-            {item.questionTitle ?? "Question Answer"}
+  const renderPayoutItem = ({ item }: { item: any }) => {
+    const nprFinal = Math.round(item.finalPoints * nprRate);
+    return (
+      <View
+        className="mx-4 mb-3 rounded-2xl border p-4"
+        style={{ backgroundColor: cardColor, borderColor }}
+      >
+        <View className="flex-row items-center justify-between">
+          <View className="mr-3 flex-1">
+            <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+              {item.questionTitle ?? "Question Answer"}
+            </Text>
+            {item.rating != null ? (
+              <Text className="mt-0.5 text-xs text-muted-foreground">
+                Rating: {"★".repeat(item.rating)}
+                {"☆".repeat(5 - item.rating)}
+              </Text>
+            ) : null}
+          </View>
+          <Text
+            className="text-base font-bold"
+            style={{ color: nprFinal >= 0 ? "#22c55e" : "#ef4444" }}
+          >
+            {nprFinal >= 0 ? "+" : ""}NPR {Math.abs(nprFinal).toLocaleString()}
           </Text>
-          {item.rating != null ? (
-            <Text className="mt-0.5 text-xs text-muted-foreground">
-              Rating: {"★".repeat(item.rating)}
-              {"☆".repeat(5 - item.rating)}
+        </View>
+        <View className="mt-2 flex-row flex-wrap gap-2">
+          {item.ratingPoints > 0 ? (
+            <Text className="text-xs text-muted-foreground">
+              Base: +NPR {Math.round(item.ratingPoints * nprRate)}
+            </Text>
+          ) : null}
+          {item.bonusPoints > 0 ? (
+            <Text className="text-xs text-emerald-500">
+              Bonus: +NPR {Math.round(item.bonusPoints * nprRate)}
+            </Text>
+          ) : null}
+          {item.commissionPoints > 0 ? (
+            <Text className="text-xs text-amber-500">
+              Commission: -{Math.round(item.commissionPoints * nprRate)} NPR (
+              {item.commissionPercent}%)
+            </Text>
+          ) : null}
+          {item.penaltyPoints > 0 ? (
+            <Text className="text-xs text-red-500">
+              Penalty: -NPR {Math.round(item.penaltyPoints * nprRate)}
             </Text>
           ) : null}
         </View>
-        <Text
-          className="text-base font-bold"
-          style={{ color: item.finalPoints >= 0 ? "#22c55e" : "#ef4444" }}
-        >
-          {item.finalPoints >= 0 ? "+" : ""}
-          {item.finalPoints.toLocaleString()} pts
+        <Text className="mt-1 text-xs text-muted-foreground">
+          {formatDate(item.occurredAt)}
         </Text>
       </View>
-      <View className="mt-2 flex-row flex-wrap gap-2">
-        {item.ratingPoints > 0 ? (
-          <Text className="text-xs text-muted-foreground">
-            Base: +{item.ratingPoints}
-          </Text>
-        ) : null}
-        {item.bonusPoints > 0 ? (
-          <Text className="text-xs text-emerald-500">Bonus: +{item.bonusPoints}</Text>
-        ) : null}
-        {item.commissionPoints > 0 ? (
-          <Text className="text-xs text-amber-500">
-            Commission: -{item.commissionPoints} ({item.commissionPercent}%)
-          </Text>
-        ) : null}
-        {item.penaltyPoints > 0 ? (
-          <Text className="text-xs text-red-500">Penalty: -{item.penaltyPoints}</Text>
-        ) : null}
-      </View>
-      <Text className="mt-1 text-xs text-muted-foreground">
-        {formatDate(item.occurredAt)}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   const renderItem = ({ item }: { item: any }) => {
     if (activeTab === "withdrawals") return renderWithdrawalItem({ item });
@@ -294,14 +303,13 @@ export default function WalletScreen() {
         style={{ backgroundColor: primarySoftColor }}
       >
         <Text className="text-xs text-muted-foreground">
-          {isTeacher ? "Point Balance" : "Quiz Points"}
+          {isTeacher ? "Earnings Balance" : "Quiz Points"}
         </Text>
         <Text className="mt-1 text-4xl font-bold text-foreground">
-          {pointBalance.toLocaleString()}
-          <Text className="text-lg font-normal text-muted-foreground"> pts</Text>
+          NPR {nprBalance.toLocaleString()}
         </Text>
         <Text className="mt-1 text-base text-muted-foreground">
-          ≈ NPR {nprEquivalent.toLocaleString()}
+          {pointBalance.toLocaleString()} pts
         </Text>
 
         {/* Stats row */}
@@ -309,27 +317,28 @@ export default function WalletScreen() {
           <View className="flex-1 rounded-xl border border-border bg-card p-3">
             <Text className="text-xs text-muted-foreground">Total Earned</Text>
             <Text className="mt-0.5 text-base font-bold text-foreground">
-              {(data?.totalPointsEarned ?? 0).toLocaleString()}
+              NPR {Math.round((data?.totalPointsEarned ?? 0) * nprRate).toLocaleString()}
             </Text>
           </View>
           <View className="flex-1 rounded-xl border border-border bg-card p-3">
             <Text className="text-xs text-muted-foreground">Withdrawn</Text>
             <Text className="mt-0.5 text-base font-bold text-foreground">
-              {(data?.totalPointsWithdrawn ?? 0).toLocaleString()}
+              NPR{" "}
+              {Math.round((data?.totalPointsWithdrawn ?? 0) * nprRate).toLocaleString()}
             </Text>
           </View>
           {data?.pendingWithdrawal ? (
             <View className="flex-1 rounded-xl border border-amber-500/30 bg-card p-3">
               <Text className="text-xs text-amber-500">Pending</Text>
               <Text className="mt-0.5 text-base font-bold text-amber-500">
-                {data.pendingWithdrawal.toLocaleString()}
+                NPR {Math.round(data.pendingWithdrawal * nprRate).toLocaleString()}
               </Text>
             </View>
           ) : null}
         </View>
       </View>
 
-      {/* Action buttons */}
+      {/* Action buttons — teacher only shows Withdraw */}
       <View className="mx-4 mt-4 flex-row gap-3">
         {isTeacher ? (
           <TouchableOpacity
@@ -338,22 +347,25 @@ export default function WalletScreen() {
             onPress={() => router.push("/wallet/withdraw" as any)}
           >
             <Ionicons name="cash-outline" size={18} color="#fff" />
-            <Text className="font-semibold text-white">Withdraw</Text>
+            <Text className="font-semibold text-white">Withdraw to eSewa</Text>
           </TouchableOpacity>
-        ) : null}
-        <TouchableOpacity
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border py-3.5"
-          style={{ borderColor }}
-          onPress={() => router.push("/payment/plans" as any)}
-        >
-          <Ionicons name="diamond-outline" size={18} color={primaryColor} />
-          <Text className="font-semibold" style={{ color: primaryColor }}>
-            Plans
-          </Text>
-        </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border py-3.5"
+              style={{ borderColor }}
+              onPress={() => router.push("/payment/plans" as any)}
+            >
+              <Ionicons name="diamond-outline" size={18} color={primaryColor} />
+              <Text className="font-semibold" style={{ color: primaryColor }}>
+                Plans
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
-      {/* Subscription info (students) */}
+      {/* Subscription info (students only) */}
       {!isTeacher && data?.subscriptionStatus ? (
         <View
           className="mx-4 mt-4 rounded-2xl border p-4"
@@ -373,7 +385,7 @@ export default function WalletScreen() {
         </View>
       ) : null}
 
-      {/* Teacher monetization info */}
+      {/* Teacher stats */}
       {isTeacher ? (
         <View
           className="mx-4 mt-4 rounded-2xl border p-4"
@@ -390,12 +402,12 @@ export default function WalletScreen() {
           </View>
           <Text className="mt-1 text-xs text-muted-foreground">
             Answered: {data?.totalAnswered ?? 0} · Monetized:{" "}
-            {data?.isMonetized ? "Yes" : "No"} · Rate: 1 pt = NPR{" "}
-            {data?.pointToNprRate ?? 1}
+            {data?.isMonetized ? "Yes" : "No"} · Rate: 1 pt = NPR {nprRate}
           </Text>
           {data?.totalPenaltyPoints ? (
             <Text className="mt-1 text-xs text-red-500">
-              Penalties: -{data.totalPenaltyPoints.toLocaleString()} pts
+              Penalties: -NPR{" "}
+              {Math.round(data.totalPenaltyPoints * nprRate).toLocaleString()}
             </Text>
           ) : null}
         </View>
