@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { Audio } from "expo-av";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { clearIncomingCall } from "@/store/slices/incomingCallSlice";
@@ -17,6 +18,7 @@ import { api } from "@/lib/api";
 import {
   displayIncomingCall,
   reportCallConnected,
+  endCallKeepCall,
   preAcceptedCallRef,
   overlayActiveRef,
 } from "@/lib/callkeep-setup";
@@ -29,15 +31,27 @@ export function IncomingCallOverlay() {
   const call = useAppSelector((s) => s.incomingCall.call);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ringtoneSoundRef = useRef<Audio.Sound | null>(null);
+
+  const stopRingSound = useCallback(async () => {
+    if (ringtoneSoundRef.current) {
+      try {
+        await ringtoneSoundRef.current.stopAsync();
+        await ringtoneSoundRef.current.unloadAsync();
+      } catch {}
+      ringtoneSoundRef.current = null;
+    }
+  }, []);
 
   const stopRing = useCallback(() => {
     Vibration.cancel();
     pulseAnim.stopAnimation();
+    void stopRingSound();
     if (dismissTimer.current) {
       clearTimeout(dismissTimer.current);
       dismissTimer.current = null;
     }
-  }, [pulseAnim]);
+  }, [pulseAnim, stopRingSound]);
 
   const dismiss = useCallback(() => {
     stopRing();
@@ -50,8 +64,29 @@ export function IncomingCallOverlay() {
     // Signal to CallKeep answerCall handler: don't navigate, overlay handles it
     overlayActiveRef.current = true;
 
+    // Set audio mode for calls — play through speaker even in silent mode
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    }).catch(() => {});
+
     // Show native call UI (lock screen / background)
     displayIncomingCall(call.callSessionId, call.callerName, call.mode === "VIDEO");
+
+    // Play incoming ringtone
+    (async () => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require("../../assets/sounds/incoming_ringtone.mp3"),
+          { shouldPlay: true, isLooping: true },
+        );
+        ringtoneSoundRef.current = sound;
+      } catch (err) {
+        console.warn("[incoming-call] Failed to play ringtone:", err);
+      }
+    })();
 
     // Vibrate in ring pattern
     Vibration.vibrate(RING_PATTERN, true);
@@ -81,6 +116,7 @@ export function IncomingCallOverlay() {
       overlayActiveRef.current = false;
       pulse.stop();
       stopRing();
+      void stopRingSound();
     };
   }, [call, pulseAnim, dismiss, stopRing]);
 

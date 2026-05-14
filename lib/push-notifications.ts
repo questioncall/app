@@ -63,13 +63,14 @@ async function setupAndroidChannels() {
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#3B82F6",
-    sound: "default",
+    sound: "notification_sound",
   });
   await Notifications.setNotificationChannelAsync("questions", {
     name: "Question Updates",
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#3B82F6",
+    sound: "notification_sound",
   });
   await Notifications.setNotificationChannelAsync("calls", {
     name: "Incoming Calls",
@@ -78,18 +79,20 @@ async function setupAndroidChannels() {
     lightColor: "#22c55e",
     enableLights: true,
     enableVibrate: true,
-    sound: "default",
+    sound: "notification_sound",
   });
   await Notifications.setNotificationChannelAsync("wallet", {
     name: "Wallet & Payments",
     importance: Notifications.AndroidImportance.DEFAULT,
     lightColor: "#F59E0B",
+    sound: "notification_sound",
   });
   await Notifications.setNotificationChannelAsync("default", {
     name: "General",
     importance: Notifications.AndroidImportance.DEFAULT,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#3B82F6",
+    sound: "notification_sound",
   });
 }
 

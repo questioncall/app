@@ -63,7 +63,12 @@
         {
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#3B82F6",
-          "androidMode": "default"
+          "androidMode": "default",
+          "sounds": [
+            "./assets/sounds/notification_sound.mp3",
+            "./assets/sounds/incoming_ringtone.mp3",
+            "./assets/sounds/outgoing_ringtone.mp3"
+          ]
         }
       ],
       [

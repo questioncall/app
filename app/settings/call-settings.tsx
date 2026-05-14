@@ -73,6 +73,16 @@ const RINGTONE_OPTIONS = [
     label: "Twilight Gong",
     description: "A deep resonant gong hit with a long, fading decay.",
   },
+  {
+    value: "incoming_ringtone",
+    label: "Incoming Call",
+    description: "A clear ringing tone for incoming calls.",
+  },
+  {
+    value: "outgoing_ringtone",
+    label: "Outgoing Call",
+    description: "A steady ringback tone while your call connects.",
+  },
 ] as const;
 
 type CallRingtone = (typeof RINGTONE_OPTIONS)[number]["value"];
@@ -85,8 +95,8 @@ type CallSettings = {
 
 const DEFAULT: CallSettings = {
   silentIncomingCalls: false,
-  incomingRingtone: "aria",
-  outgoingRingtone: "reverie",
+  incomingRingtone: "incoming_ringtone",
+  outgoingRingtone: "outgoing_ringtone",
 };
 
 function ringtoneLabel(value: string) {
@@ -397,7 +407,11 @@ export default function CallSettingsScreen() {
       setPreviewing(ringtone);
       try {
         await setAudioModeAsync({ playsInSilentMode: true });
-        const player = createAudioPlayer(`${API_BASE_URL}/sounds/${ringtone}.wav`);
+        const ext =
+          ringtone === "incoming_ringtone" || ringtone === "outgoing_ringtone"
+            ? "mp3"
+            : "wav";
+        const player = createAudioPlayer(`${API_BASE_URL}/sounds/${ringtone}.${ext}`);
         soundRef.current = player;
         player.play();
         const subscription = player.addListener("playbackStatusUpdate", (status) => {

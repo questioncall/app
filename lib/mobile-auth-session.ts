@@ -40,8 +40,8 @@ function buildFallbackUser(user: MobileAuthUser): AppUser {
     seenOnboardingRoles: [],
     callSettings: {
       silentIncomingCalls: false,
-      incomingRingtone: "default",
-      outgoingRingtone: "default",
+      incomingRingtone: "incoming_ringtone",
+      outgoingRingtone: "outgoing_ringtone",
     },
   };
 }

@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
+import { Audio } from "expo-av";
 import {
   Room,
   RoomEvent,
@@ -107,6 +108,19 @@ export default function CallScreen() {
 
   const endingRef = useRef(false);
   const acceptHandlerRef = useRef<() => Promise<void>>(async () => {});
+
+  // ── Outgoing ringtone (for the caller while the callee hasn't answered) ───
+  const outgoingRingtoneRef = useRef<Audio.Sound | null>(null);
+  const stopOutgoingRingtone = useCallback(async () => {
+    const sound = outgoingRingtoneRef.current;
+    if (sound) {
+      outgoingRingtoneRef.current = null;
+      try {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+      } catch {}
+    }
+  }, []);
 
   // ── Session initialization ────────────────────────────────────────────────
   // OPT-8: If the incoming-call-overlay already accepted the call and stored
@@ -291,6 +305,35 @@ export default function CallScreen() {
     connectToRoom,
   ]);
 
+  // ── Outgoing ringtone: play while RINGING for the caller ───────────────
+  useEffect(() => {
+    if (!session || !userId) return;
+
+    const isCaller = session.callerId === userId;
+
+    if (session.status === "RINGING" && isCaller) {
+      const play = async () => {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            require("../../assets/sounds/outgoing_ringtone.mp3"),
+            { isLooping: true, volume: 1.0 },
+          );
+          outgoingRingtoneRef.current = sound;
+        } catch (err) {
+          console.warn("[call] Failed to play outgoing ringtone:", err);
+        }
+      };
+      play();
+    } else {
+      // Status changed away from RINGING — stop the ringtone
+      stopOutgoingRingtone();
+    }
+
+    return () => {
+      stopOutgoingRingtone();
+    };
+  }, [session?.status, session?.callerId, userId, stopOutgoingRingtone]);
+
   const handleRetry = useCallback(() => {
     connectionBlockedRef.current = false;
     connectingRef.current = false;
@@ -301,6 +344,7 @@ export default function CallScreen() {
   // ── Cleanup room on unmount ───────────────────────────────────────────────
   useEffect(() => {
     return () => {
+      stopOutgoingRingtone();
       const room = roomRef.current;
       if (room) {
         // Remove all listeners first to prevent Disconnected handler from firing
@@ -311,7 +355,7 @@ export default function CallScreen() {
       }
       roomRef.current = null;
     };
-  }, []);
+  }, [stopOutgoingRingtone]);
 
   // ── Channel timer countdown ───────────────────────────────────────────────
   useEffect(() => {
@@ -442,6 +486,7 @@ export default function CallScreen() {
 
   const handleEnd = async () => {
     if (!session || endingRef.current) return;
+    stopOutgoingRingtone();
     endingRef.current = true;
     setIsEnding(true);
     endCallKeepCall(session.callSessionId);
