@@ -100,6 +100,7 @@ export default function CallScreen() {
   const [channelId, setChannelId] = useState<string | null>(null);
 
   const endingRef = useRef(false);
+  const acceptHandlerRef = useRef<() => Promise<void>>(async () => {});
 
   // ── Fetch call session ────────────────────────────────────────────────────
   const fetchSession = useCallback(async () => {
@@ -107,7 +108,9 @@ export default function CallScreen() {
     try {
       const res = await api.get(`/calls/${roomId}`);
       setSession(res.data as CallSession);
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[call] Failed to fetch session:", msg);
       Toast.show({ type: "error", text1: "Could not load call session" });
     } finally {
       setLoading(false);
@@ -212,17 +215,19 @@ export default function CallScreen() {
       clearTimeout(timeoutId);
       setConnected(true);
       if (roomId) reportCallConnected(roomId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId);
       if (!timedOut) {
+        const errMsg = err instanceof Error ? err.message : String(err);
         // Filter out NegotiationError from closed PC manager — this is
         // expected when the room was torn down during connection.
-        const msg = err?.response?.data?.error ?? err?.message ?? "Connection failed";
-        const isStaleNegotiation =
-          typeof msg === "string" && msg.includes("PC manager is closed");
+        const isStaleNegotiation = errMsg.includes("PC manager is closed");
         if (!isStaleNegotiation) {
+          console.error("[call] Room connection failed:", errMsg);
           connectionBlockedRef.current = true;
-          setConnectionError(msg);
+          setConnectionError(
+            (err as any)?.response?.data?.error ?? errMsg ?? "Connection failed",
+          );
         }
         roomRef.current?.disconnect();
         roomRef.current = null;
@@ -246,7 +251,7 @@ export default function CallScreen() {
         void connectToRoom();
       } else {
         // Callee arrived at call screen (from overlay) — auto-accept
-        void handleAccept();
+        void acceptHandlerRef.current();
       }
     }
   }, [
@@ -378,15 +383,17 @@ export default function CallScreen() {
       }
       setSession((prev) => (prev ? { ...prev, status: "ACTIVE" } : prev));
       Vibration.cancel();
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1: err?.response?.data?.error ?? "Failed to accept",
-      });
+    } catch (err: unknown) {
+      const msg =
+        (err as any)?.response?.data?.error ??
+        (err instanceof Error ? err.message : "Failed to accept");
+      console.error("[call] Accept failed:", msg);
+      Toast.show({ type: "error", text1: msg });
     } finally {
       setActing(false);
     }
   };
+  acceptHandlerRef.current = handleAccept;
 
   const handleDecline = async () => {
     if (!session) return;
@@ -395,7 +402,11 @@ export default function CallScreen() {
       await api.post(`/calls/${session.callSessionId}/reject`);
       Vibration.cancel();
       router.back();
-    } catch {
+    } catch (err: unknown) {
+      console.error(
+        "[call] Decline failed:",
+        err instanceof Error ? err.message : String(err),
+      );
       router.back();
     } finally {
       setActing(false);
@@ -418,8 +429,11 @@ export default function CallScreen() {
 
     try {
       await api.post(`/calls/${session.callSessionId}/end`);
-    } catch {
-      // best-effort
+    } catch (err: unknown) {
+      console.error(
+        "[call] End call API failed:",
+        err instanceof Error ? err.message : String(err),
+      );
     } finally {
       setActing(false);
       router.back();
@@ -433,8 +447,11 @@ export default function CallScreen() {
     try {
       await room.localParticipant.setMicrophoneEnabled(next);
       setMicEnabled(next);
-    } catch {
-      // Room may have disconnected mid-toggle
+    } catch (err: unknown) {
+      console.warn(
+        "[call] Toggle mic failed:",
+        err instanceof Error ? err.message : String(err),
+      );
     }
   };
 
@@ -451,8 +468,11 @@ export default function CallScreen() {
       } else {
         setLocalVideoTrack(null);
       }
-    } catch {
-      // Room may have disconnected mid-toggle
+    } catch (err: unknown) {
+      console.warn(
+        "[call] Toggle camera failed:",
+        err instanceof Error ? err.message : String(err),
+      );
     }
   };
 
@@ -467,8 +487,11 @@ export default function CallScreen() {
         await (pub.track as any).restartTrack({
           facingMode: facingModeRef.current,
         });
-      } catch {
-        // Room may have disconnected mid-switch
+      } catch (err: unknown) {
+        console.warn(
+          "[call] Switch camera failed:",
+          err instanceof Error ? err.message : String(err),
+        );
       }
     }
   };

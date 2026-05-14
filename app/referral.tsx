@@ -49,7 +49,6 @@ export default function ReferralScreen() {
     borderColor,
     primaryColor,
     primarySoftColor,
-    mutedIconColor,
     isDark,
   } = useAppTheme();
 

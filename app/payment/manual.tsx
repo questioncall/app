@@ -49,7 +49,7 @@ export default function ManualPaymentScreen() {
     mutedIconColor,
   } = useAppTheme();
 
-  const plans = config?.plans ?? [];
+  const plans = useMemo(() => config?.plans ?? [], [config?.plans]);
   const adminEsewa = config?.manualPaymentEsewaNumber ?? "";
   const rawQrUrl = config?.manualPaymentQrCodeUrl ?? "";
   const qrCodeUrl = rawQrUrl.startsWith("/") ? `${API_BASE_URL}${rawQrUrl}` : rawQrUrl;

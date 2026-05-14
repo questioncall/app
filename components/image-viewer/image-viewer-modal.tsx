@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Image, Modal, Pressable, useWindowDimensions, View } from "react-native";
+import { Image, Modal, Pressable, useWindowDimensions } from "react-native";
 import {
   Gesture,
   GestureDetector,

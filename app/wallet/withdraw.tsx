@@ -40,7 +40,6 @@ export default function WithdrawScreen() {
     backgroundColor,
     primaryColor,
     primarySoftColor,
-    cardColor,
     borderColor,
     mutedIconColor,
   } = useAppTheme();

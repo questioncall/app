@@ -21,6 +21,7 @@ import { clearOnboarding } from "@/store/slices/onboardingSlice";
 import { clearRealtime } from "@/store/slices/realtimeSlice";
 import { SECURE_STORE_KEYS } from "@/lib/api";
 import { resetPusherClient } from "@/lib/realtime";
+import { unsubscribePushToken, getCurrentPushToken } from "@/lib/push-notifications";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import type { ComponentProps } from "react";
 
@@ -117,6 +118,10 @@ export default function MenuScreen() {
         text: "Sign Out",
         style: "destructive",
         onPress: async () => {
+          // Unsubscribe push token before clearing auth
+          const pushToken = getCurrentPushToken();
+          if (pushToken) await unsubscribePushToken(pushToken);
+
           await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
           await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
           dispatch(clearAuth());

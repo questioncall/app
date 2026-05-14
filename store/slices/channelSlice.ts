@@ -113,12 +113,23 @@ const channelSlice = createSlice({
       state.error = null;
     },
     appendMessage(state, action: PayloadAction<ChatMessage>) {
-      const entry = getActive(state);
-      if (!entry) return;
-      const msgId = getMessageId(action.payload);
+      const msg = action.payload;
+      // Try active channel first, then fall back to the message's own channelId
+      const activeEntry = getActive(state);
+      const entry =
+        activeEntry ?? (msg.channelId ? state.cache[msg.channelId] : undefined);
+      if (!entry) {
+        // Channel data hasn't been fetched yet — this message will be
+        // picked up on the next fetch. Log it for debugging.
+        console.warn(
+          `[channelSlice] appendMessage: no cache entry for channelId=${msg.channelId} (activeChannelId=${state.activeChannelId}). Message will be fetched on next load.`,
+        );
+        return;
+      }
+      const msgId = getMessageId(msg);
       const exists = entry.messages.some((m) => getMessageId(m) === msgId);
       if (!exists) {
-        entry.messages.push(action.payload);
+        entry.messages.push(msg);
       }
     },
     addPendingMessage(state, action: PayloadAction<ChatMessage>) {

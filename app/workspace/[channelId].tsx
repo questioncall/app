@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -21,6 +22,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useImageViewer } from "@/components/image-viewer/image-viewer-context";
+import ChannelTimer from "@/components/channel/ChannelTimer";
+import { MessageItem } from "@/components/channel/MessageItem";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -61,16 +64,6 @@ import {
   dequeueMessage,
   getFailedMessages,
 } from "@/lib/message-retry-queue";
-
-function formatCountdown(ms: number) {
-  if (ms <= 0) return "0:00";
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
 
 function formatMessageTime(iso: string) {
   const d = new Date(iso);
@@ -117,7 +110,7 @@ export default function WorkspaceScreen() {
   } = useAppTheme();
 
   const detail = cached?.detail ?? null;
-  const messages = cached?.messages ?? [];
+  const messages = useMemo(() => cached?.messages ?? [], [cached?.messages]);
   const { openImageViewer } = useImageViewer();
 
   const isAsker = userId === detail?.askerId;
@@ -128,8 +121,6 @@ export default function WorkspaceScreen() {
 
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [isExtending, setIsExtending] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
@@ -138,8 +129,10 @@ export default function WorkspaceScreen() {
   );
 
   const flatListRef = useRef<FlatList<any>>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isLoadingOlderRef = useRef(false);
+  // Declared here with null; assigned after fetchChannel useCallback below
+  // to avoid Temporal Dead Zone errors (fetchChannel is a const).
+  const fetchChannelRef = useRef<(() => Promise<void>) | null>(null);
 
   const PAGE_SIZE = 30;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -192,20 +185,25 @@ export default function WorkspaceScreen() {
     },
     [channelId, dispatch, userId, cached],
   );
+  fetchChannelRef.current = fetchChannel;
+
+  const cachedRef = useRef(cached);
+  cachedRef.current = cached;
 
   useEffect(() => {
     if (!channelId) return;
-    const isFresh = cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS;
-    if (isFresh) {
+    const isFresh =
+      cachedRef.current && Date.now() - cachedRef.current.fetchedAt < CACHE_TTL_MS;
+    if (isFresh && cachedRef.current) {
       dispatch(
         setChannelData({
           channelId,
-          detail: cached.detail,
-          messages: cached.messages,
+          detail: cachedRef.current.detail,
+          messages: cachedRef.current.messages,
         }),
       );
-    } else {
-      void fetchChannel();
+    } else if (fetchChannelRef.current) {
+      fetchChannelRef.current();
     }
     return () => {
       dispatch(clearChannel());
@@ -229,41 +227,15 @@ export default function WorkspaceScreen() {
     dispatch(markMessagesAsSeen());
   }, [channelId, detail, dispatch]);
 
-  // ─── Countdown timer ───────────────────────────────────────────
-  useEffect(() => {
-    if (!detail?.timerDeadline) return;
-    const update = () => {
-      const remaining = new Date(detail.timerDeadline).getTime() - Date.now();
-      setCountdown(Math.max(0, remaining));
-    };
-    update();
-    countdownRef.current = setInterval(update, 1000);
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, [detail?.timerDeadline]);
-
-  const timerColor =
-    countdown <= 0
-      ? "#ef4444"
-      : countdown < 5 * 60 * 1000
-        ? "#ef4444"
-        : countdown < 15 * 60 * 1000
-          ? "#f59e0b"
-          : primaryColor;
-
-  const canExtend =
-    isActive &&
-    !detail?.isAnswerSubmitted &&
-    countdown > 0 &&
-    countdown <= 5 * 60 * 1000 &&
-    (detail?.timeExtensionCount ?? 0) < 5;
-
   // ─── Pusher subscription ───────────────────────────────────────
   useEffect(() => {
     if (!channelId) return;
     const client = getPusherClient();
     if (!client) return;
+
+    console.log(
+      `[workspace] Subscribing to Pusher channel=${getChannelPusherName(channelId)}`,
+    );
 
     const pusherChannel = client.subscribe(getChannelPusherName(channelId));
 
@@ -286,10 +258,15 @@ export default function WorkspaceScreen() {
         isDeleted: Boolean(msg.isDeleted),
         sentAt: msg.sentAt || new Date().toISOString(),
       };
+      console.log(
+        `[workspace] CHANNEL_MESSAGE_EVENT received: id=${normalized.id} sender=${normalized.senderId} isOwn=${normalized.isOwn} channelId=${normalized.channelId}`,
+      );
       if (!normalized.isOwn) {
         dispatch(appendMessage(normalized));
         api.post(`/channels/${channelId}/read`).catch(() => {});
         dispatch(markChannelRead(channelId));
+      } else {
+        console.log(`[workspace] Skipping own message from Pusher`);
       }
     });
 
@@ -353,11 +330,37 @@ export default function WorkspaceScreen() {
       dispatch(setAnswerSubmitted(true));
     });
 
+    // Listen for Pusher reconnection to re-fetch (uses ref to avoid effect churn)
+    const onReconnect = () => {
+      console.log(
+        `[workspace] Pusher reconnected — re-fetching messages for channelId=${channelId}`,
+      );
+      void fetchChannelRef.current!();
+    };
+    client.connection.bind("connected", onReconnect);
+
     return () => {
       pusherChannel.unbind_all();
       client.unsubscribe(getChannelPusherName(channelId));
+      client.connection.unbind("connected", onReconnect);
     };
   }, [channelId, userId, dispatch]);
+
+  // ─── Re-fetch on app foreground to recover missed messages ────
+  useEffect(() => {
+    if (!channelId) return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        console.log(
+          `[workspace] App foregrounded — re-fetching messages for channelId=${channelId}`,
+        );
+        void fetchChannelRef.current!();
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [channelId]);
 
   // ─── Send message ──────────────────────────────────────────────
   const handleSend = async () => {
@@ -480,42 +483,22 @@ export default function WorkspaceScreen() {
   };
 
   // ─── Mark as answer (teacher only) ─────────────────────────────
-  const handleToggleMark = async (messageId: string, currentMark: boolean) => {
-    const next = !currentMark;
-    dispatch(toggleMessageMarked({ messageId, isMarkedAsAnswer: next }));
-    try {
-      await api.post(`/channels/${channelId}/mark-answer`, {
-        messageId,
-        isMarkedAsAnswer: next,
-      });
-    } catch {
-      dispatch(toggleMessageMarked({ messageId, isMarkedAsAnswer: currentMark }));
-      Toast.show({ type: "error", text1: "Failed to mark answer" });
-    }
-  };
-
-  // ─── Extend timer ──────────────────────────────────────────────
-  const handleExtend = async () => {
-    if (!canExtend) return;
-    setIsExtending(true);
-    try {
-      const res = await api.post(`/channels/${channelId}/extend`);
-      dispatch(
-        setChannelTimer({
-          timerDeadline: res.data.timerDeadline,
-          timeExtensionCount: res.data.timeExtensionCount,
-        }),
-      );
-      Toast.show({ type: "success", text1: "Added 5 more minutes." });
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1: err?.response?.data?.error ?? "Failed to extend timer",
-      });
-    } finally {
-      setIsExtending(false);
-    }
-  };
+  const handleToggleMark = useCallback(
+    async (messageId: string, currentMark: boolean) => {
+      const next = !currentMark;
+      dispatch(toggleMessageMarked({ messageId, isMarkedAsAnswer: next }));
+      try {
+        await api.post(`/channels/${channelId}/mark-answer`, {
+          messageId,
+          isMarkedAsAnswer: next,
+        });
+      } catch {
+        dispatch(toggleMessageMarked({ messageId, isMarkedAsAnswer: currentMark }));
+        Toast.show({ type: "error", text1: "Failed to mark answer" });
+      }
+    },
+    [channelId, dispatch],
+  );
 
   // ─── Close & Rate (asker only) ─────────────────────────────────
   const handleClose = async () => {
@@ -584,33 +567,36 @@ export default function WorkspaceScreen() {
   };
 
   // ─── Retry failed message ─────────────────────────────────────
-  const handleRetry = async (msg: ChatMessage) => {
-    if (!msg.localId) return;
-    dispatch(
-      resolvePendingMessage({
-        localId: msg.localId,
-        message: { ...msg, isSending: true, sendFailed: false },
-      }),
-    );
-    try {
-      const payload: Record<string, string> = {};
-      if (msg.content) payload.content = msg.content;
-      if (msg.mediaUrl) {
-        payload.mediaUrl = msg.mediaUrl;
-        payload.mediaType = msg.mediaType ?? "image";
-      }
-      const res = await api.post(`/channels/${channelId}/messages`, payload);
+  const handleRetry = useCallback(
+    async (msg: ChatMessage) => {
+      if (!msg.localId) return;
       dispatch(
         resolvePendingMessage({
           localId: msg.localId,
-          message: { ...(res.data as ChatMessage), isOwn: true, isDelivered: true },
+          message: { ...msg, isSending: true, sendFailed: false },
         }),
       );
-      dequeueMessage(msg.localId).catch(() => {});
-    } catch {
-      dispatch(failPendingMessage(msg.localId));
-    }
-  };
+      try {
+        const payload: Record<string, string> = {};
+        if (msg.content) payload.content = msg.content;
+        if (msg.mediaUrl) {
+          payload.mediaUrl = msg.mediaUrl;
+          payload.mediaType = msg.mediaType ?? "image";
+        }
+        const res = await api.post(`/channels/${channelId}/messages`, payload);
+        dispatch(
+          resolvePendingMessage({
+            localId: msg.localId,
+            message: { ...(res.data as ChatMessage), isOwn: true, isDelivered: true },
+          }),
+        );
+        dequeueMessage(msg.localId).catch(() => {});
+      } catch {
+        dispatch(failPendingMessage(msg.localId));
+      }
+    },
+    [channelId, dispatch],
+  );
 
   // ─── Voice recording implementation (expo-av) ──────────────────
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -844,6 +830,39 @@ export default function WorkspaceScreen() {
     return result;
   }, [messages, visibleCount]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: ChatMessage | { __dateSeparator: string } }) => (
+      <MessageItem
+        item={item}
+        userId={userId}
+        isAcceptor={isAcceptor}
+        isActive={isActive}
+        isAnswerSubmitted={!!detail?.isAnswerSubmitted}
+        primaryColor={primaryColor}
+        cardColor={cardColor}
+        borderColor={borderColor}
+        mutedIconColor={mutedIconColor}
+        formatMessageTime={formatMessageTime}
+        onImageOpen={openImageViewer}
+        onRetry={handleRetry}
+        onToggleMark={handleToggleMark}
+      />
+    ),
+    [
+      userId,
+      isAcceptor,
+      isActive,
+      detail?.isAnswerSubmitted,
+      primaryColor,
+      cardColor,
+      borderColor,
+      mutedIconColor,
+      openImageViewer,
+      handleRetry,
+      handleToggleMark,
+    ],
+  );
+
   // ─── Loading state ────────────────────────────────────────────
   if (isLoading || !detail) {
     return (
@@ -872,163 +891,6 @@ export default function WorkspaceScreen() {
 
   const counterpartName = isAsker ? detail.acceptorName : detail.askerName;
   const counterpartImage = isAsker ? detail.acceptorImage : detail.askerImage;
-
-  // ─── Render message ───────────────────────────────────────────
-  const renderItem = ({ item }: { item: ChatMessage | { __dateSeparator: string } }) => {
-    if ("__dateSeparator" in item) {
-      return (
-        <View className="my-3 items-center">
-          <View className="bg-muted/30 rounded-full px-3 py-1">
-            <Text className="text-[11px] font-medium text-muted-foreground">
-              {item.__dateSeparator}
-            </Text>
-          </View>
-        </View>
-      );
-    }
-
-    const msg = item;
-    if (msg.isDeleted) {
-      return (
-        <View className="my-1 items-center">
-          <View className="bg-muted/20 flex-row items-center gap-1.5 rounded-full px-3 py-1.5">
-            <Ionicons name="trash-outline" size={12} color={mutedIconColor} />
-            <Text className="text-[11px] text-muted-foreground">Message deleted</Text>
-          </View>
-        </View>
-      );
-    }
-
-    if (msg.isSystemMessage) {
-      return (
-        <View className="my-2 items-center px-12">
-          <View className="rounded-2xl bg-sky-500/10 px-4 py-2.5">
-            <Text className="text-center text-[13px] leading-5 text-sky-700 dark:text-sky-300">
-              {msg.content}
-            </Text>
-          </View>
-        </View>
-      );
-    }
-
-    const isOwn = msg.isOwn || msg.senderId === userId;
-    const showMark = isAcceptor && isActive && isOwn && !detail.isAnswerSubmitted;
-
-    return (
-      <View className={`my-1 px-3 ${isOwn ? "items-end" : "items-start"}`}>
-        <View
-          style={{
-            maxWidth: "80%",
-            borderRadius: 18,
-            padding: 10,
-            backgroundColor: isOwn ? primaryColor : cardColor,
-            borderWidth: isOwn ? 0 : 1,
-            borderColor: isOwn ? undefined : borderColor,
-            ...(msg.isMarkedAsAnswer
-              ? {
-                  borderWidth: 2,
-                  borderColor: "#f59e0b",
-                }
-              : {}),
-          }}
-        >
-          {!isOwn ? (
-            <Text
-              className="mb-1 text-[11px] font-semibold"
-              style={{ color: primaryColor }}
-            >
-              {msg.senderName}
-            </Text>
-          ) : null}
-
-          {msg.mediaUrl && msg.mediaType === "IMAGE" ? (
-            <TouchableOpacity
-              onPress={() => openImageViewer(msg.mediaUrl!)}
-              activeOpacity={0.85}
-            >
-              <Image
-                source={{ uri: msg.mediaUrl }}
-                style={{
-                  width: 200,
-                  height: 150,
-                  borderRadius: 12,
-                  marginBottom: msg.content ? 6 : 0,
-                }}
-                resizeMode="cover"
-              />
-            </TouchableOpacity>
-          ) : msg.mediaUrl && msg.mediaType === "AUDIO" ? (
-            <View className="bg-muted/20 my-1 flex-row items-center gap-2 rounded-lg px-3 py-2">
-              <Ionicons name="volume-mute" size={16} color={primaryColor} />
-              <Text className="text-[12px] text-foreground">Voice message</Text>
-              <Ionicons name="play-circle" size={16} color={primaryColor} />
-            </View>
-          ) : msg.mediaUrl ? (
-            <Image
-              source={{ uri: msg.mediaUrl }}
-              style={{
-                width: 200,
-                height: 150,
-                borderRadius: 12,
-                marginBottom: msg.content ? 6 : 0,
-              }}
-              resizeMode="cover"
-            />
-          ) : null}
-
-          {msg.content ? (
-            <Text
-              className="text-[15px] leading-[22px]"
-              style={{ color: isOwn ? "#fff" : undefined }}
-            >
-              {msg.content}
-            </Text>
-          ) : null}
-
-          <View className="mt-1 flex-row items-center justify-end gap-1.5">
-            <Text
-              className="text-[10px]"
-              style={{ color: isOwn ? "rgba(255,255,255,0.6)" : mutedIconColor }}
-            >
-              {formatMessageTime(msg.sentAt)}
-            </Text>
-            {isOwn && msg.isSending ? (
-              <ActivityIndicator size={8} color="rgba(255,255,255,0.5)" />
-            ) : isOwn ? (
-              <Ionicons
-                name={msg.isDelivered ? "checkmark-done" : "checkmark"}
-                size={12}
-                color={msg.isSeen ? "#60a5fa" : "rgba(255,255,255,0.5)"}
-              />
-            ) : null}
-          </View>
-
-          {msg.sendFailed ? (
-            <TouchableOpacity
-              onPress={() => handleRetry(msg)}
-              className="mt-1 flex-row items-center gap-1"
-            >
-              <Ionicons name="refresh" size={12} color="#ef4444" />
-              <Text className="text-[11px] font-medium text-red-500">Tap to retry</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        {showMark ? (
-          <TouchableOpacity
-            onPress={() => handleToggleMark(msg.id, msg.isMarkedAsAnswer)}
-            className="mt-1 px-1"
-          >
-            <Ionicons
-              name={msg.isMarkedAsAnswer ? "star" : "star-outline"}
-              size={16}
-              color={msg.isMarkedAsAnswer ? "#f59e0b" : mutedIconColor}
-            />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-    );
-  };
 
   // ─── Rating Modal ─────────────────────────────────────────────
   const renderRatingModal = () => (
@@ -1157,7 +1019,7 @@ export default function WorkspaceScreen() {
             </Text>
           </View>
 
-          {isActive && countdown > 0 ? (
+          {isActive ? (
             <View className="flex-row items-center gap-2">
               <TouchableOpacity
                 onPress={() => handleStartCall("AUDIO")}
@@ -1195,25 +1057,14 @@ export default function WorkspaceScreen() {
                   <Ionicons name="videocam-outline" size={16} color={primaryColor} />
                 )}
               </TouchableOpacity>
-              <View
-                className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1"
-                style={{ backgroundColor: `${timerColor}18` }}
-              >
-                <Ionicons name="timer-outline" size={13} color={timerColor} />
-                <Text className="text-[11px] font-bold" style={{ color: timerColor }}>
-                  {formatCountdown(countdown)}
-                </Text>
-              </View>
-            </View>
-          ) : isActive ? (
-            <View
-              className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1"
-              style={{ backgroundColor: `${timerColor}18` }}
-            >
-              <Ionicons name="timer-outline" size={13} color={timerColor} />
-              <Text className="text-[11px] font-bold" style={{ color: timerColor }}>
-                {formatCountdown(countdown)}
-              </Text>
+              <ChannelTimer
+                timerDeadline={detail?.timerDeadline ?? null}
+                channelId={channelId}
+                isActive={isActive}
+                isAnswerSubmitted={!!detail?.isAnswerSubmitted}
+                timeExtensionCount={detail?.timeExtensionCount ?? 0}
+                primaryColor={primaryColor}
+              />
             </View>
           ) : (
             <View className="bg-muted/30 rounded-full px-2.5 py-1">
@@ -1227,24 +1078,6 @@ export default function WorkspaceScreen() {
         {/* Extend + Close buttons */}
         {isActive ? (
           <View className="mt-2 flex-row items-center gap-2">
-            {canExtend ? (
-              <TouchableOpacity
-                onPress={handleExtend}
-                disabled={isExtending}
-                className="flex-row items-center gap-1 rounded-full border px-3 py-1.5"
-                style={{ borderColor: timerColor }}
-              >
-                {isExtending ? (
-                  <ActivityIndicator size={12} color={timerColor} />
-                ) : (
-                  <Ionicons name="add-circle-outline" size={14} color={timerColor} />
-                )}
-                <Text className="text-[11px] font-semibold" style={{ color: timerColor }}>
-                  +5 min
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-
             {isAcceptor &&
             isActive &&
             !detail.isAnswerSubmitted &&

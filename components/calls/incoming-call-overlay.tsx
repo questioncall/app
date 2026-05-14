@@ -13,7 +13,6 @@ import { router } from "expo-router";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { clearIncomingCall } from "@/store/slices/incomingCallSlice";
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { displayIncomingCall, endCallKeepCall } from "@/lib/callkeep-setup";
 
@@ -22,7 +21,6 @@ const AUTO_DISMISS_MS = 45_000;
 
 export function IncomingCallOverlay() {
   const dispatch = useAppDispatch();
-  const { isDark } = useAppTheme();
   const call = useAppSelector((s) => s.incomingCall.call);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as Linking from "expo-linking";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
+import { startMobileUpload } from "@/lib/upload-manager";
 
 type FileType = "PDF" | "DOCX" | "PPT" | "Image";
 
@@ -491,7 +492,7 @@ export default function NotesScreen() {
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -545,8 +546,6 @@ export default function NotesScreen() {
     setUploadVisible(false);
 
     if (data.pickedFile) {
-      const { startMobileUpload } = require("@/lib/upload-manager");
-
       const isImage =
         data.fileType === "Image" ||
         (data.pickedFile.mimeType || "").startsWith("image/");

@@ -3,6 +3,7 @@ import RNCallKeep from "react-native-callkeep";
 import { router } from "expo-router";
 
 let initialized = false;
+let answeringCall = false;
 
 const CALLKEEP_OPTIONS = {
   ios: {
@@ -25,13 +26,22 @@ export function setupCallKeep() {
 
   try {
     RNCallKeep.setup(CALLKEEP_OPTIONS);
-  } catch {
+  } catch (err) {
+    console.warn(
+      "[callkeep] Setup failed:",
+      err instanceof Error ? err.message : String(err),
+    );
     // Non-fatal — calls still work in-app without native call UI
   }
 
   RNCallKeep.addEventListener("answerCall", ({ callUUID }) => {
+    if (answeringCall) return; // Guard against double-tap
+    answeringCall = true;
     RNCallKeep.setCurrentCallActive(callUUID);
     router.push(`/call/${callUUID}` as any);
+    setTimeout(() => {
+      answeringCall = false;
+    }, 1000);
   });
 
   RNCallKeep.addEventListener("endCall", ({ callUUID }) => {
@@ -63,16 +73,22 @@ export function displayIncomingCall(
 export function endCallKeepCall(callSessionId: string) {
   try {
     RNCallKeep.endCall(callSessionId);
-  } catch {
-    // ignore if not active
+  } catch (err) {
+    console.warn(
+      "[callkeep] endCall failed:",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 }
 
 export function reportCallConnected(callSessionId: string) {
   try {
     RNCallKeep.setCurrentCallActive(callSessionId);
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn(
+      "[callkeep] reportConnected failed:",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 }
 
@@ -80,7 +96,10 @@ async function fetch_reject(callSessionId: string) {
   try {
     const { api } = await import("@/lib/api");
     await api.post(`/calls/${callSessionId}/reject`);
-  } catch {
-    // best-effort
+  } catch (err) {
+    console.warn(
+      "[callkeep] reject API call failed:",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 }

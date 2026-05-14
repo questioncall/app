@@ -48,7 +48,7 @@ function SectionLabel({ title }: { title: string }) {
 }
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
-  const { primaryColor, iconColor } = useAppTheme();
+  const { primaryColor } = useAppTheme();
   return (
     <View className="flex-row items-center py-3">
       <View

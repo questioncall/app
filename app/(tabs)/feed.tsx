@@ -551,7 +551,7 @@ export default function FeedScreen() {
     flatListRef.current?.scrollToOffset({ offset: 0, animated });
   }, []);
 
-  const openFilterModal = () => {
+  const openFilterModal = useCallback(() => {
     setFilterModalVisible(true);
     RNAnimated.spring(modalSlide, {
       toValue: 1,
@@ -559,7 +559,7 @@ export default function FeedScreen() {
       tension: 65,
       friction: 11,
     }).start();
-  };
+  }, []);
 
   const closeFilterModal = () => {
     RNAnimated.timing(modalSlide, {
@@ -835,150 +835,171 @@ export default function FeedScreen() {
     });
   };
 
-  const toggleComments = (questionId: string) => {
-    setExpandedComments((prev) => {
-      const next = new Set(prev);
-      if (next.has(questionId)) {
-        next.delete(questionId);
+  const toggleComments = useCallback(
+    (questionId: string) => {
+      setExpandedComments((prev) => {
+        const next = new Set(prev);
+        if (next.has(questionId)) {
+          next.delete(questionId);
+        } else {
+          next.add(questionId);
+          if (!commentsMap[questionId]) void fetchComments(questionId);
+        }
+        return next;
+      });
+    },
+    [commentsMap, fetchComments],
+  );
+
+  const handleReact = useCallback(
+    async (questionId: string, type: ReactionType) => {
+      if (!userId) return;
+      const targetQuestion = feedQuestions.find(
+        (q) => getFeedQuestionId(q) === questionId,
+      );
+      if (!targetQuestion) return;
+
+      const nextReactions = [...targetQuestion.reactions];
+      const idx = nextReactions.findIndex((r) => r.userId === userId);
+      if (idx >= 0) {
+        if (nextReactions[idx].type === type) nextReactions.splice(idx, 1);
+        else nextReactions[idx] = { ...nextReactions[idx], type };
       } else {
-        next.add(questionId);
-        if (!commentsMap[questionId]) void fetchComments(questionId);
-      }
-      return next;
-    });
-  };
-
-  const handleReact = async (questionId: string, type: ReactionType) => {
-    if (!userId) return;
-    const targetQuestion = feedQuestions.find((q) => getFeedQuestionId(q) === questionId);
-    if (!targetQuestion) return;
-
-    const nextReactions = [...targetQuestion.reactions];
-    const idx = nextReactions.findIndex((r) => r.userId === userId);
-    if (idx >= 0) {
-      if (nextReactions[idx].type === type) nextReactions.splice(idx, 1);
-      else nextReactions[idx] = { ...nextReactions[idx], type };
-    } else {
-      nextReactions.push({ userId, type });
-    }
-
-    const optimistic: FeedQuestion = {
-      ...targetQuestion,
-      reactions: nextReactions,
-      reactionCount: nextReactions.length,
-    };
-    dispatch(updateQuestion({ id: questionId, data: optimistic }));
-
-    try {
-      const res = await api.post(`/questions/${questionId}/react`, { type });
-      dispatch(updateQuestion({ id: questionId, data: normalizeFeedQuestion(res.data) }));
-    } catch {
-      dispatch(updateQuestion({ id: questionId, data: targetQuestion }));
-    }
-  };
-
-  const handleAccept = async (questionId: string) => {
-    setAcceptingId(questionId);
-    try {
-      const res = await api.post(`/questions/${questionId}/accept`);
-      const updated = normalizeFeedQuestion(res.data);
-      dispatch(updateQuestion({ id: questionId, data: updated }));
-
-      const timerDeadline = res.data?.timerDeadline;
-      const channelId = updated.channelId;
-      if (timerDeadline && channelId) {
-        scheduleAnswerDeadlineReminder({
-          questionTitle: updated.title,
-          channelId,
-          timerDeadline,
-        }).catch(() => {});
+        nextReactions.push({ userId, type });
       }
 
-      if (channelId) router.push(`/workspace/${channelId}` as any);
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1:
-          err?.response?.data?.error ??
-          err?.response?.data?.message ??
-          "Failed to accept question",
-      });
-    } finally {
-      setAcceptingId(null);
-    }
-  };
+      const optimistic: FeedQuestion = {
+        ...targetQuestion,
+        reactions: nextReactions,
+        reactionCount: nextReactions.length,
+      };
+      dispatch(updateQuestion({ id: questionId, data: optimistic }));
 
-  const handleDelete = (questionId: string, questionTitle: string) => {
-    Alert.alert(
-      "Delete question",
-      `Are you sure you want to delete "${questionTitle.length > 60 ? questionTitle.slice(0, 60) + "…" : questionTitle}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setDeletingId(questionId);
-            try {
-              await api.delete(`/questions/${questionId}`);
-              dispatch(removeQuestion(questionId));
-              dispatch(
-                updateUser({
-                  questionsAsked: Math.max(0, (user?.questionsAsked ?? 1) - 1),
-                }),
-              );
-              Toast.show({ type: "success", text1: "Question deleted." });
-            } catch (err: any) {
-              Toast.show({
-                type: "error",
-                text1: err?.response?.data?.error ?? "Failed to delete question",
-              });
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleSubmitComment = async (questionId: string) => {
-    const text = commentInput[questionId]?.trim();
-    if (!text) return;
-    setIsSubmittingComment(questionId);
-    try {
-      const res = await api.post(`/questions/${questionId}/comments`, { content: text });
-      if (res.data?.comment) {
-        const incoming = res.data.comment as PeerCommentItem;
-        setCommentsMap((prev) => ({
-          ...prev,
-          [questionId]: dedupeComments([incoming, ...(prev[questionId] || [])]),
-        }));
-        setCommentInput((prev) => ({ ...prev, [questionId]: "" }));
-        const current = feedQuestions.find((q) => getFeedQuestionId(q) === questionId);
+      try {
+        const res = await api.post(`/questions/${questionId}/react`, { type });
         dispatch(
-          updateQuestion({
-            id: questionId,
-            data: { commentCount: (current?.commentCount ?? 0) + 1 },
-          }),
+          updateQuestion({ id: questionId, data: normalizeFeedQuestion(res.data) }),
         );
+      } catch {
+        dispatch(updateQuestion({ id: questionId, data: targetQuestion }));
       }
-      Toast.show({
-        type: "success",
-        text1: res.data?.milestoneMessage ?? "Comment posted!",
-      });
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1:
-          err?.response?.data?.error ??
-          err?.response?.data?.message ??
-          "Failed to post comment",
-      });
-    } finally {
-      setIsSubmittingComment(null);
-    }
-  };
+    },
+    [userId, feedQuestions, dispatch],
+  );
+
+  const handleAccept = useCallback(
+    async (questionId: string) => {
+      setAcceptingId(questionId);
+      try {
+        const res = await api.post(`/questions/${questionId}/accept`);
+        const updated = normalizeFeedQuestion(res.data);
+        dispatch(updateQuestion({ id: questionId, data: updated }));
+
+        const timerDeadline = res.data?.timerDeadline;
+        const channelId = updated.channelId;
+        if (timerDeadline && channelId) {
+          scheduleAnswerDeadlineReminder({
+            questionTitle: updated.title,
+            channelId,
+            timerDeadline,
+          }).catch(() => {});
+        }
+
+        if (channelId) router.push(`/workspace/${channelId}` as any);
+      } catch (err: any) {
+        Toast.show({
+          type: "error",
+          text1:
+            err?.response?.data?.error ??
+            err?.response?.data?.message ??
+            "Failed to accept question",
+        });
+      } finally {
+        setAcceptingId(null);
+      }
+    },
+    [api, dispatch, router, scheduleAnswerDeadlineReminder],
+  );
+
+  const handleDelete = useCallback(
+    (questionId: string, questionTitle: string) => {
+      Alert.alert(
+        "Delete question",
+        `Are you sure you want to delete "${questionTitle.length > 60 ? questionTitle.slice(0, 60) + "…" : questionTitle}"?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              setDeletingId(questionId);
+              try {
+                await api.delete(`/questions/${questionId}`);
+                dispatch(removeQuestion(questionId));
+                dispatch(
+                  updateUser({
+                    questionsAsked: Math.max(0, (user?.questionsAsked ?? 1) - 1),
+                  }),
+                );
+                Toast.show({ type: "success", text1: "Question deleted." });
+              } catch (err: any) {
+                Toast.show({
+                  type: "error",
+                  text1: err?.response?.data?.error ?? "Failed to delete question",
+                });
+              } finally {
+                setDeletingId(null);
+              }
+            },
+          },
+        ],
+      );
+    },
+    [api, dispatch, removeQuestion, updateUser, user],
+  );
+
+  const handleSubmitComment = useCallback(
+    async (questionId: string) => {
+      const text = commentInput[questionId]?.trim();
+      if (!text) return;
+      setIsSubmittingComment(questionId);
+      try {
+        const res = await api.post(`/questions/${questionId}/comments`, {
+          content: text,
+        });
+        if (res.data?.comment) {
+          const incoming = res.data.comment as PeerCommentItem;
+          setCommentsMap((prev) => ({
+            ...prev,
+            [questionId]: dedupeComments([incoming, ...(prev[questionId] || [])]),
+          }));
+          setCommentInput((prev) => ({ ...prev, [questionId]: "" }));
+          const current = feedQuestions.find((q) => getFeedQuestionId(q) === questionId);
+          dispatch(
+            updateQuestion({
+              id: questionId,
+              data: { commentCount: (current?.commentCount ?? 0) + 1 },
+            }),
+          );
+        }
+        Toast.show({
+          type: "success",
+          text1: res.data?.milestoneMessage ?? "Comment posted!",
+        });
+      } catch (err: any) {
+        Toast.show({
+          type: "error",
+          text1:
+            err?.response?.data?.error ??
+            err?.response?.data?.message ??
+            "Failed to post comment",
+        });
+      } finally {
+        setIsSubmittingComment(null);
+      }
+    },
+    [commentInput, feedQuestions, dispatch],
+  );
 
   // ─── Filter Modal ───────────────────────────────────────────────
   const renderFilterModal = () => {

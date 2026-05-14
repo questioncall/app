@@ -1,10 +1,20 @@
-import { Platform } from "react-native";
+import { Platform, Alert, Linking } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { api } from "@/lib/api";
 import { displayIncomingCall } from "@/lib/callkeep-setup";
 
 const EAS_PROJECT_ID = "86d256ec-943f-49e8-adaf-659400e4edac";
+
+let currentPushToken: string | null = null;
+
+/**
+ * Returns the last registered push token so callers (e.g. logout flows)
+ * can unsubscribe it from the server without re-registering.
+ */
+export function getCurrentPushToken(): string | null {
+  return currentPushToken;
+}
 
 /**
  * Single, unified notification handler.
@@ -83,6 +93,26 @@ async function setupAndroidChannels() {
   });
 }
 
+/** Show an alert directing the user to system settings to enable notifications manually. */
+async function showSettingsAlert(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    Alert.alert(
+      "Enable Notifications",
+      "To receive question updates, chat messages, and call alerts, please enable notifications in your device settings.\n\nSettings → Apps → QuestionCall → Notifications",
+      [
+        { text: "Cancel", style: "cancel", onPress: () => resolve() },
+        {
+          text: "Open Settings",
+          onPress: () => {
+            Linking.openSettings();
+            resolve();
+          },
+        },
+      ],
+    );
+  });
+}
+
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
     console.log("[push] Not a physical device — skipping push registration");
@@ -99,7 +129,52 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   if (finalStatus !== "granted") {
     console.warn("[push] Notification permission not granted:", finalStatus);
-    return null;
+
+    // Check if we can ask again (Android 13+ may block re-prompting)
+    const perm = await Notifications.getPermissionsAsync();
+    const canAskAgain = perm.canAskAgain ?? true;
+
+    if (!canAskAgain) {
+      // Permanently denied — guide user to system settings
+      await showSettingsAlert();
+      return null;
+    }
+
+    // Denied but we can still re-prompt — explain why notifications matter
+    let shouldRetry = false;
+    await new Promise<void>((resolve) => {
+      Alert.alert(
+        "Notifications Needed",
+        "QuestionCall needs notification permission to alert you when you receive answers, chat messages, and incoming calls.",
+        [
+          {
+            text: "Not Now",
+            style: "cancel",
+            onPress: () => resolve(),
+          },
+          {
+            text: "Try Again",
+            onPress: () => {
+              shouldRetry = true;
+              resolve();
+            },
+          },
+        ],
+      );
+    });
+
+    if (shouldRetry) {
+      const { status: retryStatus } = await Notifications.requestPermissionsAsync();
+      if (retryStatus !== "granted") {
+        console.warn("[push] Permission still denied after re-prompt:", retryStatus);
+        // Still denied after retry — guide user to settings
+        await showSettingsAlert();
+        return null;
+      }
+    } else {
+      // User chose "Not Now" — stop
+      return null;
+    }
   }
 
   if (Platform.OS === "android") {
@@ -121,37 +196,62 @@ export async function registerForPushNotifications(): Promise<string | null> {
     });
     if (deviceToken?.data) {
       console.log("[push] Using device push token (FCM)");
-      return String(deviceToken.data);
+      currentPushToken = String(deviceToken.data);
+      return currentPushToken;
     }
     console.warn("[push] No push token obtained at all");
     return null;
   }
 
   console.log("[push] Expo push token obtained:", tokenData.data.slice(0, 30) + "…");
+  currentPushToken = tokenData.data;
   return tokenData.data;
 }
 
+const MAX_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function subscribePushToken(token: string): Promise<boolean> {
-  try {
-    await api.post("/push/subscribe", {
-      subscription: {
-        endpoint: token,
-        expirationTime: null,
-        keys: {},
-        platform: Platform.OS === "ios" ? "ios" : "android",
-      },
-    });
-    return true;
-  } catch {
-    return false;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await api.post("/push/subscribe", {
+        subscription: {
+          endpoint: token,
+          expirationTime: null,
+          keys: {},
+          platform: Platform.OS === "ios" ? "ios" : "android",
+        },
+      });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(
+        `[push] Failed to subscribe push token (attempt ${attempt}/${MAX_RETRIES}):`,
+        message,
+      );
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        console.log(`[push] Retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
   }
+  return false;
 }
 
 export async function unsubscribePushToken(token: string): Promise<boolean> {
   try {
     await api.post("/push/unsubscribe", { endpoint: token });
     return true;
-  } catch {
+  } catch (error) {
+    console.error(
+      "[push] Failed to unsubscribe push token:",
+      error instanceof Error ? error.message : String(error),
+    );
     return false;
   }
 }
