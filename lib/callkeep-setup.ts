@@ -5,6 +5,28 @@ import { router } from "expo-router";
 let initialized = false;
 let answeringCall = false;
 
+// ── Pre-accepted call data ──────────────────────────────────────────────────
+// Used to pass the accept response directly from incoming-call-overlay to the
+// call screen, enabling instant LiveKit connection without intermediate API calls.
+export interface PreAcceptedCallData {
+  token: string;
+  serverUrl: string;
+  channelId: string;
+  timerDeadline: string;
+  timeExtensionCount: number;
+  mode: "AUDIO" | "VIDEO";
+  callerId: string;
+}
+export const preAcceptedCallRef: { current: PreAcceptedCallData | null } = {
+  current: null,
+};
+
+// ── Overlay visibility tracking ────────────────────────────────────────────
+// The incoming-call-overlay sets this to true when it's visible. The CallKeep
+// answerCall handler checks it to prevent a race where both the overlay AND
+// the native notification's answer event trigger simultaneous accept attempts.
+export const overlayActiveRef: { current: boolean } = { current: false };
+
 const CALLKEEP_OPTIONS = {
   ios: {
     appName: "QuestionCall",
@@ -36,6 +58,13 @@ export function setupCallKeep() {
 
   RNCallKeep.addEventListener("answerCall", ({ callUUID }) => {
     if (answeringCall) return; // Guard against double-tap
+    if (overlayActiveRef.current && callUUID) {
+      // The in-app overlay is showing — the user will accept from there.
+      // Mark the call as active in CallKeep but don't navigate, avoiding a
+      // race where both paths try to accept the same call simultaneously.
+      RNCallKeep.setCurrentCallActive(callUUID);
+      return;
+    }
     answeringCall = true;
     RNCallKeep.setCurrentCallActive(callUUID);
     router.push(`/call/${callUUID}` as any);

@@ -22,7 +22,11 @@ import { VideoView } from "@livekit/react-native";
 
 import { api } from "@/lib/api";
 import { useAppSelector } from "@/hooks/redux";
-import { endCallKeepCall, reportCallConnected } from "@/lib/callkeep-setup";
+import {
+  endCallKeepCall,
+  reportCallConnected,
+  preAcceptedCallRef,
+} from "@/lib/callkeep-setup";
 import {
   getPusherClient,
   getUserPusherName,
@@ -74,7 +78,9 @@ export default function CallScreen() {
 
   const [session, setSession] = useState<CallSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
   // LiveKit state
   const roomRef = useRef<Room | null>(null);
@@ -102,24 +108,45 @@ export default function CallScreen() {
   const endingRef = useRef(false);
   const acceptHandlerRef = useRef<() => Promise<void>>(async () => {});
 
-  // ── Fetch call session ────────────────────────────────────────────────────
-  const fetchSession = useCallback(async () => {
-    if (!roomId) return;
-    try {
-      const res = await api.get(`/calls/${roomId}`);
-      setSession(res.data as CallSession);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[call] Failed to fetch session:", msg);
-      Toast.show({ type: "error", text1: "Could not load call session" });
-    } finally {
-      setLoading(false);
-    }
-  }, [roomId]);
-
+  // ── Session initialization ────────────────────────────────────────────────
+  // OPT-8: If the incoming-call-overlay already accepted the call and stored
+  // the response data, go straight to ACTIVE. Otherwise fetch from server.
+  // Must be a single effect to prevent the API fetch from overwriting ACTIVE.
   useEffect(() => {
-    void fetchSession();
-  }, [fetchSession]);
+    if (!roomId) return;
+
+    const pre = preAcceptedCallRef.current;
+    if (pre) {
+      preAcceptedCallRef.current = null; // consume immediately
+      prefetchedTokenRef.current = {
+        token: pre.token,
+        serverUrl: pre.serverUrl,
+        channelId: pre.channelId,
+        timerDeadline: pre.timerDeadline,
+        timeExtensionCount: pre.timeExtensionCount,
+      };
+      setSession({
+        callSessionId: roomId,
+        channelId: pre.channelId,
+        callerId: pre.callerId,
+        mode: pre.mode,
+        status: "ACTIVE" as CallStatus,
+      } as CallSession);
+      setLoading(false);
+      return;
+    }
+
+    // Normal path: fetch session from server
+    api
+      .get(`/calls/${roomId}`)
+      .then((res) => setSession(res.data as CallSession))
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[call] Failed to fetch session:", msg);
+        Toast.show({ type: "error", text1: "Could not load call session" });
+      })
+      .finally(() => setLoading(false));
+  }, [roomId]);
 
   // ── Connect to LiveKit ─────────────────────────────────────────────────────
   // Supports both ACTIVE (both users) and RINGING (caller only, OPT-3).
@@ -367,7 +394,7 @@ export default function CallScreen() {
   // ── Call actions ──────────────────────────────────────────────────────────
   const handleAccept = async () => {
     if (!session) return;
-    setActing(true);
+    setIsAccepting(true);
     try {
       const res = await api.post(`/calls/${session.callSessionId}/accept`);
       // OPT-6: Accept response includes token — store it so connectToRoom skips /token fetch
@@ -390,14 +417,14 @@ export default function CallScreen() {
       console.error("[call] Accept failed:", msg);
       Toast.show({ type: "error", text1: msg });
     } finally {
-      setActing(false);
+      setIsAccepting(false);
     }
   };
   acceptHandlerRef.current = handleAccept;
 
   const handleDecline = async () => {
     if (!session) return;
-    setActing(true);
+    setIsDeclining(true);
     try {
       await api.post(`/calls/${session.callSessionId}/reject`);
       Vibration.cancel();
@@ -409,14 +436,14 @@ export default function CallScreen() {
       );
       router.back();
     } finally {
-      setActing(false);
+      setIsDeclining(false);
     }
   };
 
   const handleEnd = async () => {
     if (!session || endingRef.current) return;
     endingRef.current = true;
-    setActing(true);
+    setIsEnding(true);
     endCallKeepCall(session.callSessionId);
 
     // Disconnect room FIRST to prevent NegotiationError from stale PC
@@ -435,7 +462,7 @@ export default function CallScreen() {
         err instanceof Error ? err.message : String(err),
       );
     } finally {
-      setActing(false);
+      setIsEnding(false);
       router.back();
     }
   };
@@ -564,10 +591,10 @@ export default function CallScreen() {
             <View style={styles.ringingBtnGroup}>
               <TouchableOpacity
                 onPress={handleDecline}
-                disabled={acting}
+                disabled={isDeclining}
                 style={[styles.circleBtn, { backgroundColor: "#ef4444" }]}
               >
-                {acting ? (
+                {isDeclining ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Ionicons
@@ -583,10 +610,10 @@ export default function CallScreen() {
             <View style={styles.ringingBtnGroup}>
               <TouchableOpacity
                 onPress={handleAccept}
-                disabled={acting}
+                disabled={isAccepting}
                 style={[styles.circleBtn, { backgroundColor: "#22c55e" }]}
               >
-                {acting ? (
+                {isAccepting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Ionicons name={isVideo ? "videocam" : "call"} size={32} color="#fff" />
@@ -598,19 +625,14 @@ export default function CallScreen() {
         ) : (
           <TouchableOpacity
             onPress={handleEnd}
-            disabled={acting}
             style={[styles.circleBtn, { backgroundColor: "#ef4444" }]}
           >
-            {acting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Ionicons
-                name="call"
-                size={32}
-                color="#fff"
-                style={{ transform: [{ rotate: "135deg" }] }}
-              />
-            )}
+            <Ionicons
+              name="call"
+              size={32}
+              color="#fff"
+              style={{ transform: [{ rotate: "135deg" }] }}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -760,10 +782,10 @@ export default function CallScreen() {
 
           <TouchableOpacity
             onPress={handleEnd}
-            disabled={acting}
+            disabled={isEnding}
             style={styles.endCallBtn}
           >
-            {acting ? (
+            {isEnding ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Ionicons

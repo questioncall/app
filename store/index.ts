@@ -1,4 +1,15 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from "redux-persist";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import authReducer from "./slices/authSlice";
 import userReducer from "./slices/userSlice";
 import feedReducer from "./slices/feedSlice";
@@ -14,26 +25,55 @@ import realtimeReducer from "./slices/realtimeSlice";
 import walletReducer from "./slices/walletSlice";
 import quizReducer from "./slices/quizSlice";
 import incomingCallReducer from "./slices/incomingCallSlice";
+import { channelCacheLimiter } from "./transforms";
+
+const persistConfig = {
+  key: "root",
+  storage: AsyncStorage,
+  whitelist: [
+    "feed",
+    "channels",
+    "channel",
+    "user",
+    "courses",
+    "wallet",
+    "config",
+    "quiz",
+  ],
+  transforms: [channelCacheLimiter],
+};
+
+const rootReducer = combineReducers({
+  auth: authReducer,
+  user: userReducer,
+  feed: feedReducer,
+  channel: channelReducer,
+  channels: channelsReducer,
+  courses: coursesReducer,
+  upload: uploadReducer,
+  config: configReducer,
+  activity: activityReducer,
+  notices: noticesReducer,
+  onboarding: onboardingReducer,
+  realtime: realtimeReducer,
+  wallet: walletReducer,
+  quiz: quizReducer,
+  incomingCall: incomingCallReducer,
+});
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    user: userReducer,
-    feed: feedReducer,
-    channel: channelReducer,
-    channels: channelsReducer,
-    courses: coursesReducer,
-    upload: uploadReducer,
-    config: configReducer,
-    activity: activityReducer,
-    notices: noticesReducer,
-    onboarding: onboardingReducer,
-    realtime: realtimeReducer,
-    wallet: walletReducer,
-    quiz: quizReducer,
-    incomingCall: incomingCallReducer,
-  },
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
 });
+
+export const persistor = persistStore(store);
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

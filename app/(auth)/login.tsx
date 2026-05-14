@@ -54,7 +54,7 @@ function GoogleLoginButton({
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
     redirectUri:
-      Platform.OS === "web" ? undefined : "com.siddthecoder.qustioncall:/login",
+      Platform.OS === "web" ? undefined : "com.siddthecoder.questioncall:/login",
     scopes: ["openid", "profile", "email"],
     selectAccount: true,
   });
@@ -92,7 +92,7 @@ function GoogleLoginButton({
 
   return (
     <TouchableOpacity
-      className="bg-card border border-border rounded-full py-4 items-center flex-row justify-center gap-2 mb-2 shadow-sm"
+      className="mb-2 flex-row items-center justify-center gap-2 rounded-full border border-border bg-card py-4 shadow-sm"
       activeOpacity={0.85}
       disabled={disabled || !request}
       onPress={handleGoogleLogin}
@@ -102,7 +102,7 @@ function GoogleLoginButton({
       ) : (
         <Ionicons name="logo-google" size={20} color={iconColor} />
       )}
-      <Text className="text-card-foreground text-[16px] font-semibold">
+      <Text className="text-[16px] font-semibold text-card-foreground">
         Sign in with Google
       </Text>
     </TouchableOpacity>
@@ -153,10 +153,7 @@ export default function LoginScreen() {
       return;
     }
 
-    await completeLogin(
-      { email: email.trim().toLowerCase(), password },
-      "email",
-    );
+    await completeLogin({ email: email.trim().toLowerCase(), password }, "email");
   }
 
   return (
@@ -171,7 +168,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <View className="px-6 pt-16 pb-8">
+          <View className="px-6 pb-8 pt-16">
             <View className="flex-row items-center gap-3">
               <TouchableOpacity
                 onPress={() => router.back()}
@@ -199,11 +196,9 @@ export default function LoginScreen() {
           </View>
 
           {/* Form */}
-          <View className="px-6 gap-5 pb-8">
+          <View className="gap-5 px-6 pb-8">
             <View>
-              <Text className="text-foreground text-sm font-medium mb-2 ml-1">
-                Email
-              </Text>
+              <Text className="mb-2 ml-1 text-sm font-medium text-foreground">Email</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
@@ -212,12 +207,12 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
-                className="bg-card border border-border rounded-2xl px-5 py-4 text-foreground text-[15px]"
+                className="rounded-2xl border border-border bg-card px-5 py-4 text-[15px] text-foreground"
               />
             </View>
 
             <View>
-              <Text className="text-foreground text-sm font-medium mb-2 ml-1">
+              <Text className="mb-2 ml-1 text-sm font-medium text-foreground">
                 Password
               </Text>
               <View className="relative">
@@ -228,7 +223,7 @@ export default function LoginScreen() {
                   placeholderTextColor="#6B7280"
                   secureTextEntry={!showPassword}
                   autoComplete="password"
-                  className="bg-card border border-border rounded-2xl px-5 py-4 pr-12 text-foreground text-[15px]"
+                  className="rounded-2xl border border-border bg-card px-5 py-4 pr-12 text-[15px] text-foreground"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword((current) => !current)}
@@ -248,28 +243,30 @@ export default function LoginScreen() {
               onPress={() => router.push("/(auth)/forgot-password")}
               className="self-end"
             >
-              <Text className="text-primary text-sm font-medium">Forgot password?</Text>
+              <Text className="text-sm font-medium text-primary">Forgot password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={handleLogin}
               disabled={loadingMethod !== null}
-              className="bg-primary rounded-full py-4 items-center mt-4 shadow-lg"
+              className="mt-4 items-center rounded-full bg-primary py-4 shadow-lg"
               activeOpacity={0.85}
             >
               {loadingMethod === "email" ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text className="text-primary-foreground text-[16px] font-semibold">Sign In</Text>
+                <Text className="text-[16px] font-semibold text-primary-foreground">
+                  Sign In
+                </Text>
               )}
             </TouchableOpacity>
 
             <AuthNotice tone="error" message={formError} />
 
-            <View className="flex-row items-center gap-4 my-2">
-              <View className="flex-1 h-px bg-border" />
-              <Text className="text-muted-foreground text-sm">or</Text>
-              <View className="flex-1 h-px bg-border" />
+            <View className="my-2 flex-row items-center gap-4">
+              <View className="h-px flex-1 bg-border" />
+              <Text className="text-sm text-muted-foreground">or</Text>
+              <View className="h-px flex-1 bg-border" />
             </View>
 
             {isGoogleConfigured ? (
@@ -283,12 +280,12 @@ export default function LoginScreen() {
             ) : (
               <View className="opacity-60">
                 <TouchableOpacity
-                  className="bg-card border border-border rounded-full py-4 items-center flex-row justify-center gap-2 mb-2 shadow-sm"
+                  className="mb-2 flex-row items-center justify-center gap-2 rounded-full border border-border bg-card py-4 shadow-sm"
                   activeOpacity={0.85}
                   disabled
                 >
                   <Ionicons name="logo-google" size={20} color={iconColor} />
-                  <Text className="text-card-foreground text-[16px] font-semibold">
+                  <Text className="text-[16px] font-semibold text-card-foreground">
                     Sign in with Google
                   </Text>
                 </TouchableOpacity>
@@ -298,11 +295,11 @@ export default function LoginScreen() {
               </View>
             )}
 
-            <View className="items-center mt-2">
-              <Text className="text-muted-foreground text-sm">
+            <View className="mt-2 items-center">
+              <Text className="text-sm text-muted-foreground">
                 Don{"'"}t have an account?{" "}
                 <Text
-                  className="text-foreground font-bold"
+                  className="font-bold text-foreground"
                   onPress={() => router.replace("/(auth)/register")}
                 >
                   Sign Up

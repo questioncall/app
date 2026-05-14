@@ -85,7 +85,7 @@ export default function RegisterScreen() {
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
     redirectUri:
-      Platform.OS === "web" ? undefined : "com.siddthecoder.qustioncall:/login",
+      Platform.OS === "web" ? undefined : "com.siddthecoder.questioncall:/login",
     scopes: ["openid", "profile", "email"],
     selectAccount: true,
   });
@@ -241,14 +241,15 @@ export default function RegisterScreen() {
         readServerStatus,
       );
 
-      assertOkResponse(res, "Account created, but sign-in failed. Please sign in manually.");
+      assertOkResponse(
+        res,
+        "Account created, but sign-in failed. Please sign in manually.",
+      );
 
       const session = await persistMobileAuthSession(dispatch, res.data);
       router.replace(session.isSuspended ? "/suspended" : "/(tabs)/feed");
     } catch (err: any) {
-      setFormError(
-        getRequestErrorMessage(err, "Registration failed. Please try again."),
-      );
+      setFormError(getRequestErrorMessage(err, "Registration failed. Please try again."));
     } finally {
       setLoadingAction(null);
     }
@@ -276,10 +277,7 @@ export default function RegisterScreen() {
         router.replace(session.isSuspended ? "/suspended" : "/(tabs)/feed");
       } catch (err: any) {
         setFormError(
-          getRequestErrorMessage(
-            err,
-            "Google sign-up failed. Please try again.",
-          ),
+          getRequestErrorMessage(err, "Google sign-up failed. Please try again."),
         );
       } finally {
         setLoadingAction(null);
@@ -635,7 +633,7 @@ export default function RegisterScreen() {
       >
         <View className="flex-1 items-center justify-center bg-black/55 px-6">
           <View className="w-full max-w-md rounded-[28px] border border-border bg-card px-5 py-6">
-            <View className="mb-4 h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+            <View className="bg-primary/10 mb-4 h-12 w-12 items-center justify-center rounded-2xl">
               <Ionicons name="logo-google" size={24} color={iconColor} />
             </View>
             <Text className="text-[22px] font-bold tracking-tight text-foreground">
@@ -645,10 +643,8 @@ export default function RegisterScreen() {
               This will create your account with Google and sign you in right away.
             </Text>
 
-            <View className="mt-4 rounded-2xl border border-border bg-muted/30 px-4 py-3">
-              <Text className="text-sm font-semibold text-foreground">
-                Selected role
-              </Text>
+            <View className="bg-muted/30 mt-4 rounded-2xl border border-border px-4 py-3">
+              <Text className="text-sm font-semibold text-foreground">Selected role</Text>
               <Text className="mt-1 text-sm text-muted-foreground">
                 {role === "STUDENT" ? "Student" : "Teacher"}
               </Text>
@@ -659,9 +655,7 @@ export default function RegisterScreen() {
                 onPress={() => setIsGoogleConfirmOpen(false)}
                 className="flex-1 items-center rounded-full border border-border bg-background py-3.5"
               >
-                <Text className="text-[15px] font-semibold text-foreground">
-                  Cancel
-                </Text>
+                <Text className="text-[15px] font-semibold text-foreground">Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={confirmGoogleSignup}

@@ -1,7 +1,12 @@
+// ── Hermes polyfills ────────────────────────────────────────────────────────
+// livekit-client uses the `Event` constructor (via abort-controller / event-target-shim)
+// which is not available in React Native's Hermes engine. Polyfill it here
+// before any LiveKit code runs to prevent "Property 'Event' doesn't exist".
 import { useCallback, useEffect } from "react";
 import { Appearance, AppState, AppStateStatus } from "react-native";
 import { Stack, router } from "expo-router";
 import { Provider } from "react-redux";
+import { PersistGate } from "redux-persist/integration/react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Sentry from "@sentry/react-native";
@@ -11,7 +16,7 @@ import Toast from "react-native-toast-message";
 import { ThemeProvider } from "@react-navigation/native";
 import "../global.css";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { store } from "@/store";
+import { store, persistor } from "@/store";
 import { setTokens, setAuthLoading, clearAuth } from "@/store/slices/authSlice";
 import { setUser } from "@/store/slices/userSlice";
 import { setConfig } from "@/store/slices/configSlice";
@@ -32,6 +37,22 @@ import { ensureLiveKitRegistered } from "@/lib/livekit-setup";
 import { setupCallKeep } from "@/lib/callkeep-setup";
 
 import { GlobalUploadOverlay } from "@/components/sprint2/global-upload-overlay";
+
+if (typeof globalThis.Event === "undefined") {
+  (globalThis as any).Event = class Event {
+    constructor(
+      public type: string,
+      options?: { bubbles?: boolean; cancelable?: boolean; composed?: boolean },
+    ) {
+      this.bubbles = options?.bubbles ?? false;
+      this.cancelable = options?.cancelable ?? false;
+      this.composed = options?.composed ?? false;
+    }
+    bubbles = false;
+    cancelable = false;
+    composed = false;
+  } as unknown as typeof globalThis.Event;
+}
 
 ensureLiveKitRegistered();
 SplashScreen.preventAutoHideAsync();
@@ -165,58 +186,60 @@ function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
       <Provider store={store}>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
-            <AppInitializer>
-              <Sprint2Bootstrap />
-              <RealtimeBridge />
-              <IncomingCallOverlay />
-              <GlobalNoticeModal />
-              <ImageViewerProvider>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor },
-                  }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="workspace/[channelId]" />
-                  <Stack.Screen name="call/[roomId]" />
-                  <Stack.Screen name="course/[id]" />
-                  <Stack.Screen name="course/video" />
-                  <Stack.Screen name="quiz/index" />
-                  <Stack.Screen name="quiz/[topicId]" />
-                  <Stack.Screen name="quiz/results" />
-                  <Stack.Screen name="wallet/index" />
-                  <Stack.Screen name="wallet/withdraw" />
-                  <Stack.Screen name="payment/gateway" />
-                  <Stack.Screen name="payment/manual" />
-                  <Stack.Screen name="payment/plans" />
-                  <Stack.Screen name="notes" />
-                  <Stack.Screen name="profile/index" />
-                  <Stack.Screen name="profile/edit" />
-                  <Stack.Screen name="profile/activity" />
-                  <Stack.Screen name="profile/change-password" />
-                  <Stack.Screen name="settings/call-settings" />
-                  <Stack.Screen name="settings/notifications" />
-                  <Stack.Screen name="settings/theme" />
-                  <Stack.Screen name="legal/index" />
-                  <Stack.Screen name="legal/terms" />
-                  <Stack.Screen name="legal/privacy" />
-                  <Stack.Screen name="referral" />
-                  <Stack.Screen name="leaderboard" />
-                  <Stack.Screen name="notices" />
-                  <Stack.Screen name="onboarding" />
-                  <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
-                </Stack>
-              </ImageViewerProvider>
-              <GlobalUploadOverlay />
-              <Toast />
-            </AppInitializer>
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
+        <PersistGate persistor={persistor}>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
+              <AppInitializer>
+                <Sprint2Bootstrap />
+                <RealtimeBridge />
+                <IncomingCallOverlay />
+                <GlobalNoticeModal />
+                <ImageViewerProvider>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor },
+                    }}
+                  >
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="workspace/[channelId]" />
+                    <Stack.Screen name="call/[roomId]" />
+                    <Stack.Screen name="course/[id]" />
+                    <Stack.Screen name="course/video" />
+                    <Stack.Screen name="quiz/index" />
+                    <Stack.Screen name="quiz/[topicId]" />
+                    <Stack.Screen name="quiz/results" />
+                    <Stack.Screen name="wallet/index" />
+                    <Stack.Screen name="wallet/withdraw" />
+                    <Stack.Screen name="payment/gateway" />
+                    <Stack.Screen name="payment/manual" />
+                    <Stack.Screen name="payment/plans" />
+                    <Stack.Screen name="notes" />
+                    <Stack.Screen name="profile/index" />
+                    <Stack.Screen name="profile/edit" />
+                    <Stack.Screen name="profile/activity" />
+                    <Stack.Screen name="profile/change-password" />
+                    <Stack.Screen name="settings/call-settings" />
+                    <Stack.Screen name="settings/notifications" />
+                    <Stack.Screen name="settings/theme" />
+                    <Stack.Screen name="legal/index" />
+                    <Stack.Screen name="legal/terms" />
+                    <Stack.Screen name="legal/privacy" />
+                    <Stack.Screen name="referral" />
+                    <Stack.Screen name="leaderboard" />
+                    <Stack.Screen name="notices" />
+                    <Stack.Screen name="onboarding" />
+                    <Stack.Screen name="suspended" options={{ gestureEnabled: false }} />
+                  </Stack>
+                </ImageViewerProvider>
+                <GlobalUploadOverlay />
+                <Toast />
+              </AppInitializer>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </PersistGate>
       </Provider>
     </ThemeProvider>
   );

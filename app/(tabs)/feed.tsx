@@ -74,6 +74,13 @@ import {
   setCoursesRefreshing,
 } from "@/store/slices/coursesSlice";
 import type { Course } from "@/store/slices/coursesSlice";
+import { setChannels, setChannelsLoading } from "@/store/slices/channelsSlice";
+import { setChannelData } from "@/store/slices/channelSlice";
+import {
+  setWalletData,
+  setWalletLoading,
+  setWalletError,
+ selectIsWalletStale } from "@/store/slices/walletSlice";
 import type { FeedQuestion, ReactionType } from "@/types/question";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -609,6 +616,7 @@ export default function FeedScreen() {
         dispatch(
           setMyQuestions(userId ? normalized.filter((q) => q.askerId === userId) : []),
         );
+        void prefetchBackgroundData();
       } catch (err: unknown) {
         const error = err as {
           code?: string;
@@ -636,6 +644,97 @@ export default function FeedScreen() {
     },
     [dispatch, roleKey, userId],
   );
+
+  // ─── Background prefetch: load channels, courses, and wallet after feed loads ───
+  const prefetchBackgroundData = async () => {
+    if (!userId) return;
+
+    // 1. Prefetch channels + top 10 channel messages (parallel fetch)
+    try {
+      const channelsState = store.getState().channels;
+      const shouldFetchChannels =
+        channelsState.loadedForUserId !== userId ||
+        !channelsState.lastFetchedAt ||
+        Date.now() - channelsState.lastFetchedAt >= 60 * 1000;
+
+      if (shouldFetchChannels) {
+        console.log("[prefetch] Fetching channels...");
+        dispatch(setChannelsLoading(true));
+        const res = await api.get("/channels");
+        const raw = Array.isArray(res.data) ? res.data : [];
+        dispatch(setChannels({ channels: raw, userId }));
+
+        // Prefetch top 10 channels' recent messages in parallel
+        const topChannels = raw.slice(0, 10);
+        if (topChannels.length > 0) {
+          console.log(
+            `[prefetch] Prefetching messages for ${topChannels.length} channels...`,
+          );
+          await Promise.all(
+            topChannels.map(async (ch: any) => {
+              try {
+                const msgRes = await api.get(`/channels/${ch.id}?limit=20`);
+                const { channel: detail, messages } = msgRes.data;
+                if (detail && Array.isArray(messages)) {
+                  dispatch(setChannelData({ channelId: ch.id, detail, messages }));
+                }
+              } catch (err: any) {
+                console.warn(
+                  `[prefetch] Failed to prefetch messages for channel ${ch.id}:`,
+                  err?.message,
+                );
+              }
+            }),
+          );
+          console.log("[prefetch] Channel messages prefetch complete");
+        }
+      }
+    } catch (err: any) {
+      console.warn("[prefetch] Failed to prefetch channels:", err?.message);
+      dispatch(setChannelsLoading(false));
+    }
+
+    // 2. Prefetch courses (10 min cache, so only refetches occasionally)
+    try {
+      const coursesState = store.getState().courses;
+      if (!coursesState.isLoading && selectIsCoursesStale(coursesState.lastFetchedAt)) {
+        console.log("[prefetch] Fetching courses...");
+        dispatch(setCoursesLoading(true));
+        try {
+          const res = await api.get("/courses");
+          const courses = Array.isArray(res.data?.courses)
+            ? res.data.courses
+            : Array.isArray(res.data)
+              ? res.data
+              : [];
+          dispatch(setCourses(courses));
+        } catch (err: any) {
+          console.warn("[prefetch] Failed to fetch courses:", err?.message);
+          dispatch(setCoursesError("Unable to load courses."));
+        }
+      }
+    } catch (err: any) {
+      console.warn("[prefetch] Failed to prefetch courses:", err?.message);
+    }
+
+    // 3. Prefetch wallet data
+    try {
+      const walletState = store.getState().wallet;
+      if (!walletState.isLoading && selectIsWalletStale(walletState.lastFetchedAt)) {
+        console.log("[prefetch] Fetching wallet...");
+        dispatch(setWalletLoading(true));
+        try {
+          const res = await api.get("/wallet", { params: { limit: 50, skip: 0 } });
+          dispatch(setWalletData(res.data));
+        } catch (err: any) {
+          console.warn("[prefetch] Failed to fetch wallet:", err?.message);
+          dispatch(setWalletError(err?.response?.data?.error ?? "Failed to load wallet"));
+        }
+      }
+    } catch (err: any) {
+      console.warn("[prefetch] Failed to prefetch wallet:", err?.message);
+    }
+  };
 
   const loadMore = useCallback(async () => {
     const currentFeedState = store.getState().feed;

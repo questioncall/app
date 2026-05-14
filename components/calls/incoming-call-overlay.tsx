@@ -14,7 +14,12 @@ import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { clearIncomingCall } from "@/store/slices/incomingCallSlice";
 import { api } from "@/lib/api";
-import { displayIncomingCall, endCallKeepCall } from "@/lib/callkeep-setup";
+import {
+  displayIncomingCall,
+  reportCallConnected,
+  preAcceptedCallRef,
+  overlayActiveRef,
+} from "@/lib/callkeep-setup";
 
 const RING_PATTERN = [0, 400, 200, 400, 200, 400];
 const AUTO_DISMISS_MS = 45_000;
@@ -41,6 +46,9 @@ export function IncomingCallOverlay() {
 
   useEffect(() => {
     if (!call) return;
+
+    // Signal to CallKeep answerCall handler: don't navigate, overlay handles it
+    overlayActiveRef.current = true;
 
     // Show native call UI (lock screen / background)
     displayIncomingCall(call.callSessionId, call.callerName, call.mode === "VIDEO");
@@ -70,6 +78,7 @@ export function IncomingCallOverlay() {
     }, AUTO_DISMISS_MS);
 
     return () => {
+      overlayActiveRef.current = false;
       pulse.stop();
       stopRing();
     };
@@ -78,11 +87,39 @@ export function IncomingCallOverlay() {
   const handleAccept = async () => {
     if (!call) return;
     stopRing();
-    endCallKeepCall(call.callSessionId);
+    // Accept the call API directly so the call screen can skip RINGING
+    // and jump straight to connecting to LiveKit.
+    try {
+      const res = await api.post(`/calls/${call.callSessionId}/accept`);
+      const data = res.data as any;
+      if (data?.token && data?.serverUrl) {
+        preAcceptedCallRef.current = {
+          token: data.token,
+          serverUrl: data.serverUrl,
+          channelId: data.channelId,
+          timerDeadline: data.timerDeadline,
+          timeExtensionCount: data.timeExtensionCount ?? 0,
+          mode: call.mode,
+          callerId: call.callerId,
+        };
+      }
+    } catch (err) {
+      const status = (err as any)?.response?.status;
+      if (status === 409) {
+        // Call was already accepted (e.g. by CallKeep answer event or call screen
+        // auto-accept). Don't navigate — the call screen is already handling it.
+        console.warn(
+          "[overlay] Pre-accept 409: call already accepted, skipping navigation",
+        );
+        reportCallConnected(call.callSessionId);
+        dispatch(clearIncomingCall());
+        return;
+      }
+      // Other errors — navigate to call screen for fallback flow
+      console.warn("[overlay] Pre-accept failed, fallback to normal flow:", err);
+    }
+    reportCallConnected(call.callSessionId);
     dispatch(clearIncomingCall());
-    // Navigate to the call screen — it will handle the accept API call
-    // itself, which lets it capture the token from the response (OPT-6)
-    // and avoid a redundant GET /token round-trip.
     router.push(`/call/${call.callSessionId}` as any);
   };
 

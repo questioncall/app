@@ -114,7 +114,7 @@ function TabIcon({
 export default function TabsLayout() {
   const userRole = useAppSelector((s) => s.user.data?.role);
   const totalUnread = useAppSelector((s) =>
-    s.channels.list.reduce((sum, ch) => sum + (ch.unreadCount ?? 0), 0),
+    s.channels.list.reduce((count, ch) => count + (ch.unreadCount > 0 ? 1 : 0), 0),
   );
   const insets = useSafeAreaInsets();
   const { cardColor, borderColor, primaryColor, mutedIconColor, isDark } = useAppTheme();
