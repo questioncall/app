@@ -1,20 +1,36 @@
-import { Tabs } from "expo-router";
+import { Tabs, usePathname, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCallback, useEffect } from "react";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { ComponentProps } from "react";
+
+const TABS = ["feed", "channels", "ask", "courses", "menu"] as const;
+type TabName = (typeof TABS)[number];
+const SWIPE_DIST = 50;
+const SWIPE_VEL = 400;
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
+// ─── Center floating button ────────────────────────────────────
 function CenterTabButton({
   children,
   onPress,
   backgroundColor,
   borderColor,
-}: BottomTabBarButtonProps & {
+}: {
+  children: React.ReactNode;
+  onPress?: () => void;
   backgroundColor: string;
   borderColor: string;
 }) {
@@ -44,6 +60,7 @@ function CenterTabButton({
   );
 }
 
+// ─── Tab icon with optional badge ─────────────────────────────
 function TabIcon({
   name,
   label,
@@ -60,16 +77,8 @@ function TabIcon({
   badge?: number;
 }) {
   const color = focused ? activeColor : inactiveColor;
-
   return (
-    <View
-      style={{
-        alignItems: "center",
-        justifyContent: "center",
-        width: 64,
-        gap: 2,
-      }}
-    >
+    <View style={{ alignItems: "center", justifyContent: "center", width: 64, gap: 2 }}>
       <View>
         <Ionicons name={name} size={21} color={color} />
         {badge && badge > 0 ? (
@@ -111,6 +120,119 @@ function TabIcon({
   );
 }
 
+// ─── Custom tab bar ────────────────────────────────────────────
+// Rendered via the `tabBar` prop so we can apply a counter-transform
+// that keeps it perfectly still while the screen content slides.
+const TAB_META: Record<
+  string,
+  { icon: IoniconName; iconFocused: IoniconName; label: string }
+> = {
+  feed: { icon: "list-outline", iconFocused: "list", label: "Feed" },
+  channels: {
+    icon: "chatbubbles-outline",
+    iconFocused: "chatbubbles",
+    label: "Channels",
+  },
+  courses: { icon: "book-outline", iconFocused: "book", label: "Courses" },
+  menu: { icon: "menu-outline", iconFocused: "menu", label: "Menu" },
+};
+
+function CustomTabBar({
+  state,
+  navigation,
+  primaryColor,
+  cardColor,
+  borderColor,
+  mutedIconColor,
+  isDark,
+  bottomPadding,
+  totalUnread,
+  isTeacher,
+}: BottomTabBarProps & {
+  primaryColor: string;
+  cardColor: string;
+  borderColor: string;
+  mutedIconColor: string;
+  isDark: boolean;
+  bottomPadding: number;
+  totalUnread: number;
+  isTeacher: boolean;
+}) {
+  const inactiveColor = isDark ? "#A8A29E" : mutedIconColor;
+  const centerLabel = isTeacher ? "Actions" : "Ask";
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: cardColor,
+        borderTopColor: borderColor,
+        borderTopWidth: 1,
+        height: 56 + bottomPadding,
+        paddingBottom: bottomPadding,
+        paddingTop: 8,
+      }}
+    >
+      {state.routes.map((route, index) => {
+        const focused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!focused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
+
+        if (route.name === "ask") {
+          return (
+            <View key={route.key} style={{ flex: 1, alignItems: "center" }}>
+              <CenterTabButton
+                onPress={onPress}
+                backgroundColor={primaryColor}
+                borderColor={borderColor}
+              >
+                <View style={{ alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="add" size={27} color="#FFFFFF" />
+                  <Text style={{ fontSize: 9, fontWeight: "600", color: "#FFFFFF" }}>
+                    {centerLabel}
+                  </Text>
+                </View>
+              </CenterTabButton>
+            </View>
+          );
+        }
+
+        const meta = TAB_META[route.name];
+        if (!meta) return null;
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            onPress={onPress}
+            activeOpacity={0.7}
+            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+          >
+            <TabIcon
+              name={focused ? meta.iconFocused : meta.icon}
+              label={meta.label}
+              focused={focused}
+              activeColor={primaryColor}
+              inactiveColor={inactiveColor}
+              badge={route.name === "channels" ? totalUnread : undefined}
+            />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+// ─── Tabs layout ───────────────────────────────────────────────
 export default function TabsLayout() {
   const userRole = useAppSelector((s) => s.user.data?.role);
   const totalUnread = useAppSelector((s) =>
@@ -119,102 +241,102 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { cardColor, borderColor, primaryColor, mutedIconColor, isDark } = useAppTheme();
   const isTeacher = userRole === "TEACHER";
-  const centerLabel = isTeacher ? "Actions" : "Ask";
   const bottomPadding = Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 10);
-  const inactiveColor = isDark ? "#A8A29E" : mutedIconColor;
+
+  // ─── Swipe gesture ─────────────────────────────────────────
+  const pathname = usePathname();
+  const segments = pathname.split("/").filter(Boolean);
+  const currentTab = segments[segments.length - 1] as TabName;
+  const tabIdx = TABS.indexOf(currentTab);
+
+  const currentIdx = useSharedValue(tabIdx);
+  useEffect(() => {
+    currentIdx.value = tabIdx;
+  }, [currentIdx, tabIdx]);
+
+  const translateX = useSharedValue(0);
+  // Captures translationX at the moment the gesture activates so the
+  // visual starts from 0 (no jump after the activeOffsetX dead zone).
+  const startOffset = useSharedValue(0);
+
+  const goToTab = useCallback((index: number) => {
+    router.navigate(`/(tabs)/${TABS[index]}` as any);
+  }, []);
+
+  const swipeGesture = Gesture.Pan()
+    // Wide enough to ignore diagonal scroll jitter, tight enough to feel instant.
+    .activeOffsetX([-12, 12])
+    // Fail fast on vertical so FlatList scrolls never get hijacked.
+    .failOffsetY([-10, 10])
+    .onStart((e) => {
+      // Capture the translation at activation so the visual starts from exactly 0
+      // (eliminates the snap-jump caused by the activeOffsetX dead zone).
+      startOffset.value = e.translationX;
+    })
+    .onUpdate((e) => {
+      translateX.value = (e.translationX - startOffset.value) * 0.15;
+    })
+    .onEnd((e) => {
+      "worklet";
+      const ci = currentIdx.value;
+      const triggered =
+        ci >= 0 &&
+        (Math.abs(e.translationX) > SWIPE_DIST || Math.abs(e.velocityX) > SWIPE_VEL);
+      const goingNext = e.translationX < 0 && ci < TABS.length - 1;
+      const goingPrev = e.translationX > 0 && ci > 0;
+
+      if (triggered && (goingNext || goingPrev)) {
+        // Snap to 0 instantly before navigation so the incoming screen
+        // never inherits a non-zero translateX (prevents post-swipe shake).
+        translateX.value = 0;
+        runOnJS(goToTab)(goingNext ? ci + 1 : ci - 1);
+      } else {
+        translateX.value = withSpring(0, { damping: 20, stiffness: 300 });
+      }
+    });
+
+  // Screen content slides; counter-transform keeps the tab bar locked in place.
+  const swipeStyle = useAnimatedStyle(() => ({
+    flex: 1,
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const counterStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -translateX.value }],
+  }));
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          backgroundColor: cardColor,
-          borderTopColor: borderColor,
-          borderTopWidth: 1,
-          height: 56 + bottomPadding,
-          paddingBottom: bottomPadding,
-          paddingTop: 8,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="feed"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              name={focused ? "list" : "list-outline"}
-              label="Feed"
-              focused={focused}
-              activeColor={primaryColor}
-              inactiveColor={inactiveColor}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="channels"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              name={focused ? "chatbubbles" : "chatbubbles-outline"}
-              label="Channels"
-              focused={focused}
-              activeColor={primaryColor}
-              inactiveColor={inactiveColor}
-              badge={totalUnread}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="ask"
-        options={{
-          tabBarButton: (props) => (
-            <CenterTabButton
-              {...props}
-              backgroundColor={primaryColor}
-              borderColor={borderColor}
-            />
-          ),
-          tabBarIcon: () => (
-            <View className="items-center justify-center">
-              <Ionicons name="add" size={27} color="#FFFFFF" />
-              <Text className="text-[9px] font-semibold text-white">{centerLabel}</Text>
-            </View>
-          ),
-          tabBarLabel: centerLabel,
-        }}
-      />
-      <Tabs.Screen
-        name="courses"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              name={focused ? "book" : "book-outline"}
-              label="Courses"
-              focused={focused}
-              activeColor={primaryColor}
-              inactiveColor={inactiveColor}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="menu"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              name={focused ? "menu" : "menu-outline"}
-              label="Menu"
-              focused={focused}
-              activeColor={primaryColor}
-              inactiveColor={inactiveColor}
-            />
-          ),
-        }}
-      />
-    </Tabs>
+    <GestureDetector gesture={swipeGesture}>
+      <Animated.View style={swipeStyle}>
+        <Tabs
+          tabBar={(props) => (
+            <Animated.View style={counterStyle}>
+              <CustomTabBar
+                {...props}
+                primaryColor={primaryColor}
+                cardColor={cardColor}
+                borderColor={borderColor}
+                mutedIconColor={mutedIconColor}
+                isDark={isDark}
+                bottomPadding={bottomPadding}
+                totalUnread={totalUnread}
+                isTeacher={isTeacher}
+              />
+            </Animated.View>
+          )}
+          screenOptions={{
+            headerShown: false,
+            tabBarShowLabel: false,
+            tabBarHideOnKeyboard: true,
+          }}
+        >
+          <Tabs.Screen name="feed" />
+          <Tabs.Screen name="channels" />
+          <Tabs.Screen name="ask" />
+          <Tabs.Screen name="courses" />
+          <Tabs.Screen name="menu" />
+        </Tabs>
+      </Animated.View>
+    </GestureDetector>
   );
 }

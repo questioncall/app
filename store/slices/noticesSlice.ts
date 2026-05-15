@@ -13,7 +13,7 @@ export interface AppNotice {
   createdAt?: string;
 }
 
-interface NoticesState {
+export interface NoticesState {
   list: AppNotice[];
   activeNoticeId: string | null;
   isLoading: boolean;

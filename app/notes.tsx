@@ -17,24 +17,17 @@ import * as Linking from "expo-linking";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { startMobileUpload } from "@/lib/upload-manager";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import {
+  setNotes as setNotesAction,
+  prependNote,
+  updateNote,
+  selectIsNotesStale,
+  type Note,
+  type NoteFileType,
+} from "@/store/slices/notesSlice";
 
-type FileType = "PDF" | "DOCX" | "PPT" | "Image";
-
-interface Note {
-  id: string;
-  title: string;
-  subject: string;
-  grade: string;
-  description: string;
-  fileType: FileType;
-  fileUrl: string | null;
-  uploaderName: string;
-  uploaderUsername: string | null;
-  uploaderImage: string | null;
-  isOwner?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+type FileType = NoteFileType;
 
 const FILE_TYPE_CONFIG: Record<FileType, { color: string; icon: string }> = {
   PDF: { color: "#EF4444", icon: "document-text" },
@@ -487,10 +480,11 @@ function UploadModal({
 
 export default function NotesScreen() {
   const { statusBarStyle, backgroundColor, primaryColor, borderColor } = useAppTheme();
-  const [notes, setNotes] = useState<Note[]>([]);
+  const dispatch = useAppDispatch();
+  const { list: notes, lastFetchedAt } = useAppSelector((s) => s.notes);
   const [uploadVisible, setUploadVisible] = useState(false);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -503,26 +497,33 @@ export default function NotesScreen() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const { mutedIconColor, cardColor } = useAppTheme();
 
-  const fetchNotes = useCallback(async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    try {
-      const res = await api.get("/notes?limit=30");
-      setNotes(res.data as Note[]);
-    } catch (err) {
-      console.error("[Notes] Failed to fetch:", err);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
+  const fetchNotes = useCallback(
+    async (force = false) => {
+      const stale = selectIsNotesStale(lastFetchedAt);
+      if (!force && !stale && notes.length > 0) return;
+      // Show spinner only on initial blank load; background-refresh otherwise
+      if (notes.length === 0) setIsLoading(true);
+      try {
+        const res = await api.get("/notes?limit=30");
+        dispatch(setNotesAction(res.data as Note[]));
+      } catch (err) {
+        console.error("[Notes] Failed to fetch:", err);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [dispatch, lastFetchedAt, notes.length],
+  );
 
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    void fetchNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    fetchNotes(true);
+    void fetchNotes(true);
   }, [fetchNotes]);
 
   const filtered = search.trim()
@@ -570,8 +571,7 @@ export default function NotesScreen() {
               fileType: data.fileType,
               fileUrl,
             });
-            const newNote = res.data as Note;
-            setNotes((prev) => [newNote, ...prev]);
+            dispatch(prependNote(res.data as Note));
           } catch (err) {
             console.error("[Notes] Failed to create note after upload:", err);
           }
@@ -591,8 +591,7 @@ export default function NotesScreen() {
           fileType: data.fileType,
           fileUrl: null,
         });
-        const newNote = res.data as Note;
-        setNotes((prev) => [newNote, ...prev]);
+        dispatch(prependNote(res.data as Note));
       } catch (err) {
         console.error("[Notes] Failed to create note:", err);
       }
@@ -621,7 +620,7 @@ export default function NotesScreen() {
         fileType: editFileType,
       });
       const updated = res.data as Note;
-      setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
+      dispatch(updateNote(updated));
       setSelectedNote(updated);
       setIsEditingNote(false);
     } catch (err) {

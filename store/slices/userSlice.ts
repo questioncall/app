@@ -43,6 +43,8 @@ interface UserState {
   error: string | null;
 }
 
+export type { UserState };
+
 const initialState: UserState = {
   data: null,
   isLoading: false,

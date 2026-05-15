@@ -25,6 +25,7 @@ import realtimeReducer from "./slices/realtimeSlice";
 import walletReducer from "./slices/walletSlice";
 import quizReducer from "./slices/quizSlice";
 import incomingCallReducer from "./slices/incomingCallSlice";
+import notesReducer from "./slices/notesSlice";
 import { channelCacheLimiter } from "./transforms";
 
 const persistConfig = {
@@ -39,6 +40,7 @@ const persistConfig = {
     "wallet",
     "config",
     "quiz",
+    "notes",
   ],
   transforms: [channelCacheLimiter],
 };
@@ -59,9 +61,10 @@ const rootReducer = combineReducers({
   wallet: walletReducer,
   quiz: quizReducer,
   incomingCall: incomingCallReducer,
+  notes: notesReducer,
 });
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const persistedReducer = persistReducer(persistConfig as any, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,

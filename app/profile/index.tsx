@@ -5,17 +5,50 @@ import { router } from "expo-router";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string | number;
+  onPress?: () => void;
+}) {
   const { primaryColor, primarySoftColor } = useAppTheme();
+  const inner = (
+    <>
+      <Text className="text-xl font-bold" style={{ color: primaryColor }}>
+        {value}
+      </Text>
+      <Text className="mt-0.5 text-xs text-muted-foreground">{label}</Text>
+      {onPress ? (
+        <Ionicons
+          name="chevron-forward"
+          size={11}
+          color={primaryColor}
+          style={{ marginTop: 2, opacity: 0.7 }}
+        />
+      ) : null}
+    </>
+  );
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.75}
+        className="flex-1 items-center rounded-2xl py-4"
+        style={{ backgroundColor: primarySoftColor }}
+      >
+        {inner}
+      </TouchableOpacity>
+    );
+  }
   return (
     <View
       className="flex-1 items-center rounded-2xl py-4"
       style={{ backgroundColor: primarySoftColor }}
     >
-      <Text className="text-xl font-bold" style={{ color: primaryColor }}>
-        {value}
-      </Text>
-      <Text className="mt-0.5 text-xs text-muted-foreground">{label}</Text>
+      {inner}
     </View>
   );
 }
@@ -204,12 +237,59 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <StatCard label="Questions Asked" value={user?.questionsAsked ?? 0} />
+              <StatCard
+                label="Questions Asked"
+                value={user?.questionsAsked ?? 0}
+                onPress={() => router.push("/profile/my-questions" as any)}
+              />
               <StatCard label="Quiz Points" value={user?.points ?? 0} />
               <StatCard label="Remaining" value={Math.max(0, questionsLeft)} />
             </>
           )}
         </View>
+
+        {/* Teacher: posted assets */}
+        {isTeacher && (
+          <View
+            className="mt-5 rounded-3xl border p-5"
+            style={{ backgroundColor: cardColor, borderColor }}
+          >
+            <Text className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              My Content
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push("/studio" as any)}
+              activeOpacity={0.8}
+              className="flex-row items-center py-3"
+            >
+              <View
+                className="mr-3 h-8 w-8 items-center justify-center rounded-xl"
+                style={{ backgroundColor: `${primaryColor}15` }}
+              >
+                <Ionicons name="book-outline" size={15} color={primaryColor} />
+              </View>
+              <Text className="flex-1 text-sm font-medium text-foreground">
+                My Courses
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={primaryColor} />
+            </TouchableOpacity>
+            <View className="h-px bg-border" />
+            <TouchableOpacity
+              onPress={() => router.push("/profile/my-notes" as any)}
+              activeOpacity={0.8}
+              className="flex-row items-center py-3"
+            >
+              <View
+                className="mr-3 h-8 w-8 items-center justify-center rounded-xl"
+                style={{ backgroundColor: `${primaryColor}15` }}
+              >
+                <Ionicons name="document-text-outline" size={15} color={primaryColor} />
+              </View>
+              <Text className="flex-1 text-sm font-medium text-foreground">My Notes</Text>
+              <Ionicons name="chevron-forward" size={16} color={primaryColor} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Skills */}
         <View

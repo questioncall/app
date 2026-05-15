@@ -316,7 +316,7 @@ export default function CallScreen() {
         try {
           const { sound } = await Audio.Sound.createAsync(
             require("../../assets/sounds/outgoing_ringtone.mp3"),
-            { isLooping: true, volume: 1.0 },
+            { shouldPlay: true, isLooping: true, volume: 1.0 },
           );
           outgoingRingtoneRef.current = sound;
         } catch (err) {

@@ -72,7 +72,7 @@ const FORMAT_OPTIONS: {
 ];
 
 const MAX_IMAGES = 4;
-const TITLE_MIN = 6;
+const TITLE_MIN_WORDS = 3;
 const TITLE_MAX = 180;
 const BODY_MAX = 5000;
 
@@ -110,6 +110,7 @@ function StudentAskScreen() {
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [isPosting, setIsPosting] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const effectiveLimit = (user?.maxQuestions ?? 0) + (user?.bonusQuestions ?? 0);
   const quotaUsed = user?.questionsAsked ?? 0;
@@ -118,7 +119,8 @@ function StudentAskScreen() {
 
   const titleLen = title.trim().length;
   const bodyLen = body.trim().length;
-  const isTitleValid = titleLen >= TITLE_MIN && titleLen <= TITLE_MAX;
+  const titleWords = title.trim() === "" ? 0 : title.trim().split(/\s+/).length;
+  const isTitleValid = titleWords >= TITLE_MIN_WORDS && titleLen <= TITLE_MAX;
   const canSubmit = isTitleValid && !isPosting && !quotaExhausted;
 
   function toggleFormat(next: SelectableAnswerFormat) {
@@ -225,7 +227,10 @@ function StudentAskScreen() {
     if (!isTitleValid) {
       Toast.show({
         type: "error",
-        text1: `Title must be between ${TITLE_MIN} and ${TITLE_MAX} characters.`,
+        text1:
+          titleWords < TITLE_MIN_WORDS
+            ? `Title must be at least ${TITLE_MIN_WORDS} words.`
+            : `Title is too long (max ${TITLE_MAX} characters).`,
       });
       return;
     }
@@ -367,8 +372,12 @@ function StudentAskScreen() {
           <Field
             label="Question title"
             required
-            counter={`${titleLen}/${TITLE_MAX}`}
-            counterTone={titleLen === 0 ? "muted" : isTitleValid ? "success" : "warn"}
+            counter={
+              titleWords === 0
+                ? `min ${TITLE_MIN_WORDS} words`
+                : `${titleWords} word${titleWords !== 1 ? "s" : ""}`
+            }
+            counterTone={titleWords === 0 ? "muted" : isTitleValid ? "success" : "warn"}
           >
             <TextInput
               value={title}
@@ -476,67 +485,129 @@ function StudentAskScreen() {
             </ScrollView>
           </View>
 
-          {/* Answer format (multi-select, mirrors web) */}
-          <View>
-            <Text className="mb-2 text-[13px] font-semibold text-foreground">
-              Preferred answer format
-            </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {FORMAT_OPTIONS.map((opt) => {
-                const active = selectedFormats.includes(opt.value);
-                return (
-                  <TouchableOpacity
-                    key={opt.value}
-                    onPress={() => toggleFormat(opt.value)}
-                    activeOpacity={0.85}
-                    disabled={quotaExhausted}
-                    className="flex-row items-center gap-1.5 rounded-full border px-3 py-2"
-                    style={{
-                      borderColor: active ? primaryColor : borderColor,
-                      backgroundColor: active ? primarySoftColor : cardColor,
-                    }}
-                  >
-                    <Ionicons
-                      name={opt.icon}
-                      size={14}
-                      color={active ? primaryColor : mutedIconColor}
-                    />
-                    <Text
-                      className="text-[12px] font-semibold"
-                      style={{ color: active ? primaryColor : mutedIconColor }}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+          {/* Advanced Options Accordion */}
+          <TouchableOpacity
+            onPress={() => setAdvancedOpen((v) => !v)}
+            activeOpacity={0.8}
+            className="flex-row items-center justify-between rounded-2xl border px-4 py-3.5"
+            style={{ borderColor, backgroundColor: cardColor }}
+          >
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="options-outline" size={16} color={primaryColor} />
+              <Text className="text-[13px] font-semibold text-foreground">
+                More options
+              </Text>
+              <Text className="text-[11px] text-muted-foreground">
+                Format · Visibility · Subject
+              </Text>
             </View>
-          </View>
+            <Ionicons
+              name={advancedOpen ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={mutedIconColor}
+            />
+          </TouchableOpacity>
 
-          {/* Visibility */}
-          <View>
-            <Text className="mb-2 text-[13px] font-semibold text-foreground">
-              Who can see the answer
-            </Text>
-            <View className="flex-row gap-2">
-              <VisibilityButton
-                label="Public"
-                description="Anyone in the feed"
-                icon="globe-outline"
-                active={visibility === "PUBLIC"}
-                onPress={() => setVisibility("PUBLIC")}
+          {advancedOpen && (
+            <View className="gap-4">
+              {/* Answer format (multi-select) */}
+              <View>
+                <Text className="mb-2 text-[13px] font-semibold text-foreground">
+                  Preferred answer format
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {FORMAT_OPTIONS.map((opt) => {
+                    const active = selectedFormats.includes(opt.value);
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        onPress={() => toggleFormat(opt.value)}
+                        activeOpacity={0.85}
+                        disabled={quotaExhausted}
+                        className="flex-row items-center gap-1.5 rounded-full border px-3 py-2"
+                        style={{
+                          borderColor: active ? primaryColor : borderColor,
+                          backgroundColor: active ? primarySoftColor : cardColor,
+                        }}
+                      >
+                        <Ionicons
+                          name={opt.icon}
+                          size={14}
+                          color={active ? primaryColor : mutedIconColor}
+                        />
+                        <Text
+                          className="text-[12px] font-semibold"
+                          style={{ color: active ? primaryColor : mutedIconColor }}
+                        >
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Visibility */}
+              <View>
+                <Text className="mb-2 text-[13px] font-semibold text-foreground">
+                  Who can see the answer
+                </Text>
+                <View className="flex-row gap-2">
+                  <VisibilityButton
+                    label="Public"
+                    description="Anyone in the feed"
+                    icon="globe-outline"
+                    active={visibility === "PUBLIC"}
+                    onPress={() => setVisibility("PUBLIC")}
+                    primaryColor={primaryColor}
+                    primarySoftColor={primarySoftColor}
+                    borderColor={borderColor}
+                    cardColor={cardColor}
+                    mutedIconColor={mutedIconColor}
+                  />
+                  <VisibilityButton
+                    label="Private"
+                    description="Only you & teacher"
+                    icon="lock-closed-outline"
+                    active={visibility === "PRIVATE"}
+                    onPress={() => setVisibility("PRIVATE")}
+                    primaryColor={primaryColor}
+                    primarySoftColor={primarySoftColor}
+                    borderColor={borderColor}
+                    cardColor={cardColor}
+                    mutedIconColor={mutedIconColor}
+                  />
+                </View>
+              </View>
+
+              {/* Subject / Stream / Level */}
+              <ChipGroup
+                label="Subject (optional)"
+                options={filterOptions.subjects}
+                value={subject}
+                onChange={setSubject}
                 primaryColor={primaryColor}
                 primarySoftColor={primarySoftColor}
                 borderColor={borderColor}
                 cardColor={cardColor}
                 mutedIconColor={mutedIconColor}
               />
-              <VisibilityButton
-                label="Private"
-                description="Only you & teacher"
-                icon="lock-closed-outline"
-                active={visibility === "PRIVATE"}
-                onPress={() => setVisibility("PRIVATE")}
+              <ChipGroup
+                label="Stream"
+                options={filterOptions.streams}
+                value={stream}
+                onChange={setStream}
+                primaryColor={primaryColor}
+                primarySoftColor={primarySoftColor}
+                borderColor={borderColor}
+                cardColor={cardColor}
+                mutedIconColor={mutedIconColor}
+              />
+              <ChipGroup
+                label="Level"
+                options={filterOptions.levels}
+                value={level}
+                onChange={setLevel}
                 primaryColor={primaryColor}
                 primarySoftColor={primarySoftColor}
                 borderColor={borderColor}
@@ -544,42 +615,7 @@ function StudentAskScreen() {
                 mutedIconColor={mutedIconColor}
               />
             </View>
-          </View>
-
-          {/* Subject / Stream / Level */}
-          <ChipGroup
-            label="Subject (optional)"
-            options={filterOptions.subjects}
-            value={subject}
-            onChange={setSubject}
-            primaryColor={primaryColor}
-            primarySoftColor={primarySoftColor}
-            borderColor={borderColor}
-            cardColor={cardColor}
-            mutedIconColor={mutedIconColor}
-          />
-          <ChipGroup
-            label="Stream"
-            options={filterOptions.streams}
-            value={stream}
-            onChange={setStream}
-            primaryColor={primaryColor}
-            primarySoftColor={primarySoftColor}
-            borderColor={borderColor}
-            cardColor={cardColor}
-            mutedIconColor={mutedIconColor}
-          />
-          <ChipGroup
-            label="Level"
-            options={filterOptions.levels}
-            value={level}
-            onChange={setLevel}
-            primaryColor={primaryColor}
-            primarySoftColor={primarySoftColor}
-            borderColor={borderColor}
-            cardColor={cardColor}
-            mutedIconColor={mutedIconColor}
-          />
+          )}
 
           {uploadStatus ? (
             <View

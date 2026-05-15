@@ -17,6 +17,7 @@ import {
   setChannels,
   setChannelsLoading,
   setChannelsRefreshing,
+  setChannelsError,
   selectIsChannelsStale,
 } from "@/store/slices/channelsSlice";
 import type { ChannelListItem } from "@/store/slices/channelsSlice";
@@ -270,7 +271,7 @@ export default function ChannelsScreen() {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
-  const { list, isLoading, isRefreshing, lastFetchedAt, loadedForUserId } =
+  const { list, isLoading, isRefreshing, lastFetchedAt, loadedForUserId, error } =
     useAppSelector((s) => s.channels);
   const {
     statusBarStyle,
@@ -285,11 +286,16 @@ export default function ChannelsScreen() {
   const cacheMatchesUser = loadedForUserId === userId;
   const channels = cacheMatchesUser ? list : [];
   const shouldUseCache = cacheMatchesUser && !selectIsChannelsStale(lastFetchedAt);
+  // True only when we have no data yet (initial blank load)
+  const showInitialSpinner = isLoading && channels.length === 0;
 
   const loadChannels = useCallback(
     async (force = false) => {
       if (!force && (isLoading || shouldUseCache)) return;
-      dispatch(setChannelsLoading(true));
+      // Only show full-screen spinner when there is nothing cached yet
+      if (list.length === 0) {
+        dispatch(setChannelsLoading(true));
+      }
       try {
         const res = await api.get("/channels");
         dispatch(
@@ -303,7 +309,7 @@ export default function ChannelsScreen() {
         dispatch(setChannelsRefreshing(false));
       }
     },
-    [dispatch, isLoading, shouldUseCache, userId],
+    [dispatch, isLoading, shouldUseCache, userId, list.length],
   );
 
   useEffect(() => {
@@ -363,7 +369,10 @@ export default function ChannelsScreen() {
             )}
           </View>
           <TouchableOpacity
-            onPress={() => loadChannels(true)}
+            onPress={() => {
+              dispatch(setChannelsRefreshing(true));
+              void loadChannels(true);
+            }}
             style={{
               width: 36,
               height: 36,
@@ -379,7 +388,7 @@ export default function ChannelsScreen() {
       </View>
 
       {/* ── Content ──────────────────────────────────────── */}
-      {isLoading ? (
+      {showInitialSpinner ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={primaryColor} size="large" />
         </View>

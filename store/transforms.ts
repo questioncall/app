@@ -8,7 +8,7 @@ import { createTransform } from "redux-persist";
  */
 export const channelCacheLimiter = createTransform(
   // inbound: state → persisted storage (cap the cache before saving)
-  (inboundState: Record<string, unknown>, _key: string) => {
+  (inboundState: Record<string, unknown>, _key: string | number) => {
     const state = inboundState as {
       cache?: Record<string, { messages?: unknown[]; fetchedAt?: number }>;
     };
@@ -35,7 +35,7 @@ export const channelCacheLimiter = createTransform(
     return { ...state, cache: limitedCache };
   },
   // outbound: persisted → state (no transformation needed on rehydration)
-  (outboundState: Record<string, unknown>, _key: string) => outboundState,
+  (outboundState: Record<string, unknown>, _key: string | number) => outboundState,
   // Only apply this transform to the "channel" slice
   { whitelist: ["channel"] },
 );

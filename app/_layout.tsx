@@ -20,6 +20,8 @@ import { store, persistor } from "@/store";
 import { setTokens, setAuthLoading, clearAuth } from "@/store/slices/authSlice";
 import { setUser } from "@/store/slices/userSlice";
 import { setConfig } from "@/store/slices/configSlice";
+import { setChannels, selectIsChannelsStale } from "@/store/slices/channelsSlice";
+import { setNotes, selectIsNotesStale } from "@/store/slices/notesSlice";
 import { api, SECURE_STORE_KEYS } from "@/lib/api";
 import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
 import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
@@ -30,6 +32,7 @@ import {
   registerForPushNotifications,
   subscribePushToken,
   addNotificationResponseListener,
+  addNotificationReceivedListener,
   configureNotificationHandler,
 } from "@/lib/push-notifications";
 
@@ -92,6 +95,31 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const backgroundPrefetch = useCallback(async () => {
+    const s = store.getState() as any;
+    const userId = s.user?.data?._id ?? null;
+    // Channels
+    if (selectIsChannelsStale(s.channels?.lastFetchedAt ?? null)) {
+      api
+        .get("/channels")
+        .then((res) => {
+          store.dispatch(
+            setChannels({ channels: Array.isArray(res.data) ? res.data : [], userId }),
+          );
+        })
+        .catch(() => {});
+    }
+    // Notes
+    if (selectIsNotesStale(s.notes?.lastFetchedAt ?? null)) {
+      api
+        .get("/notes?limit=30")
+        .then((res) => {
+          store.dispatch(setNotes(Array.isArray(res.data) ? res.data : []));
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   const fetchCurrentUser = useCallback(async () => {
     try {
       const res = await api.get("/mobile/me");
@@ -117,8 +145,27 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
         configureNotificationHandler();
         await Promise.all([fetchPlatformConfig(), fetchCurrentUser()]);
         registerForPushNotifications().then((token) => {
-          if (token) void subscribePushToken(token);
+          if (token) {
+            console.log("[push] Token obtained, subscribing to server...");
+            subscribePushToken(token).then((ok) => {
+              console.log("[push] Subscribe result:", ok ? "SUCCESS" : "FAILED");
+              if (ok) {
+                api
+                  .get("/push/test")
+                  .then((res) => {
+                    console.log("[push] Test push sent:", JSON.stringify(res.data));
+                  })
+                  .catch((err) => {
+                    console.error("[push] Test push failed:", err?.message ?? err);
+                  });
+              }
+            });
+          } else {
+            console.warn("[push] No token returned from registerForPushNotifications");
+          }
         });
+        // Prefetch channels + notes in background (no spinner)
+        void backgroundPrefetch();
       } else {
         store.dispatch(clearAuth());
       }
@@ -128,7 +175,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       store.dispatch(setAuthLoading(false));
       SplashScreen.hideAsync();
     }
-  }, [fetchCurrentUser, fetchPlatformConfig]);
+  }, [fetchCurrentUser, fetchPlatformConfig, backgroundPrefetch]);
 
   const handleAppStateChange = useCallback(
     (state: AppStateStatus) => {
@@ -148,14 +195,27 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
       // Always check suspension on foreground
       void fetchCurrentUser();
+
+      // Background refresh channels + notes if stale
+      void backgroundPrefetch();
     },
-    [fetchCurrentUser, fetchPlatformConfig],
+    [fetchCurrentUser, fetchPlatformConfig, backgroundPrefetch],
   );
 
   useEffect(() => {
     void initializeApp();
 
     const subscription = AppState.addEventListener("change", handleAppStateChange);
+    const receivedSub = addNotificationReceivedListener((notification) => {
+      console.log(
+        "[push] ★ Notification RECEIVED:",
+        JSON.stringify({
+          title: notification.request.content.title,
+          body: notification.request.content.body,
+          data: notification.request.content.data,
+        }),
+      );
+    });
     const notificationSub = addNotificationResponseListener((response) => {
       const data = response.notification.request.content.data;
       const url = data?.url ?? data?.href;
@@ -173,6 +233,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     });
     return () => {
       subscription.remove();
+      receivedSub.remove();
       notificationSub.remove();
     };
   }, [handleAppStateChange, initializeApp]);

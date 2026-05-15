@@ -1,8 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-let foregroundHandlerConfigured = false;
 let permissionRequested = false;
+let channelCreated = false;
 
 async function ensurePermission(): Promise<boolean> {
   if (!permissionRequested) {
@@ -16,26 +16,15 @@ async function ensurePermission(): Promise<boolean> {
   return status === "granted";
 }
 
-function configureForegroundHandler() {
-  if (foregroundHandlerConfigured) return;
-  foregroundHandlerConfigured = true;
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+async function ensureChannel() {
+  if (channelCreated || Platform.OS !== "android") return;
+  channelCreated = true;
+  await Notifications.setNotificationChannelAsync("answer-deadline", {
+    name: "Answer deadline reminders",
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: "default",
+    vibrationPattern: [0, 250, 250, 250],
   });
-  if (Platform.OS === "android") {
-    void Notifications.setNotificationChannelAsync("answer-deadline", {
-      name: "Answer deadline reminders",
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: "default",
-      vibrationPattern: [0, 250, 250, 250],
-    });
-  }
 }
 
 /**
@@ -49,7 +38,7 @@ export async function scheduleLocalNotification(opts: {
   data?: Record<string, unknown>;
   channelId?: string;
 }): Promise<string | null> {
-  configureForegroundHandler();
+  await ensureChannel();
 
   const granted = await ensurePermission();
   if (!granted) return null;

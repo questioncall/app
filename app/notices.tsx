@@ -11,8 +11,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
-
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import type { RootState } from "@/store";
 import { api } from "@/lib/api";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import {
@@ -34,8 +34,8 @@ function stripHtml(value: string) {
 
 export default function NoticesScreen() {
   const dispatch = useAppDispatch();
-  const user = useAppSelector((s) => s.user.data);
-  const notices = useAppSelector((s) => s.notices);
+  const user = useAppSelector((s: RootState) => s.user.data);
+  const notices = useAppSelector((s: RootState) => s.notices);
   const { statusBarStyle, backgroundColor, iconColor, primaryColor, primarySoftColor } =
     useAppTheme();
   const [dismissingId, setDismissingId] = useState<string | null>(null);
