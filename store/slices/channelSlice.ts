@@ -45,6 +45,7 @@ export interface ChannelDetail {
   updatedAt: string;
   questionTitle: string;
   questionBody: string;
+  questionImages: string[];
   answerFormat: string;
   answerVisibility: string;
   askerName: string;

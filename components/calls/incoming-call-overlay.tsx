@@ -22,6 +22,12 @@ import {
   preAcceptedCallRef,
   overlayActiveRef,
 } from "@/lib/callkeep-setup";
+import {
+  getPusherClient,
+  getUserPusherName,
+  CALL_CANCELLED_EVENT,
+  CALL_MISSED_EVENT,
+} from "@/lib/realtime";
 
 const RING_PATTERN = [0, 400, 200, 400, 200, 400];
 const AUTO_DISMISS_MS = 45_000;
@@ -29,18 +35,34 @@ const AUTO_DISMISS_MS = 45_000;
 export function IncomingCallOverlay() {
   const dispatch = useAppDispatch();
   const call = useAppSelector((s) => s.incomingCall.call);
+  // Need the current user's ID to subscribe to their personal Pusher channel
+  // so we can dismiss the overlay when the caller cancels.
+  const currentUserId = useAppSelector((s) => s.user.data?._id ?? null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ringtoneSoundRef = useRef<Audio.Sound | null>(null);
 
+  // Stop and unload the expo-av ringtone, then release the audio session so
+  // hardware volume buttons go back to controlling the ringer instead of media.
   const stopRingSound = useCallback(async () => {
-    if (ringtoneSoundRef.current) {
-      try {
-        await ringtoneSoundRef.current.stopAsync();
-        await ringtoneSoundRef.current.unloadAsync();
-      } catch {}
+    const s = ringtoneSoundRef.current;
+    if (s) {
       ringtoneSoundRef.current = null;
+      try {
+        await s.stopAsync();
+        await s.unloadAsync();
+      } catch {}
     }
+    // Reset audio session to neutral defaults.  While the ringtone is playing
+    // `staysActiveInBackground: true` keeps the audio engine open, which
+    // makes Android/iOS route volume-button presses to the media stream rather
+    // than the ringer.  Resetting here hands control back to the system.
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: false,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    }).catch(() => {});
   }, []);
 
   const stopRing = useCallback(() => {
@@ -64,23 +86,24 @@ export function IncomingCallOverlay() {
     // Signal to CallKeep answerCall handler: don't navigate, overlay handles it
     overlayActiveRef.current = true;
 
-    // Set audio mode for calls — play through speaker even in silent mode
+    // Show native call UI (for lock-screen / background handling via CallKeep)
+    displayIncomingCall(call.callSessionId, call.callerName, call.mode === "VIDEO");
+
+    // Play ringtone via expo-av so it is audible when the app is in the
+    // foreground (CallKeep's native audio only fires on the lock-screen /
+    // background).  expo-av uses media volume; ringer-stream playback would
+    // require a separate native module which is out-of-scope for now.
     Audio.setAudioModeAsync({
       playsInSilentModeIOS: true,
       staysActiveInBackground: true,
-      shouldDuckAndroid: true,
+      shouldDuckAndroid: false,
       playThroughEarpieceAndroid: false,
     }).catch(() => {});
-
-    // Show native call UI (lock screen / background)
-    displayIncomingCall(call.callSessionId, call.callerName, call.mode === "VIDEO");
-
-    // Play incoming ringtone
     (async () => {
       try {
         const { sound } = await Audio.Sound.createAsync(
           require("../../assets/sounds/incoming_ringtone.mp3"),
-          { shouldPlay: true, isLooping: true },
+          { shouldPlay: true, isLooping: true, volume: 1.0 },
         );
         ringtoneSoundRef.current = sound;
       } catch (err) {
@@ -88,7 +111,7 @@ export function IncomingCallOverlay() {
       }
     })();
 
-    // Vibrate in ring pattern
+    // Vibrate in ring pattern as tactile feedback
     Vibration.vibrate(RING_PATTERN, true);
 
     // Pulse animation on avatar
@@ -112,13 +135,36 @@ export function IncomingCallOverlay() {
       dismiss();
     }, AUTO_DISMISS_MS);
 
+    // Listen for caller cancellation on the callee's personal Pusher channel
+    // so we can dismiss the overlay immediately instead of waiting 45 s.
+    // We bind/unbind only — never unsubscribe — because RealtimeBridge also
+    // holds a subscription to the same user channel.
+    const client = getPusherClient();
+    const handleCancelled = (payload: any) => {
+      if (payload?.callSessionId && payload.callSessionId !== sessionId) return;
+      endCallKeepCall(sessionId);
+      dismiss();
+    };
+    let userChannel: ReturnType<
+      NonNullable<ReturnType<typeof getPusherClient>>["subscribe"]
+    > | null = null;
+    if (client && currentUserId) {
+      userChannel = client.subscribe(getUserPusherName(currentUserId));
+      userChannel.bind(CALL_CANCELLED_EVENT, handleCancelled);
+      userChannel.bind(CALL_MISSED_EVENT, handleCancelled);
+    }
+
     return () => {
       overlayActiveRef.current = false;
       pulse.stop();
-      stopRing();
-      void stopRingSound();
+      stopRing(); // also calls stopRingSound internally
+      // Only unbind — do NOT unsubscribe (RealtimeBridge owns that subscription)
+      if (userChannel) {
+        userChannel.unbind(CALL_CANCELLED_EVENT, handleCancelled);
+        userChannel.unbind(CALL_MISSED_EVENT, handleCancelled);
+      }
     };
-  }, [call, pulseAnim, dismiss, stopRing]);
+  }, [call, pulseAnim, dismiss, stopRing, currentUserId]);
 
   const handleAccept = async () => {
     if (!call) return;

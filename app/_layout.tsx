@@ -149,16 +149,6 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
             console.log("[push] Token obtained, subscribing to server...");
             subscribePushToken(token).then((ok) => {
               console.log("[push] Subscribe result:", ok ? "SUCCESS" : "FAILED");
-              if (ok) {
-                api
-                  .get("/push/test")
-                  .then((res) => {
-                    console.log("[push] Test push sent:", JSON.stringify(res.data));
-                  })
-                  .catch((err) => {
-                    console.error("[push] Test push failed:", err?.message ?? err);
-                  });
-              }
             });
           } else {
             console.warn("[push] No token returned from registerForPushNotifications");
@@ -220,11 +210,9 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       const data = response.notification.request.content.data;
       const url = data?.url ?? data?.href;
       if (url && typeof url === "string") {
-        const isChannelRoute =
-          url.startsWith("/workspace/") ||
-          url.startsWith("/channel/") ||
-          url.startsWith("/call/");
-        if (isChannelRoute) {
+        // Always push so the tab stack stays in history and back works.
+        // Call routes use replace to avoid stacking duplicate call screens.
+        if (url.startsWith("/call/")) {
           router.replace(url as any);
         } else {
           router.push(url as any);

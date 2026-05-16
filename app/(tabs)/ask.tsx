@@ -72,7 +72,7 @@ const FORMAT_OPTIONS: {
 ];
 
 const MAX_IMAGES = 4;
-const TITLE_MIN_WORDS = 3;
+const TITLE_MIN_CHARS = 3;
 const TITLE_MAX = 180;
 const BODY_MAX = 5000;
 
@@ -119,8 +119,7 @@ function StudentAskScreen() {
 
   const titleLen = title.trim().length;
   const bodyLen = body.trim().length;
-  const titleWords = title.trim() === "" ? 0 : title.trim().split(/\s+/).length;
-  const isTitleValid = titleWords >= TITLE_MIN_WORDS && titleLen <= TITLE_MAX;
+  const isTitleValid = titleLen >= TITLE_MIN_CHARS && titleLen <= TITLE_MAX;
   const canSubmit = isTitleValid && !isPosting && !quotaExhausted;
 
   function toggleFormat(next: SelectableAnswerFormat) {
@@ -228,8 +227,8 @@ function StudentAskScreen() {
       Toast.show({
         type: "error",
         text1:
-          titleWords < TITLE_MIN_WORDS
-            ? `Title must be at least ${TITLE_MIN_WORDS} words.`
+          titleLen < TITLE_MIN_CHARS
+            ? `Title must be at least ${TITLE_MIN_CHARS} characters.`
             : `Title is too long (max ${TITLE_MAX} characters).`,
       });
       return;
@@ -372,12 +371,8 @@ function StudentAskScreen() {
           <Field
             label="Question title"
             required
-            counter={
-              titleWords === 0
-                ? `min ${TITLE_MIN_WORDS} words`
-                : `${titleWords} word${titleWords !== 1 ? "s" : ""}`
-            }
-            counterTone={titleWords === 0 ? "muted" : isTitleValid ? "success" : "warn"}
+            counter={`${titleLen}/${TITLE_MAX}`}
+            counterTone={titleLen === 0 ? "muted" : isTitleValid ? "success" : "warn"}
           >
             <TextInput
               value={title}

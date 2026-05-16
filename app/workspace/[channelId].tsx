@@ -124,6 +124,7 @@ export default function WorkspaceScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
+  const [questionBannerExpanded, setQuestionBannerExpanded] = useState(false);
   const [startingCallType, setStartingCallType] = useState<"AUDIO" | "VIDEO" | null>(
     null,
   );
@@ -133,6 +134,10 @@ export default function WorkspaceScreen() {
   // Declared here with null; assigned after fetchChannel useCallback below
   // to avoid Temporal Dead Zone errors (fetchChannel is a const).
   const fetchChannelRef = useRef<(() => Promise<void>) | null>(null);
+  // Set to true while a system permission dialog is in-flight (camera /
+  // microphone). The dialog briefly triggers AppState → active, which would
+  // cause a spurious full DB reload; we skip that refetch while this is set.
+  const suppressForegroundRefetchRef = useRef(false);
 
   const PAGE_SIZE = 30;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -147,6 +152,11 @@ export default function WorkspaceScreen() {
       try {
         const res = await api.get(`/channels/${channelId}`);
         const { channel, messages: msgs } = res.data;
+        // Diagnostic: log questionImages so we can verify the API is returning them.
+        console.warn(
+          `[workspace] channel API questionImages for ${channelId}:`,
+          channel?.questionImages,
+        );
         const serverMessages = (msgs as ChatMessage[]) ?? [];
         const persisted = await getFailedMessages(channelId);
         const failedMessages: ChatMessage[] = persisted.map((p) => ({
@@ -168,10 +178,19 @@ export default function WorkspaceScreen() {
           isSending: false,
           sendFailed: true,
         }));
+        // Normalize the detail so stale cache entries that pre-date the
+        // questionImages field never break the banner (rehydrated entries
+        // from redux-persist may have questionImages === undefined).
+        const normalizedDetail: ChannelDetail = {
+          ...(channel as ChannelDetail),
+          questionImages: Array.isArray(channel?.questionImages)
+            ? channel.questionImages
+            : [],
+        };
         dispatch(
           setChannelData({
             channelId,
-            detail: channel as ChannelDetail,
+            detail: normalizedDetail,
             messages: [...serverMessages, ...failedMessages],
           }),
         );
@@ -195,13 +214,21 @@ export default function WorkspaceScreen() {
     const isFresh =
       cachedRef.current && Date.now() - cachedRef.current.fetchedAt < CACHE_TTL_MS;
     if (isFresh && cachedRef.current) {
-      dispatch(
-        setChannelData({
-          channelId,
-          detail: cachedRef.current.detail,
-          messages: cachedRef.current.messages,
-        }),
-      );
+      const cachedDetail = cachedRef.current.detail;
+      // If this cache entry pre-dates the questionImages field (redux-persist
+      // rehydration of old data), force a fresh fetch instead of serving
+      // stale data that would make the banner show "No images attached."
+      if (!Array.isArray(cachedDetail.questionImages)) {
+        fetchChannelRef.current?.();
+      } else {
+        dispatch(
+          setChannelData({
+            channelId,
+            detail: cachedDetail,
+            messages: cachedRef.current.messages,
+          }),
+        );
+      }
     } else if (fetchChannelRef.current) {
       fetchChannelRef.current();
     }
@@ -351,10 +378,17 @@ export default function WorkspaceScreen() {
     if (!channelId) return;
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
-        console.log(
-          `[workspace] App foregrounded — re-fetching messages for channelId=${channelId}`,
-        );
-        void fetchChannelRef.current!();
+        // Skip if we triggered the inactive→active transition ourselves by
+        // opening a system permission dialog (camera / microphone / gallery).
+        if (suppressForegroundRefetchRef.current) return;
+        // Skip if the cached data is still fresh — avoids a full-screen
+        // spinner and a redundant DB round-trip when the user briefly
+        // minimises the app and immediately returns.
+        const cache = cachedRef.current;
+        if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) return;
+        // Re-fetch silently (force = true skips the loading spinner) so the
+        // UI doesn't flash white while the request is in-flight.
+        void fetchChannelRef.current!(true);
       }
     });
     return () => {
@@ -415,18 +449,94 @@ export default function WorkspaceScreen() {
     }
   };
 
+  // ─── Take photo with camera ────────────────────────────────────
+  const handleOpenCamera = async () => {
+    if (!isActive) return;
+    suppressForegroundRefetchRef.current = true;
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    suppressForegroundRefetchRef.current = false;
+    if (!permission.granted) {
+      Toast.show({ type: "error", text1: "Camera permission required." });
+      return;
+    }
+    suppressForegroundRefetchRef.current = true;
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images", "videos"],
+      quality: 0.85,
+    });
+    suppressForegroundRefetchRef.current = false;
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    const isVideo = asset.type === "video";
+    const localId = `local_cam_${Date.now()}`;
+    const optimistic: ChatMessage = {
+      id: localId,
+      localId,
+      channelId: channelId!,
+      senderId: userId!,
+      senderName: "You",
+      content: "",
+      mediaUrl: asset.uri,
+      mediaType: isVideo ? "VIDEO" : "image",
+      isSystemMessage: false,
+      isOwn: true,
+      isSeen: false,
+      isDelivered: false,
+      isMarkedAsAnswer: false,
+      isDeleted: false,
+      sentAt: new Date().toISOString(),
+      isSending: true,
+    };
+    dispatch(addPendingMessage(optimistic));
+
+    try {
+      const form = new FormData();
+      form.append("file", {
+        uri: asset.uri,
+        name: asset.fileName ?? `cam-${Date.now()}.${isVideo ? "mp4" : "jpg"}`,
+        type: asset.mimeType ?? (isVideo ? "video/mp4" : "image/jpeg"),
+      } as unknown as Blob);
+      const uploadRes = await api.post("/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 60000,
+      });
+      const mediaUrl = uploadRes.data?.secure_url ?? uploadRes.data?.url;
+
+      const res = await api.post(`/channels/${channelId}/messages`, {
+        mediaUrl,
+        mediaType: isVideo ? "VIDEO" : "IMAGE",
+      });
+      dispatch(
+        resolvePendingMessage({
+          localId,
+          message: { ...(res.data as ChatMessage), isOwn: true, isDelivered: true },
+        }),
+      );
+      dequeueMessage(localId).catch(() => {});
+    } catch {
+      dispatch(failPendingMessage(localId));
+      enqueueFailedMessage(optimistic).catch(() => {});
+      Toast.show({ type: "error", text1: "Failed to send photo" });
+    }
+  };
+
   // ─── Send image ────────────────────────────────────────────────
   const handlePickImage = async () => {
     if (!isActive) return;
+    suppressForegroundRefetchRef.current = true;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    suppressForegroundRefetchRef.current = false;
     if (!permission.granted) {
       Toast.show({ type: "error", text1: "Photo library permission required." });
       return;
     }
+    suppressForegroundRefetchRef.current = true;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.85,
     });
+    suppressForegroundRefetchRef.current = false;
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
@@ -613,7 +723,9 @@ export default function WorkspaceScreen() {
   const startVoiceRecording = async () => {
     if (isRecording) return;
     try {
+      suppressForegroundRefetchRef.current = true;
       const { granted } = await Audio.requestPermissionsAsync();
+      suppressForegroundRefetchRef.current = false;
       if (!granted) {
         Toast.show({ type: "error", text1: "Microphone permission required" });
         return;
@@ -989,7 +1101,12 @@ export default function WorkspaceScreen() {
         }}
       >
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+          <TouchableOpacity
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)" as any)
+            }
+            hitSlop={12}
+          >
             <Ionicons name="arrow-back" size={24} color={isDark ? "#fff" : "#111"} />
           </TouchableOpacity>
 
@@ -1132,6 +1249,74 @@ export default function WorkspaceScreen() {
         </View>
       )}
 
+      {/* ── Question context banner ─────────────────────────── */}
+      {/* Collapsed by default — tap to expand and see the question title +
+          the images the student attached when posting the question.           */}
+      {detail.questionTitle ? (
+        <View
+          style={{
+            backgroundColor: isDark ? "#1e293b" : "#f0f9ff",
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? "#334155" : "#bae6fd",
+          }}
+        >
+          {/* Always-visible header row — tap to expand / collapse */}
+          <TouchableOpacity
+            onPress={() => setQuestionBannerExpanded((v) => !v)}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              gap: 8,
+            }}
+          >
+            <Ionicons name="help-circle" size={15} color={primaryColor} />
+            <Text
+              numberOfLines={1}
+              style={{
+                flex: 1,
+                fontSize: 12,
+                fontWeight: "600",
+                color: isDark ? "#e2e8f0" : "#0f172a",
+              }}
+            >
+              {detail.questionTitle}
+            </Text>
+            <Ionicons
+              name={questionBannerExpanded ? "chevron-up" : "chevron-down"}
+              size={14}
+              color={mutedIconColor}
+            />
+          </TouchableOpacity>
+
+          {/* Expanded: only images posted with the question */}
+          {questionBannerExpanded ? (
+            <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
+              {Array.isArray(detail.questionImages) &&
+              detail.questionImages.length > 0 ? (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {detail.questionImages.map((uri, idx) => (
+                    <TouchableOpacity key={idx} onPress={() => openImageViewer(uri)}>
+                      <Image
+                        source={{ uri }}
+                        style={{ width: 80, height: 80, borderRadius: 10 }}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={{ fontSize: 12, color: mutedIconColor }}>
+                  No images attached to this question.
+                </Text>
+              )}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       {/* ── Messages ────────────────────────────────────────── */}
       <FlatList
         ref={flatListRef}
@@ -1238,12 +1423,21 @@ export default function WorkspaceScreen() {
           ) : (
             /* ── Normal input ── */
             <View className="flex-row items-end gap-2">
+              {/* Gallery picker */}
               <TouchableOpacity
                 onPress={handlePickImage}
                 className="mb-1 h-10 w-10 items-center justify-center rounded-full"
                 style={{ backgroundColor: primarySoftColor }}
               >
                 <Ionicons name="image-outline" size={20} color={primaryColor} />
+              </TouchableOpacity>
+              {/* Camera */}
+              <TouchableOpacity
+                onPress={handleOpenCamera}
+                className="mb-1 h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: primarySoftColor }}
+              >
+                <Ionicons name="camera-outline" size={20} color={primaryColor} />
               </TouchableOpacity>
 
               <View

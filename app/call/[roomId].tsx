@@ -77,6 +77,14 @@ export default function CallScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
 
+  // After a call ends the screen should always exit to the tabs, regardless
+  // of how deep the navigation stack is.  Using router.canGoBack() here caused
+  // an infinite-recursion crash (the replace_all that wired up this helper
+  // accidentally replaced the router.back() call inside the definition itself,
+  // turning it into a recursive call).  We now always replace to avoid both
+  // the recursion and stacking up stale call screens in the back stack.
+  const goBack = () => router.replace("/(tabs)" as any);
+
   const [session, setSession] = useState<CallSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
@@ -157,7 +165,10 @@ export default function CallScreen() {
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[call] Failed to fetch session:", msg);
-        Toast.show({ type: "error", text1: "Could not load call session" });
+        Toast.show({
+          type: "error",
+          text1: "Couldn't load this call. Please try again.",
+        });
       })
       .finally(() => setLoading(false));
   }, [roomId]);
@@ -183,7 +194,7 @@ export default function CallScreen() {
       connectionBlockedRef.current = true;
       connectingRef.current = false;
       setConnecting(false);
-      setConnectionError("Connection timed out. Check your network and try again.");
+      setConnectionError("Connection timed out — check your internet and try again.");
       roomRef.current?.disconnect();
       roomRef.current = null;
     }, CONNECTION_TIMEOUT_MS);
@@ -222,7 +233,7 @@ export default function CallScreen() {
         setRemoteVideoTrack(null);
         if (!endingRef.current) {
           endingRef.current = true;
-          router.back();
+          goBack();
         }
       });
       room.on(RoomEvent.LocalTrackPublished, (pub) => {
@@ -267,7 +278,7 @@ export default function CallScreen() {
           console.error("[call] Room connection failed:", errMsg);
           connectionBlockedRef.current = true;
           setConnectionError(
-            (err as any)?.response?.data?.error ?? errMsg ?? "Connection failed",
+            "Couldn't connect to the call. Check your internet and try again.",
           );
         }
         roomRef.current?.disconnect();
@@ -421,7 +432,7 @@ export default function CallScreen() {
         endingRef.current = true;
         Toast.show({ type: "info", text1: "Call ended" });
         roomRef.current?.disconnect();
-        router.back();
+        goBack();
       }
     };
 
@@ -455,11 +466,11 @@ export default function CallScreen() {
       setSession((prev) => (prev ? { ...prev, status: "ACTIVE" } : prev));
       Vibration.cancel();
     } catch (err: unknown) {
-      const msg =
-        (err as any)?.response?.data?.error ??
-        (err instanceof Error ? err.message : "Failed to accept");
-      console.error("[call] Accept failed:", msg);
-      Toast.show({ type: "error", text1: msg });
+      console.error(
+        "[call] Accept failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+      Toast.show({ type: "error", text1: "Couldn't accept the call. Please try again." });
     } finally {
       setIsAccepting(false);
     }
@@ -472,13 +483,13 @@ export default function CallScreen() {
     try {
       await api.post(`/calls/${session.callSessionId}/reject`);
       Vibration.cancel();
-      router.back();
+      goBack();
     } catch (err: unknown) {
       console.error(
         "[call] Decline failed:",
         err instanceof Error ? err.message : String(err),
       );
-      router.back();
+      goBack();
     } finally {
       setIsDeclining(false);
     }
@@ -500,15 +511,23 @@ export default function CallScreen() {
     }
 
     try {
-      await api.post(`/calls/${session.callSessionId}/end`);
+      // If the call is still RINGING and we are the caller, this is a
+      // cancellation — use /cancel so the server broadcasts CALL_CANCELLED_EVENT
+      // to the callee and their overlay dismisses immediately.
+      const isCallerCancelling =
+        session.status === "RINGING" && session.callerId === userId;
+      const endpoint = isCallerCancelling
+        ? `/calls/${session.callSessionId}/cancel`
+        : `/calls/${session.callSessionId}/end`;
+      await api.post(endpoint);
     } catch (err: unknown) {
       console.error(
-        "[call] End call API failed:",
+        "[call] End/cancel call API failed:",
         err instanceof Error ? err.message : String(err),
       );
     } finally {
       setIsEnding(false);
-      router.back();
+      goBack();
     }
   };
 
@@ -579,7 +598,7 @@ export default function CallScreen() {
     } catch (err: any) {
       Toast.show({
         type: "error",
-        text1: err?.response?.data?.error ?? "Failed to extend",
+        text1: "Couldn't extend the call. Please try again.",
       });
     } finally {
       setIsExtending(false);
@@ -600,7 +619,7 @@ export default function CallScreen() {
       <View style={styles.centered}>
         <Ionicons name="call-outline" size={56} color="#ffffff40" />
         <Text style={styles.mutedText}>Call not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
           <Text style={styles.whiteText}>Go back</Text>
         </TouchableOpacity>
       </View>
@@ -713,7 +732,7 @@ export default function CallScreen() {
             >
               <Text style={styles.whiteText}>Retry</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
               <Text style={styles.whiteText}>Leave</Text>
             </TouchableOpacity>
           </View>
@@ -727,7 +746,7 @@ export default function CallScreen() {
           <ActivityIndicator color="#fff" size="large" />
           <Text style={[styles.mutedText, { marginTop: 12 }]}>Connecting to room…</Text>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             style={[styles.backBtn, { marginTop: 32 }]}
           >
             <Text style={[styles.mutedText, { marginTop: 0, fontSize: 14 }]}>Cancel</Text>
@@ -859,7 +878,7 @@ export default function CallScreen() {
             ? "Call declined"
             : "Call ended"}
       </Text>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+      <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
         <Text style={styles.whiteText}>Go back</Text>
       </TouchableOpacity>
     </View>
