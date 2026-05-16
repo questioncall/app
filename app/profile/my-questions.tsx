@@ -1,25 +1,34 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Image,
   Linking,
+  Modal,
   RefreshControl,
   ScrollView,
   StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import { useImageViewer } from "@/components/image-viewer/image-viewer-context";
+import Toast from "react-native-toast-message";
+
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
-import { normalizeFeedQuestions, setMyQuestions } from "@/store/slices/feedSlice";
+import {
+  normalizeFeedQuestions,
+  removeQuestion,
+  setMyQuestions,
+} from "@/store/slices/feedSlice";
 import type { Note } from "@/store/slices/notesSlice";
 import type { FeedQuestion } from "@/types/question";
 
@@ -33,6 +42,111 @@ function formatDate(value: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+// ─── Delete confirmation modal ─────────────────────────────────────────────
+
+function DeleteModal({
+  visible,
+  onCancel,
+  onConfirm,
+  isDeleting,
+}: {
+  visible: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}) {
+  const { primaryColor, cardColor, borderColor } = useAppTheme();
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 120,
+          friction: 8,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.9);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
+
+  return (
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onCancel}>
+      <TouchableWithoutFeedback onPress={onCancel}>
+        <View
+          className="flex-1 items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+        >
+          <TouchableWithoutFeedback>
+            <Animated.View
+              style={{
+                transform: [{ scale: scaleAnim }],
+                opacity: opacityAnim,
+                backgroundColor: cardColor,
+                borderColor,
+                borderWidth: 1,
+                borderRadius: 20,
+                width: 300,
+                padding: 24,
+              }}
+            >
+              {/* Icon */}
+              <View
+                className="mb-4 h-14 w-14 items-center justify-center self-center rounded-full"
+                style={{ backgroundColor: "rgba(239,68,68,0.1)" }}
+              >
+                <Ionicons name="trash-outline" size={28} color="#EF4444" />
+              </View>
+
+              <Text className="mb-1.5 text-center text-[17px] font-bold text-foreground">
+                Delete Question?
+              </Text>
+              <Text className="mb-6 text-center text-sm leading-5 text-muted-foreground">
+                This will permanently remove your question and cannot be undone.
+              </Text>
+
+              {/* Buttons */}
+              <TouchableOpacity
+                onPress={onConfirm}
+                disabled={isDeleting}
+                activeOpacity={0.8}
+                className="mb-2.5 items-center rounded-xl py-3"
+                style={{ backgroundColor: "#EF4444" }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text className="text-sm font-bold text-white">Yes, Delete</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={onCancel}
+                disabled={isDeleting}
+                activeOpacity={0.8}
+                className="items-center rounded-xl py-3"
+                style={{ backgroundColor: borderColor }}
+              >
+                <Text className="text-sm font-semibold text-foreground">Cancel</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
 }
 
 // ─── Question card ─────────────────────────────────────────────────────────
@@ -66,9 +180,11 @@ function StatusBadge({ status }: { status: string }) {
 function QuestionCard({
   item,
   onImagePress,
+  onDelete,
 }: {
   item: FeedQuestion;
   onImagePress: (uri: string) => void;
+  onDelete: () => void;
 }) {
   const { cardColor, borderColor, primaryColor, mutedIconColor } = useAppTheme();
   const answered = item.status === "ACCEPTED" || item.status === "SOLVED";
@@ -206,9 +322,18 @@ function QuestionCard({
               {item.reactionCount}
             </Text>
           </View>
-          <Text className="ml-auto text-[11px] text-muted-foreground">
+          <Text className="text-[11px] text-muted-foreground">
             {formatDate(item.createdAt)}
           </Text>
+          <TouchableOpacity
+            onPress={onDelete}
+            activeOpacity={0.7}
+            hitSlop={8}
+            className="ml-auto h-7 w-7 items-center justify-center rounded-full"
+            style={{ backgroundColor: "rgba(239,68,68,0.1)" }}
+          >
+            <Ionicons name="trash-outline" size={14} color="#EF4444" />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -318,6 +443,10 @@ export default function MyQuestionsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("questions");
   const [search, setSearch] = useState("");
 
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Questions state
   const [isLoadingQ, setIsLoadingQ] = useState(false);
   const [isRefreshingQ, setIsRefreshingQ] = useState(false);
@@ -395,6 +524,22 @@ export default function MyQuestionsScreen() {
       )
     : notes;
 
+  // ── Delete question ──────────────────────────────────────────────────────
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/questions/${deleteTarget}`);
+      dispatch(removeQuestion(deleteTarget));
+    } catch (err) {
+      console.error("[MyQuestions] delete failed:", err);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, dispatch]);
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   const tabs: { key: Tab; label: string; count: number }[] = [
@@ -405,6 +550,13 @@ export default function MyQuestionsScreen() {
   return (
     <View className="flex-1 bg-background">
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+
+      <DeleteModal
+        visible={deleteTarget !== null}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
 
       {/* Header */}
       <View
@@ -507,7 +659,11 @@ export default function MyQuestionsScreen() {
             data={filteredQuestions}
             keyExtractor={(item) => item.id ?? item.createdAt}
             renderItem={({ item }) => (
-              <QuestionCard item={item} onImagePress={openImageViewer} />
+              <QuestionCard
+                item={item}
+                onImagePress={openImageViewer}
+                onDelete={() => setDeleteTarget(item.id ?? (item as any)._id ?? "")}
+              />
             )}
             contentContainerStyle={{
               paddingHorizontal: 16,

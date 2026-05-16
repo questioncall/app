@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated as RNAnimated,
   Easing,
   FlatList,
@@ -23,6 +22,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
@@ -80,7 +80,8 @@ import {
   setWalletData,
   setWalletLoading,
   setWalletError,
- selectIsWalletStale } from "@/store/slices/walletSlice";
+  selectIsWalletStale,
+} from "@/store/slices/walletSlice";
 import type { FeedQuestion, ReactionType } from "@/types/question";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -539,6 +540,10 @@ export default function FeedScreen() {
   const [isSubmittingComment, setIsSubmittingComment] = useState<string | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModalTarget, setDeleteModalTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   // Modal slide-up animation
   const modalSlide = useRef(new RNAnimated.Value(0)).current;
@@ -1020,42 +1025,33 @@ export default function FeedScreen() {
     [api, dispatch, router, scheduleAnswerDeadlineReminder],
   );
 
-  const handleDelete = useCallback(
-    (questionId: string, questionTitle: string) => {
-      Alert.alert(
-        "Delete question",
-        `Are you sure you want to delete "${questionTitle.length > 60 ? questionTitle.slice(0, 60) + "…" : questionTitle}"?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              setDeletingId(questionId);
-              try {
-                await api.delete(`/questions/${questionId}`);
-                dispatch(removeQuestion(questionId));
-                dispatch(
-                  updateUser({
-                    questionsAsked: Math.max(0, (user?.questionsAsked ?? 1) - 1),
-                  }),
-                );
-                Toast.show({ type: "success", text1: "Question deleted." });
-              } catch (err: any) {
-                Toast.show({
-                  type: "error",
-                  text1: err?.response?.data?.error ?? "Failed to delete question",
-                });
-              } finally {
-                setDeletingId(null);
-              }
-            },
-          },
-        ],
+  const handleDelete = useCallback((questionId: string, questionTitle: string) => {
+    setDeleteModalTarget({ id: questionId, title: questionTitle });
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteModalTarget) return;
+    const { id } = deleteModalTarget;
+    setDeletingId(id);
+    try {
+      await api.delete(`/questions/${id}`);
+      dispatch(removeQuestion(id));
+      dispatch(
+        updateUser({
+          questionsAsked: Math.max(0, (user?.questionsAsked ?? 1) - 1),
+        }),
       );
-    },
-    [api, dispatch, removeQuestion, updateUser, user],
-  );
+      Toast.show({ type: "success", text1: "Question deleted." });
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: err?.response?.data?.error ?? "Failed to delete question",
+      });
+    } finally {
+      setDeletingId(null);
+      setDeleteModalTarget(null);
+    }
+  }, [api, deleteModalTarget, dispatch, removeQuestion, updateUser, user]);
 
   const handleSubmitComment = useCallback(
     async (questionId: string) => {
@@ -2037,6 +2033,112 @@ export default function FeedScreen() {
   return (
     <View className="flex-1 bg-background">
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+
+      {/* Delete confirmation modal */}
+      <Modal
+        transparent
+        visible={deleteModalTarget !== null}
+        animationType="none"
+        onRequestClose={() => setDeleteModalTarget(null)}
+      >
+        <TouchableWithoutFeedback
+          onPress={() => !deletingId && setDeleteModalTarget(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.45)",
+            }}
+          >
+            <TouchableWithoutFeedback>
+              <RNAnimated.View
+                style={{
+                  backgroundColor: cardColor,
+                  borderColor,
+                  borderWidth: 1,
+                  borderRadius: 20,
+                  width: 300,
+                  padding: 24,
+                }}
+              >
+                <View
+                  style={{
+                    height: 56,
+                    width: 56,
+                    borderRadius: 28,
+                    backgroundColor: "rgba(239,68,68,0.1)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    alignSelf: "center",
+                    marginBottom: 16,
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={28} color="#EF4444" />
+                </View>
+                <Text
+                  style={{
+                    textAlign: "center",
+                    fontSize: 17,
+                    fontWeight: "700",
+                    color: iconColor,
+                    marginBottom: 6,
+                  }}
+                >
+                  Delete Question?
+                </Text>
+                <Text
+                  style={{
+                    textAlign: "center",
+                    fontSize: 14,
+                    lineHeight: 20,
+                    color: mutedIconColor,
+                    marginBottom: 24,
+                  }}
+                >
+                  This will permanently remove your question and cannot be undone.
+                </Text>
+                <TouchableOpacity
+                  onPress={handleDeleteConfirm}
+                  disabled={!!deletingId}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: "#EF4444",
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  {deletingId ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>
+                      Yes, Delete
+                    </Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setDeleteModalTarget(null)}
+                  disabled={!!deletingId}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: borderColor,
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontWeight: "600", fontSize: 14, color: iconColor }}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </RNAnimated.View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {renderFilterModal()}
 
