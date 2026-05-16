@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "QuestionCall",
+    "name": "Question Call",
     "slug": "qustion-call",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -62,7 +62,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/android-icon-monochrome.png",
-          "color": "#3B82F6",
+          "color": "#10B981",
           "androidMode": "default",
           "sounds": [
             "./assets/sounds/notification_sound.mp3",
