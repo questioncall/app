@@ -2,7 +2,8 @@ import { Platform, Alert, Linking } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { api } from "@/lib/api";
-import { displayIncomingCall } from "@/lib/callkeep-setup";
+import { displayIncomingCall, incomingCallMetadataMap } from "@/lib/callkeep-setup";
+import { showFullScreenCallNotification } from "@/lib/full-screen-call-notification";
 
 const EAS_PROJECT_ID = "86d256ec-943f-49e8-adaf-659400e4edac";
 
@@ -32,11 +33,18 @@ Notifications.setNotificationHandler({
 
     // Incoming call → show native call screen instead of a push banner
     if (data?.callSessionId) {
-      displayIncomingCall(
-        data.callSessionId,
-        data.callerName ?? "Incoming call",
-        data.mode === "VIDEO",
-      );
+      const mode: "AUDIO" | "VIDEO" = data.mode === "VIDEO" ? "VIDEO" : "AUDIO";
+      const callerName = data.callerName ?? "Incoming call";
+      // Cache metadata so the native answer event can recover the mode/callerId
+      // (the answer event only delivers a callUUID).
+      incomingCallMetadataMap.set(data.callSessionId, {
+        mode,
+        callerId: String(data.callerId ?? ""),
+        channelId: String(data.channelId ?? ""),
+        callerName,
+      });
+      displayIncomingCall(data.callSessionId, callerName, mode === "VIDEO");
+      showFullScreenCallNotification(data.callSessionId, callerName, mode === "VIDEO");
       return {
         shouldShowAlert: false,
         shouldPlaySound: false,

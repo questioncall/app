@@ -26,18 +26,17 @@ import { api, SECURE_STORE_KEYS } from "@/lib/api";
 import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
 import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
 import { RealtimeBridge } from "@/components/realtime/realtime-bridge";
-import { IncomingCallOverlay } from "@/components/calls/incoming-call-overlay";
 import { ImageViewerProvider } from "@/components/image-viewer/image-viewer-context";
 import {
   registerForPushNotifications,
   subscribePushToken,
   addNotificationResponseListener,
   addNotificationReceivedListener,
-  configureNotificationHandler,
 } from "@/lib/push-notifications";
 
 import { ensureLiveKitRegistered } from "@/lib/livekit-setup";
 import { setupCallKeep } from "@/lib/callkeep-setup";
+import { setupFullScreenCallListeners } from "@/lib/full-screen-call-notification";
 
 import { GlobalUploadOverlay } from "@/components/sprint2/global-upload-overlay";
 
@@ -58,6 +57,8 @@ if (typeof globalThis.Event === "undefined") {
 }
 
 ensureLiveKitRegistered();
+setupCallKeep();
+setupFullScreenCallListeners();
 SplashScreen.preventAutoHideAsync();
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -71,10 +72,6 @@ if (sentryDsn) {
 }
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    setupCallKeep();
-  }, []);
-
   useEffect(() => {
     SecureStore.getItemAsync("theme_preference")
       .then((pref) => {
@@ -142,9 +139,9 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
       if (accessToken && refreshToken) {
         store.dispatch(setTokens({ accessToken, refreshToken }));
-        configureNotificationHandler();
-        await Promise.all([fetchPlatformConfig(), fetchCurrentUser()]);
-        registerForPushNotifications().then((token) => {
+
+        // Push registration starts immediately — don't wait for other fetches
+        const pushPromise = registerForPushNotifications().then((token) => {
           if (token) {
             console.log("[push] Token obtained, subscribing to server...");
             subscribePushToken(token).then((ok) => {
@@ -154,6 +151,8 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
             console.warn("[push] No token returned from registerForPushNotifications");
           }
         });
+
+        await Promise.all([fetchPlatformConfig(), fetchCurrentUser(), pushPromise]);
         // Prefetch channels + notes in background (no spinner)
         void backgroundPrefetch();
       } else {
@@ -241,7 +240,6 @@ function RootLayout() {
               <AppInitializer>
                 <Sprint2Bootstrap />
                 <RealtimeBridge />
-                <IncomingCallOverlay />
                 <GlobalNoticeModal />
                 <ImageViewerProvider>
                   <Stack

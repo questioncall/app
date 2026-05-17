@@ -1,0 +1,219 @@
+diff --git a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallActivity.java b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallActivity.java
+index 3395f00..f88c697 100644
+--- a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallActivity.java
++++ b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallActivity.java
+@@ -90,19 +90,9 @@ public class IncomingCallActivity extends AppCompatActivity implements DefaultHa
+     if (bundle.containsKey("uuid")) {
+       uuid = bundle.getString("uuid");
+     }
+-    if (bundle.containsKey("mainComponent") && bundle.getString("mainComponent") != null) {
+-      String mainComponent = bundle.getString("mainComponent");
+-      setContentView(R.layout.custom_ingcoming_call_rn);
+-      Fragment reactNativeFragment = new ReactFragment.Builder()
+-        .setComponentName(mainComponent)
+-        .setLaunchOptions(bundle)
+-        .build();
+-
+-      getSupportFragmentManager()
+-        .beginTransaction()
+-        .add(R.id.reactNativeFragment, reactNativeFragment)
+-        .commit();
+-      return;
++    if (false) {
++      // Custom mainComponent branch disabled — incompatible with RN 0.81+ Kotlin interop.
++      // We use the default call UI layout instead.
+     } else {
+       setContentView(R.layout.activity_call_incoming);
+     }
+@@ -166,15 +156,39 @@ public class IncomingCallActivity extends AppCompatActivity implements DefaultHa
+ 
+   private void acceptDialing() {
+     active = false;
++
+     WritableMap params = Arguments.createMap();
+     Bundle bundle = getIntent().getExtras();
+     if (bundle.containsKey("payload")) {
+       params.putString("payload", bundle.getString("payload"));
+     }
+     params.putString("callUUID", uuid);
+-    FullScreenNotificationIncomingCallModule.sendEventToJs(Constants.RNNotificationAnswerAction, params);
++
++    boolean eventSent = false;
++    try {
++      FullScreenNotificationIncomingCallModule.sendEventToJs(Constants.RNNotificationAnswerAction, params);
++      eventSent = true;
++    } catch (Exception e) {
++      // RN bridge not available — app is killed
++    }
+     stopService(new Intent(this, IncomingCallService.class));
+ 
++    if (eventSent) {
++      // App is alive — JS event handles navigation. Just bring app to front.
++      String packageName = getApplicationContext().getPackageName();
++      Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
++      if (launchIntent != null) {
++        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
++        startActivity(launchIntent);
++      }
++    } else {
++      // App is killed — deep link cold-starts directly to call screen
++      Intent deepLink = new Intent(Intent.ACTION_VIEW,
++        android.net.Uri.parse("questioncall://call/" + uuid));
++      deepLink.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
++      startActivity(deepLink);
++    }
++
+     if (Build.VERSION.SDK_INT >= 21) {
+       finishAndRemoveTask();
+     } else {
+diff --git a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallService.java b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallService.java
+index 502fe36..ee4bccc 100644
+--- a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallService.java
++++ b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/IncomingCallService.java
+@@ -17,6 +17,8 @@ import android.graphics.Color;
+ import android.graphics.drawable.Drawable;
+ import android.graphics.drawable.Icon;
+ import android.media.AudioAttributes;
++import android.media.AudioManager;
++import android.media.MediaPlayer;
+ import android.media.RingtoneManager;
+ import android.net.Uri;
+ import android.os.Build;
+@@ -52,6 +54,7 @@ public class IncomingCallService extends Service {
+   // you can perform a click only once time
+   private Bundle bundleData;
+   private static final String TAG = "FullscreenService";
++  private MediaPlayer mediaPlayer;
+ 
+   public int onStartCommand(Intent intent, int flags, int startId) {
+     String action = intent.getAction();
+@@ -90,6 +93,10 @@ public class IncomingCallService extends Service {
+   }
+ 
+   private void handleIncomingCall(Intent intent) {
++    // Stop any existing ringtone from a previous call
++    stopRingtone();
++    cancelTimer();
++
+     NotificationReceiverHandler.updateCanClick(true);
+     registerBroadcastPressEvent();
+ 
+@@ -150,6 +157,39 @@ public class IncomingCallService extends Service {
+     } else {
+       startForeground(1, notification);
+     }
++
++    // Play ringtone via MediaPlayer (looping) — notification channel sound is disabled
++    startRingtone(intent);
++  }
++
++  private void startRingtone(Intent intent) {
++    try {
++      Bundle bundle = intent.getExtras();
++      Uri soundUri = getCustomSoundUri(getApplicationContext(), bundle);
++      mediaPlayer = new MediaPlayer();
++      mediaPlayer.setDataSource(getApplicationContext(), soundUri);
++      mediaPlayer.setAudioAttributes(new AudioAttributes.Builder()
++        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
++        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
++        .build());
++      mediaPlayer.setLooping(true);
++      mediaPlayer.prepare();
++      mediaPlayer.start();
++    } catch (Exception e) {
++      Log.e(TAG, "Failed to start ringtone", e);
++    }
++  }
++
++  private void stopRingtone() {
++    if (mediaPlayer != null) {
++      try {
++        mediaPlayer.stop();
++        mediaPlayer.release();
++      } catch (Exception e) {
++        Log.e(TAG, "Failed to stop ringtone", e);
++      }
++      mediaPlayer = null;
++    }
+   }
+ 
+   private PendingIntent onButtonNotificationClick(int id, String action, String eventName) {
+@@ -212,7 +252,7 @@ public class IncomingCallService extends Service {
+       .setOngoing(true)
+       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+       .setVibrate(new long[]{0, 1000, 800})
+-      .setSound(soundUri)
++      .setSound(null)
+       .setFullScreenIntent(emptyPendingIntent, true);
+   }
+ 
+@@ -245,11 +285,7 @@ public class IncomingCallService extends Service {
+     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+       NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+       NotificationChannel notificationChannel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+-      notificationChannel.setSound(soundUri,
+-        new AudioAttributes.Builder()
+-          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+-          .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+-          .build());
++      notificationChannel.setSound(null, null);
+       notificationChannel.enableLights(true);
+       notificationChannel.enableVibration(true);
+       notificationChannel.setLightColor(Color.WHITE);
+@@ -303,6 +339,7 @@ public class IncomingCallService extends Service {
+   public void onDestroy() {
+     super.onDestroy();
+     Log.d(TAG, "onDestroy service");
++    stopRingtone();
+     cancelTimer();
+     stopForeground(true);
+     unregisterBroadcastPressEvent();
+@@ -341,7 +378,7 @@ public class IncomingCallService extends Service {
+         params.putString("endAction", Constants.ACTION_HIDE_CALL);
+         FullScreenNotificationIncomingCallModule.sendEventToJs(Constants.RNNotificationEndCallAction, params);
+         cancelTimer();
+-        stopForeground(true);
++        stopSelf();
+       }
+     };
+     callhandle.postDelayed(handleTimeout, timeoutNumber);
+@@ -392,7 +429,7 @@ public class IncomingCallService extends Service {
+           params.putString("callUUID", uuid);
+           params.putString("endAction", Constants.ACTION_REJECTED_CALL);
+           FullScreenNotificationIncomingCallModule.sendEventToJs(Constants.RNNotificationEndCallAction, params);
+-          stopForeground(true);
++          stopSelf();
+         }
+       }
+     }
+diff --git a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/NotificationReceiverHandler.java b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/NotificationReceiverHandler.java
+index beb50db..d8cfd87 100644
+--- a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/NotificationReceiverHandler.java
++++ b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/NotificationReceiverHandler.java
+@@ -72,8 +72,25 @@ public class NotificationReceiverHandler {
+     }
+     params.putBoolean("accept", true);
+     params.putString("callUUID", uuid);
+-    FullScreenNotificationIncomingCallModule.sendEventToJs(eventName, params);
++
++    boolean eventSent = false;
++    try {
++      FullScreenNotificationIncomingCallModule.sendEventToJs(eventName, params);
++      eventSent = true;
++    } catch (Exception e) {
++      // RN bridge may not exist on cold start
++    }
+     context.stopService(new Intent(context, IncomingCallService.class));
++
++    if (Constants.RNNotificationAnswerAction.equals(eventName) && uuid != null && !uuid.isEmpty()) {
++      if (!eventSent) {
++        // App killed — deep link cold-starts directly to call screen
++        Intent deepLink = new Intent(Intent.ACTION_VIEW,
++          android.net.Uri.parse("questioncall://call/" + uuid));
++        deepLink.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
++        context.startActivity(deepLink);
++      }
++    }
+   }
+ 
+   @SuppressLint("LongLogTag")

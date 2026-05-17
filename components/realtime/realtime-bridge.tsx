@@ -1,4 +1,4 @@
-import { useEffect , useRef } from "react";
+import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import Toast from "react-native-toast-message";
 
@@ -8,6 +8,8 @@ import {
   NOTIFICATION_EVENT,
   SUBSCRIPTION_UPDATED_EVENT,
   CALL_INCOMING_EVENT,
+  CALL_CANCELLED_EVENT,
+  CALL_MISSED_EVENT,
   getPusherClient,
   getPusherConfig,
   getUserPusherName,
@@ -21,9 +23,17 @@ import {
   setRealtimeStatus,
   setRealtimeUserChannel,
 } from "@/store/slices/realtimeSlice";
-import { setIncomingCall } from "@/store/slices/incomingCallSlice";
 import { updateChannelLastMessage, upsertChannel } from "@/store/slices/channelsSlice";
 import { updateUser } from "@/store/slices/userSlice";
+import {
+  displayIncomingCall,
+  endCallKeepCall,
+  incomingCallMetadataMap,
+} from "@/lib/callkeep-setup";
+import {
+  showFullScreenCallNotification,
+  hideFullScreenCallNotification,
+} from "@/lib/full-screen-call-notification";
 
 type ChannelUpdatedPayload = {
   channelId: string;
@@ -146,16 +156,36 @@ export function RealtimeBridge() {
 
     channel.bind(CALL_INCOMING_EVENT, (payload: any) => {
       if (!payload?.callSessionId) return;
-      dispatch(
-        setIncomingCall({
-          callSessionId: String(payload.callSessionId),
-          channelId: String(payload.channelId ?? ""),
-          callerName: String(payload.callerName ?? "Unknown"),
-          callerImage: payload.callerImage ?? null,
-          callerId: String(payload.callerId ?? ""),
-          mode: payload.mode === "VIDEO" ? "VIDEO" : "AUDIO",
-        }),
-      );
+      const callSessionId = String(payload.callSessionId);
+      const callerName = String(payload.callerName ?? "Unknown");
+      const mode: "AUDIO" | "VIDEO" = payload.mode === "VIDEO" ? "VIDEO" : "AUDIO";
+      // Cache the authoritative metadata BEFORE showing the notification.
+      // The native answer event only carries a callUUID; this is how mode
+      // and callerId survive the round-trip to the call screen.
+      incomingCallMetadataMap.set(callSessionId, {
+        mode,
+        callerId: String(payload.callerId ?? ""),
+        channelId: String(payload.channelId ?? ""),
+        callerName,
+      });
+      displayIncomingCall(callSessionId, callerName, mode === "VIDEO");
+      showFullScreenCallNotification(callSessionId, callerName, mode === "VIDEO");
+    });
+
+    channel.bind(CALL_CANCELLED_EVENT, (payload: any) => {
+      if (!payload?.callSessionId) return;
+      const callSessionId = String(payload.callSessionId);
+      incomingCallMetadataMap.delete(callSessionId);
+      endCallKeepCall(callSessionId);
+      hideFullScreenCallNotification();
+    });
+
+    channel.bind(CALL_MISSED_EVENT, (payload: any) => {
+      if (!payload?.callSessionId) return;
+      const callSessionId = String(payload.callSessionId);
+      incomingCallMetadataMap.delete(callSessionId);
+      endCallKeepCall(callSessionId);
+      hideFullScreenCallNotification();
     });
 
     channel.bind(SUBSCRIPTION_UPDATED_EVENT, (payload: any) => {

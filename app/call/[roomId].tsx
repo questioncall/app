@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Vibration,
   StyleSheet,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -20,6 +21,12 @@ import {
   type VideoTrack as LKVideoTrack,
 } from "livekit-client";
 import { VideoView } from "@livekit/react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 
 import { api } from "@/lib/api";
 import { useAppSelector } from "@/hooks/redux";
@@ -27,7 +34,9 @@ import {
   endCallKeepCall,
   reportCallConnected,
   preAcceptedCallRef,
+  setSpeakerphone,
 } from "@/lib/callkeep-setup";
+import { hideFullScreenCallNotification } from "@/lib/full-screen-call-notification";
 import {
   getPusherClient,
   getUserPusherName,
@@ -83,7 +92,7 @@ export default function CallScreen() {
   // accidentally replaced the router.back() call inside the definition itself,
   // turning it into a recursive call).  We now always replace to avoid both
   // the recursion and stacking up stale call screens in the back stack.
-  const goBack = () => router.replace("/(tabs)" as any);
+  const goBack = () => router.replace("/(tabs)/channels" as any);
 
   const [session, setSession] = useState<CallSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,6 +109,75 @@ export default function CallScreen() {
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<LKVideoTrack | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
+  const [speakerOn, setSpeakerOn] = useState(true);
+  // Whether the local PiP is the fullscreen view (and remote sits in the corner)
+  const [pipSwapped, setPipSwapped] = useState(false);
+
+  // ── PiP drag ──────────────────────────────────────────────────────────────
+  // The PiP is absolutely positioned anchored at bottom-right; the user can
+  // grab it and drag it anywhere on the call surface.  translateX/Y are
+  // offsets from that default position.  Bounds keep the whole PiP on screen.
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const PIP_W = 110;
+  const PIP_H = 150;
+  const PIP_DEFAULT_BOTTOM = Platform.OS === "ios" ? 132 : 116;
+  const PIP_DEFAULT_RIGHT = 16;
+  const PIP_EDGE_PAD = 12;
+  const PIP_TOP_SAFE = Platform.OS === "ios" ? 70 : 50;
+  const pipMinX = -(screenW - PIP_W - PIP_DEFAULT_RIGHT - PIP_EDGE_PAD);
+  const pipMaxX = 0;
+  const pipMinY = -(screenH - PIP_H - PIP_DEFAULT_BOTTOM - PIP_TOP_SAFE);
+  const pipMaxY = 0;
+
+  const pipTranslateX = useSharedValue(0);
+  const pipTranslateY = useSharedValue(0);
+  const pipStartX = useSharedValue(0);
+  const pipStartY = useSharedValue(0);
+
+  const togglePipSwapped = useCallback(() => {
+    setPipSwapped((s) => !s);
+  }, []);
+
+  const pipPanGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .minDistance(6)
+        .onStart(() => {
+          pipStartX.value = pipTranslateX.value;
+          pipStartY.value = pipTranslateY.value;
+        })
+        .onUpdate((e) => {
+          const nx = pipStartX.value + e.translationX;
+          const ny = pipStartY.value + e.translationY;
+          pipTranslateX.value = Math.min(pipMaxX, Math.max(pipMinX, nx));
+          pipTranslateY.value = Math.min(pipMaxY, Math.max(pipMinY, ny));
+        })
+        .onEnd(() => {
+          // Soft spring settle so the corner doesn't feel rubbery on release
+          pipTranslateX.value = withSpring(pipTranslateX.value, {
+            damping: 20,
+            stiffness: 200,
+          });
+          pipTranslateY.value = withSpring(pipTranslateY.value, {
+            damping: 20,
+            stiffness: 200,
+          });
+        }),
+    [
+      pipMaxX,
+      pipMaxY,
+      pipMinX,
+      pipMinY,
+      pipStartX,
+      pipStartY,
+      pipTranslateX,
+      pipTranslateY,
+    ],
+  );
+
+  const pipAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pipTranslateX.value }, { translateY: pipTranslateY.value }],
+  }));
   // Refs to break the infinite-retry loop and enforce single-flight connections
   const connectingRef = useRef(false);
   const connectionBlockedRef = useRef(false);
@@ -136,6 +214,7 @@ export default function CallScreen() {
   // Must be a single effect to prevent the API fetch from overwriting ACTIVE.
   useEffect(() => {
     if (!roomId) return;
+    hideFullScreenCallNotification();
 
     const pre = preAcceptedCallRef.current;
     if (pre) {
@@ -318,11 +397,13 @@ export default function CallScreen() {
 
   // ── Outgoing ringtone: play while RINGING for the caller ───────────────
   useEffect(() => {
-    if (!session || !userId) return;
+    const status = session?.status;
+    const callerId = session?.callerId;
+    if (!status || !userId) return;
 
-    const isCaller = session.callerId === userId;
+    const isCaller = callerId === userId;
 
-    if (session.status === "RINGING" && isCaller) {
+    if (status === "RINGING" && isCaller) {
       const play = async () => {
         try {
           const { sound } = await Audio.Sound.createAsync(
@@ -356,9 +437,9 @@ export default function CallScreen() {
   useEffect(() => {
     return () => {
       stopOutgoingRingtone();
+      if (roomId) endCallKeepCall(roomId);
       const room = roomRef.current;
       if (room) {
-        // Remove all listeners first to prevent Disconnected handler from firing
         room.removeAllListeners();
         if (room.state !== ConnectionState.Disconnected) {
           room.disconnect();
@@ -366,7 +447,7 @@ export default function CallScreen() {
       }
       roomRef.current = null;
     };
-  }, [stopOutgoingRingtone]);
+  }, [stopOutgoingRingtone, roomId]);
 
   // ── Channel timer countdown ───────────────────────────────────────────────
   useEffect(() => {
@@ -567,6 +648,13 @@ export default function CallScreen() {
     }
   };
 
+  const toggleSpeaker = async () => {
+    if (!roomId) return;
+    const next = !speakerOn;
+    await setSpeakerphone(roomId, next);
+    setSpeakerOn(next);
+  };
+
   const facingModeRef = useRef<"user" | "environment">("user");
   const switchCamera = async () => {
     const room = roomRef.current;
@@ -595,7 +683,7 @@ export default function CallScreen() {
       setTimerDeadline(res.data.timerDeadline);
       setTimeExtensionCount(res.data.timeExtensionCount);
       Toast.show({ type: "success", text1: `Added ${EXTENSION_MINUTES} more minutes` });
-    } catch (err: any) {
+    } catch {
       Toast.show({
         type: "error",
         text1: "Couldn't extend the call. Please try again.",
@@ -755,14 +843,28 @@ export default function CallScreen() {
       );
     }
 
+    // PiP / swap layout: by default the remote feed is fullscreen and the
+    // local camera sits in the corner.  Tapping the PiP swaps them so the
+    // local feed fills the screen and the remote feed becomes the overlay.
+    const localAvailable = !!localVideoTrack && camEnabled;
+    const remoteAvailable = !!remoteVideoTrack;
+    const effectiveSwap = pipSwapped && localAvailable;
+    const mainIsLocal = effectiveSwap;
+    const mainTrack = mainIsLocal ? localVideoTrack : remoteVideoTrack;
+    const pipIsLocal = !mainIsLocal;
+    const pipTrackAvailable = pipIsLocal ? localAvailable : remoteAvailable;
+    const pipTrack = pipIsLocal ? localVideoTrack : remoteVideoTrack;
+    const showPip = isVideo && (localAvailable || remoteAvailable);
+
     return (
       <View style={styles.activeContainer}>
-        {/* Remote video (full screen) */}
-        {remoteVideoTrack ? (
+        {/* Main video (fullscreen) */}
+        {mainTrack ? (
           <VideoView
-            videoTrack={remoteVideoTrack}
+            videoTrack={mainTrack}
             style={StyleSheet.absoluteFillObject}
             objectFit="cover"
+            mirror={mainIsLocal}
           />
         ) : (
           <View style={styles.noVideoPlaceholder}>
@@ -773,16 +875,41 @@ export default function CallScreen() {
           </View>
         )}
 
-        {/* Local video (PiP) */}
-        {localVideoTrack && camEnabled && (
-          <View style={styles.pipContainer}>
-            <VideoView
-              videoTrack={localVideoTrack}
-              style={styles.pipVideo}
-              objectFit="cover"
-              mirror={true}
-            />
-          </View>
+        {/* PiP overlay — drag to reposition, tap to swap with main */}
+        {showPip && (
+          <GestureDetector gesture={pipPanGesture}>
+            <Animated.View style={[styles.pipContainer, pipAnimatedStyle]}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={togglePipSwapped}
+                style={styles.pipTouchInner}
+              >
+                {pipTrackAvailable && pipTrack ? (
+                  <VideoView
+                    videoTrack={pipTrack}
+                    style={styles.pipVideo}
+                    objectFit="cover"
+                    mirror={pipIsLocal}
+                  />
+                ) : (
+                  <View style={[styles.pipVideo, styles.pipPlaceholder]}>
+                    <Ionicons name="person" size={32} color="#ffffff40" />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Camera-flip overlay on PiP (only when local camera is the PiP feed) */}
+              {pipIsLocal && camEnabled && (
+                <TouchableOpacity
+                  onPress={switchCamera}
+                  style={styles.pipFlipBtn}
+                  hitSlop={8}
+                >
+                  <Ionicons name="camera-reverse" size={16} color="#fff" />
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+          </GestureDetector>
         )}
 
         {/* Top bar: timer + extend */}
@@ -823,26 +950,32 @@ export default function CallScreen() {
             onPress={toggleMic}
             style={[styles.controlBtn, !micEnabled && styles.controlBtnOff]}
           >
-            <Ionicons name={micEnabled ? "mic" : "mic-off"} size={24} color="#fff" />
+            <Ionicons name={micEnabled ? "mic" : "mic-off"} size={22} color="#fff" />
           </TouchableOpacity>
 
           {isVideo && (
-            <>
-              <TouchableOpacity
-                onPress={toggleCam}
-                style={[styles.controlBtn, !camEnabled && styles.controlBtnOff]}
-              >
-                <Ionicons
-                  name={camEnabled ? "videocam" : "videocam-off"}
-                  size={24}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={switchCamera} style={styles.controlBtn}>
-                <Ionicons name="camera-reverse" size={24} color="#fff" />
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              onPress={toggleCam}
+              style={[styles.controlBtn, !camEnabled && styles.controlBtnOff]}
+            >
+              <Ionicons
+                name={camEnabled ? "videocam" : "videocam-off"}
+                size={22}
+                color="#fff"
+              />
+            </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            onPress={toggleSpeaker}
+            style={[styles.controlBtn, !speakerOn && styles.controlBtnOff]}
+          >
+            <Ionicons
+              name={speakerOn ? "volume-high" : "volume-mute"}
+              size={22}
+              color="#fff"
+            />
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleEnd}
@@ -974,19 +1107,39 @@ const styles = StyleSheet.create({
   },
   pipContainer: {
     position: "absolute",
-    top: Platform.OS === "ios" ? 60 : 48,
+    bottom: Platform.OS === "ios" ? 132 : 116,
     right: 16,
-    width: 120,
-    height: 160,
-    borderRadius: 12,
+    width: 110,
+    height: 150,
+    borderRadius: 14,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "#ffffff30",
+    backgroundColor: "#000",
     zIndex: 10,
     elevation: 10,
   },
+  pipTouchInner: {
+    flex: 1,
+  },
   pipVideo: {
     flex: 1,
+  },
+  pipPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1a1a1a",
+  },
+  pipFlipBtn: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#00000090",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // Top bar
@@ -1039,7 +1192,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
     zIndex: 10,
   },
   controlBtn: {

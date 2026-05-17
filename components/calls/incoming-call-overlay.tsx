@@ -20,7 +20,6 @@ import {
   reportCallConnected,
   endCallKeepCall,
   preAcceptedCallRef,
-  overlayActiveRef,
 } from "@/lib/callkeep-setup";
 import {
   getPusherClient,
@@ -28,6 +27,10 @@ import {
   CALL_CANCELLED_EVENT,
   CALL_MISSED_EVENT,
 } from "@/lib/realtime";
+import {
+  showFullScreenCallNotification,
+  hideFullScreenCallNotification,
+} from "@/lib/full-screen-call-notification";
 
 const RING_PATTERN = [0, 400, 200, 400, 200, 400];
 const AUTO_DISMISS_MS = 45_000;
@@ -83,11 +86,13 @@ export function IncomingCallOverlay() {
   useEffect(() => {
     if (!call) return;
 
-    // Signal to CallKeep answerCall handler: don't navigate, overlay handles it
-    overlayActiveRef.current = true;
-
     // Show native call UI (for lock-screen / background handling via CallKeep)
     displayIncomingCall(call.callSessionId, call.callerName, call.mode === "VIDEO");
+    showFullScreenCallNotification(
+      call.callSessionId,
+      call.callerName,
+      call.mode === "VIDEO",
+    );
 
     // Play ringtone via expo-av so it is audible when the app is in the
     // foreground (CallKeep's native audio only fires on the lock-screen /
@@ -132,6 +137,7 @@ export function IncomingCallOverlay() {
     dismissTimer.current = setTimeout(() => {
       void api.post(`/calls/${sessionId}/missed`).catch(() => {});
       endCallKeepCall(sessionId);
+      hideFullScreenCallNotification();
       dismiss();
     }, AUTO_DISMISS_MS);
 
@@ -143,6 +149,7 @@ export function IncomingCallOverlay() {
     const handleCancelled = (payload: any) => {
       if (payload?.callSessionId && payload.callSessionId !== sessionId) return;
       endCallKeepCall(sessionId);
+      hideFullScreenCallNotification();
       dismiss();
     };
     let userChannel: ReturnType<
@@ -155,7 +162,6 @@ export function IncomingCallOverlay() {
     }
 
     return () => {
-      overlayActiveRef.current = false;
       pulse.stop();
       stopRing(); // also calls stopRingSound internally
       // Only unbind — do NOT unsubscribe (RealtimeBridge owns that subscription)
@@ -169,6 +175,7 @@ export function IncomingCallOverlay() {
   const handleAccept = async () => {
     if (!call) return;
     stopRing();
+    hideFullScreenCallNotification();
     // Accept the call API directly so the call screen can skip RINGING
     // and jump straight to connecting to LiveKit.
     try {
@@ -208,6 +215,7 @@ export function IncomingCallOverlay() {
   const handleDecline = async () => {
     if (!call) return;
     stopRing();
+    hideFullScreenCallNotification();
     endCallKeepCall(call.callSessionId);
     void api.post(`/calls/${call.callSessionId}/reject`).catch(() => {});
     dismiss();
