@@ -18,6 +18,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useAppDispatch } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { AuthNotice } from "@/components/auth/auth-notice";
+import { GOOGLE_OAUTH_REDIRECT_URI } from "@/lib/app-identity";
 import { persistMobileAuthSession } from "@/lib/mobile-auth-session";
 import { api } from "@/lib/api";
 import {
@@ -53,8 +54,7 @@ function GoogleLoginButton({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
-    redirectUri:
-      Platform.OS === "web" ? undefined : "com.siddthecoder.questioncall:/login",
+    redirectUri: GOOGLE_OAUTH_REDIRECT_URI,
     scopes: ["openid", "profile", "email"],
     selectAccount: true,
   });

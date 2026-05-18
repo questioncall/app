@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppDispatch } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { GOOGLE_OAUTH_REDIRECT_URI } from "@/lib/app-identity";
 import { persistMobileAuthSession } from "@/lib/mobile-auth-session";
 import { api } from "@/lib/api";
 import {
@@ -84,8 +85,7 @@ export default function RegisterScreen() {
     webClientId: GOOGLE_WEB_CLIENT_ID,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
-    redirectUri:
-      Platform.OS === "web" ? undefined : "com.siddthecoder.questioncall:/login",
+    redirectUri: GOOGLE_OAUTH_REDIRECT_URI,
     scopes: ["openid", "profile", "email"],
     selectAccount: true,
   });

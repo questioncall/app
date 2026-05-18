@@ -5,12 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": ["questioncall", "com.siddthecoder.qustioncall"],
+    "scheme": ["questioncall", "com.siddthecoder.questioncall"],
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.siddthecoder.qustioncall",
+      "bundleIdentifier": "com.siddthecoder.questioncall",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "QuestionCall needs camera access for video calls.",
