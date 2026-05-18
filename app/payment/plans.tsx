@@ -14,6 +14,7 @@ import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
 import { api } from "@/lib/api";
+import { PlanBadge } from "@/components/PlanBadge";
 
 interface SubscriptionInfo {
   subscriptionStatus: string;
@@ -113,14 +114,7 @@ export default function PlansScreen() {
                 <Text className="text-sm font-semibold text-foreground">
                   Current Plan
                 </Text>
-                <View
-                  className="rounded-full px-2.5 py-0.5"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  <Text className="text-xs font-bold text-white">
-                    {currentPlan.toUpperCase()}
-                  </Text>
-                </View>
+                <PlanBadge slug={currentPlan} size="md" />
               </View>
               <Text className="mt-2 text-xs text-muted-foreground">
                 Questions: {subInfo.questionsAsked}/{subInfo.maxQuestions}
@@ -176,7 +170,7 @@ export default function PlansScreen() {
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2">
                         <Text className="text-lg font-bold text-foreground">
-                          {plan.name}
+                          {plan.name.toUpperCase()}
                         </Text>
                         {isCurrent ? (
                           <View
@@ -228,7 +222,9 @@ export default function PlansScreen() {
                       disabled={isPending}
                     >
                       <Text className="font-semibold text-white">
-                        {isPending ? "Payment Pending..." : `Upgrade to ${plan.name}`}
+                        {isPending
+                          ? "Payment Pending..."
+                          : `Upgrade to ${plan.name.toUpperCase()}`}
                       </Text>
                     </TouchableOpacity>
                   ) : null}

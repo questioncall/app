@@ -23,6 +23,7 @@ import { SECURE_STORE_KEYS } from "@/lib/api";
 import { resetPusherClient } from "@/lib/realtime";
 import { unsubscribePushToken, getCurrentPushToken } from "@/lib/push-notifications";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { PlanBadge } from "@/components/PlanBadge";
 import type { ComponentProps } from "react";
 
 type IoniconName = ComponentProps<typeof Ionicons>["name"];
@@ -211,9 +212,7 @@ export default function MenuScreen() {
                       {user?.role ?? "—"}
                     </Text>
                   </View>
-                  <Text className="text-xs text-muted-foreground">
-                    {user?.planSlug ?? "free"}
-                  </Text>
+                  <PlanBadge slug={user?.planSlug ?? "free"} />
                 </View>
               </View>
               <TouchableOpacity
@@ -378,7 +377,7 @@ export default function MenuScreen() {
               <MenuItem
                 icon="diamond-outline"
                 label="Subscription Plans"
-                subtitle={`Current: ${user?.planSlug ?? "Free"}`}
+                subtitle={`Current: ${(user?.planSlug ?? "free").toUpperCase()}`}
                 onPress={() => router.push("/payment/plans" as any)}
               />
               <Divider />

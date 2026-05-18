@@ -4,6 +4,7 @@ import { router } from "expo-router";
 
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { PlanBadge } from "@/components/PlanBadge";
 
 function StatCard({
   label,
@@ -193,13 +194,7 @@ export default function ProfileScreen() {
                 {user?.role ?? "USER"}
               </Text>
             </View>
-            {user?.planSlug && user.planSlug !== "free" ? (
-              <View className="rounded-full bg-amber-100 px-3 py-1 dark:bg-amber-900">
-                <Text className="text-xs font-semibold text-amber-700 dark:text-amber-200">
-                  {user.planSlug.toUpperCase()}
-                </Text>
-              </View>
-            ) : null}
+            {user?.planSlug ? <PlanBadge slug={user.planSlug} size="md" /> : null}
             {isTeacher && user?.isMonetized ? (
               <View className="rounded-full bg-emerald-100 px-3 py-1 dark:bg-emerald-900">
                 <Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-200">
@@ -320,7 +315,7 @@ export default function ProfileScreen() {
           <InfoRow
             icon="diamond-outline"
             label="Subscription"
-            value={`${user?.planSlug ?? "Free"} · ${user?.subscriptionStatus ?? "inactive"}`}
+            value={`${(user?.planSlug ?? "free").toUpperCase()} · ${user?.subscriptionStatus ?? "inactive"}`}
           />
           {user?.subscriptionEnd ? (
             <>
