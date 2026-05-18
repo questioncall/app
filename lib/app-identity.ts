@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 
 const expoConfig = Constants.expoConfig;
 
-const FALLBACK_PACKAGE = "com.siddthecoder.questioncall";
+const FALLBACK_PACKAGE = "com.questioncall.app";
 
 export const APP_PACKAGE =
   (Platform.OS === "ios"
