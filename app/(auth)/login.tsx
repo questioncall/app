@@ -18,7 +18,12 @@ import * as WebBrowser from "expo-web-browser";
 import { useAppDispatch } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { AuthNotice } from "@/components/auth/auth-notice";
-import { GOOGLE_OAUTH_REDIRECT_URI } from "@/lib/app-identity";
+import {
+  GOOGLE_ANDROID_CLIENT_ID,
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_OAUTH_REDIRECT_URI,
+  GOOGLE_WEB_CLIENT_ID,
+} from "@/lib/app-identity";
 import { persistMobileAuthSession } from "@/lib/mobile-auth-session";
 import { api } from "@/lib/api";
 import {
@@ -28,10 +33,6 @@ import {
 } from "@/lib/server-response";
 
 WebBrowser.maybeCompleteAuthSession();
-
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
 
 type LoginMethod = "email" | "google" | null;
 

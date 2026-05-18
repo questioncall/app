@@ -21,7 +21,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppDispatch } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { GOOGLE_OAUTH_REDIRECT_URI } from "@/lib/app-identity";
+import {
+  GOOGLE_ANDROID_CLIENT_ID,
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_OAUTH_REDIRECT_URI,
+  GOOGLE_WEB_CLIENT_ID,
+} from "@/lib/app-identity";
 import { persistMobileAuthSession } from "@/lib/mobile-auth-session";
 import { api } from "@/lib/api";
 import {
@@ -36,10 +41,6 @@ WebBrowser.maybeCompleteAuthSession();
 type Role = "STUDENT" | "TEACHER";
 type RegisterAction = "send-code" | "verify-code" | "create-account" | "google" | null;
 type SignupStep = "email" | "code" | "password";
-
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
 
 function buildDisplayNameFromEmail(email: string) {
   const localPart = email.split("@")[0] ?? "";

@@ -23,25 +23,6 @@
           "other_platform_oauth_client": []
         }
       }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:116367880758:android:477e4c1465747c8dd61e97",
-        "android_client_info": {
-          "package_name": "com.siddthecoder.questioncall"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCKDWwsplqoXFoz3jQ7JcDYxx3vWeC8VdQ"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
     }
   ],
   "configuration_version": "1"
