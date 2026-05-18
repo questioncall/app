@@ -6,6 +6,7 @@ import {
   preAcceptedCallRef,
   incomingCallMetadataMap,
 } from "@/lib/callkeep-setup";
+import { getPrewarmedCalleeRoom } from "@/lib/call-prewarm";
 
 const CHANNEL_ID = "incoming_calls_fs";
 const CHANNEL_NAME = "Incoming Calls";
@@ -46,6 +47,45 @@ async function acceptCall(callSessionId: string) {
   // mode is authoritative — the server /accept response is a fallback for
   // cases where the user accepts before we cached anything (e.g. cold start).
   const meta = incomingCallMetadataMap.get(callSessionId);
+
+  // If realtime-bridge already pre-warmed a LiveKit room from the Pusher
+  // payload, the call screen will consume it directly. We can hand it the
+  // cached token immediately, skipping the wait on the /accept response.
+  const prewarm = getPrewarmedCalleeRoom(callSessionId);
+  if (prewarm && meta) {
+    preAcceptedCallRef.current = {
+      token: prewarm.token.token,
+      serverUrl: prewarm.token.serverUrl,
+      channelId: prewarm.token.channelId,
+      timerDeadline: prewarm.token.timerDeadline,
+      timeExtensionCount: prewarm.token.timeExtensionCount,
+      mode: meta.mode,
+      callerId: meta.callerId,
+    };
+    incomingCallMetadataMap.delete(callSessionId);
+    reportCallConnected(callSessionId);
+    router.replace(`/call/${callSessionId}` as any);
+    // Fire the accept API in the background — server still needs to flip
+    // status from RINGING to ACTIVE and notify the caller via Pusher. The
+    // user is already looking at the call screen by the time it returns.
+    void (async () => {
+      try {
+        const { api } = await import("@/lib/api");
+        await api.post(`/calls/${callSessionId}/accept`);
+      } catch (err: any) {
+        if (err?.response?.status !== 409) {
+          console.warn(
+            "[acceptCall] background /accept failed:",
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      }
+    })();
+    return;
+  }
+
+  // Fallback: no pre-warm available (e.g. Pusher payload was missing the
+  // token for some reason). Use the original blocking /accept path.
   try {
     const { api } = await import("@/lib/api");
     const res = await api.post(`/calls/${callSessionId}/accept`);

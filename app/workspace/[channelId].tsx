@@ -64,6 +64,11 @@ import {
   dequeueMessage,
   getFailedMessages,
 } from "@/lib/message-retry-queue";
+import {
+  prewarmCallerRoom,
+  clearCallerPrewarm,
+  setPendingCreate,
+} from "@/lib/call-prewarm";
 
 function formatMessageTime(iso: string) {
   const d = new Date(iso);
@@ -880,24 +885,40 @@ export default function WorkspaceScreen() {
   };
 
   // ─── Start call ───────────────────────────────────────────────
-  const handleStartCall = async (mode: "AUDIO" | "VIDEO") => {
+  // Optimistic navigation: jump straight to the call screen with a "pending"
+  // marker the moment the button is pressed. The /calls/create POST happens
+  // in the background and the call screen swaps in the real session id when
+  // it resolves. No button spinner, no white delay.
+  const handleStartCall = (mode: "AUDIO" | "VIDEO") => {
     if (!channelId || startingCallType) return;
     setStartingCallType(mode);
-    try {
-      const res = await api.post("/calls/create", { channelId, mode });
-      const callSessionId = res.data?.callSessionId ?? res.data?.id;
-      if (callSessionId) {
-        router.push(`/call/${callSessionId}` as any);
-      }
-    } catch (err: any) {
-      Toast.show({
-        type: "error",
-        text1: err?.response?.data?.error ?? "Failed to start call",
-      });
-    } finally {
-      setStartingCallType(null);
-    }
+    const createPromise = api
+      .post("/calls/create", { channelId, mode })
+      .finally(() => setStartingCallType(null));
+    setPendingCreate(channelId, mode, createPromise);
+    // Swallow rejection here — the call screen owns user-visible error
+    // reporting via the same promise, but we still want this catch so that
+    // an unhandled rejection doesn't crash the JS thread.
+    createPromise.catch(() => {});
+    router.push(
+      `/call/pending?channelId=${encodeURIComponent(channelId)}&mode=${mode}` as any,
+    );
   };
+
+  // ─── Pre-warm the per-channel LiveKit room ────────────────────
+  // Opens the WS + DTLS handshake to channel_${channelId} while the user is
+  // reading messages. When they press the call button the room connection
+  // is already established — only track publishing remains.
+  useEffect(() => {
+    if (!channelId || !isActive) return;
+    void prewarmCallerRoom(channelId);
+    return () => {
+      // Tear down only this channel's pre-warm; leave any other slot alone
+      // (e.g. when navigating to the call screen which consumes the slot,
+      // this cleanup must be a no-op for the consumed slot).
+      clearCallerPrewarm(channelId);
+    };
+  }, [channelId, isActive]);
 
   // ─── Voice record toggle ──────────────────────────────────────
   const handleVoiceRecord = () => {

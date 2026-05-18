@@ -34,6 +34,7 @@ import {
   showFullScreenCallNotification,
   hideFullScreenCallNotification,
 } from "@/lib/full-screen-call-notification";
+import { prewarmCalleeRoom, clearCalleePrewarm } from "@/lib/call-prewarm";
 
 type ChannelUpdatedPayload = {
   channelId: string;
@@ -159,17 +160,36 @@ export function RealtimeBridge() {
       const callSessionId = String(payload.callSessionId);
       const callerName = String(payload.callerName ?? "Unknown");
       const mode: "AUDIO" | "VIDEO" = payload.mode === "VIDEO" ? "VIDEO" : "AUDIO";
+      const channelId = String(payload.channelId ?? "");
       // Cache the authoritative metadata BEFORE showing the notification.
       // The native answer event only carries a callUUID; this is how mode
       // and callerId survive the round-trip to the call screen.
       incomingCallMetadataMap.set(callSessionId, {
         mode,
         callerId: String(payload.callerId ?? ""),
-        channelId: String(payload.channelId ?? ""),
+        channelId,
         callerName,
       });
       displayIncomingCall(callSessionId, callerName, mode === "VIDEO");
       showFullScreenCallNotification(callSessionId, callerName, mode === "VIDEO");
+
+      // Pre-warm the callee's LiveKit room in the background while the
+      // ringtone plays. The token was minted at create-time on the server
+      // and shipped in this Pusher payload, so we can open the WS + DTLS
+      // handshake before the user has even tapped Accept.
+      if (payload.token && payload.serverUrl && payload.timerDeadline && channelId) {
+        prewarmCalleeRoom({
+          callSessionId,
+          channelId,
+          token: String(payload.token),
+          serverUrl: String(payload.serverUrl),
+          timerDeadline: String(payload.timerDeadline),
+          timeExtensionCount:
+            typeof payload.timeExtensionCount === "number"
+              ? payload.timeExtensionCount
+              : 0,
+        });
+      }
     });
 
     channel.bind(CALL_CANCELLED_EVENT, (payload: any) => {
@@ -178,6 +198,7 @@ export function RealtimeBridge() {
       incomingCallMetadataMap.delete(callSessionId);
       endCallKeepCall(callSessionId);
       hideFullScreenCallNotification();
+      clearCalleePrewarm(callSessionId);
     });
 
     channel.bind(CALL_MISSED_EVENT, (payload: any) => {
@@ -186,6 +207,7 @@ export function RealtimeBridge() {
       incomingCallMetadataMap.delete(callSessionId);
       endCallKeepCall(callSessionId);
       hideFullScreenCallNotification();
+      clearCalleePrewarm(callSessionId);
     });
 
     channel.bind(SUBSCRIPTION_UPDATED_EVENT, (payload: any) => {

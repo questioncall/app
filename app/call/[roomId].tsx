@@ -36,6 +36,11 @@ import {
   preAcceptedCallRef,
   setSpeakerphone,
 } from "@/lib/callkeep-setup";
+import {
+  consumeCallerPrewarm,
+  consumeCalleePrewarm,
+  consumePendingCreate,
+} from "@/lib/call-prewarm";
 import { hideFullScreenCallNotification } from "@/lib/full-screen-call-notification";
 import {
   getPusherClient,
@@ -83,8 +88,25 @@ function formatCountdown(ms: number) {
 }
 
 export default function CallScreen() {
-  const { roomId } = useLocalSearchParams<{ roomId: string }>();
+  const params = useLocalSearchParams<{
+    roomId: string;
+    channelId?: string;
+    mode?: string;
+  }>();
+  const routeRoomId = params.roomId;
+  const pendingChannelId = params.channelId ?? null;
+  const pendingModeParam = params.mode === "VIDEO" ? "VIDEO" : "AUDIO";
+  const isPendingRoute = routeRoomId === "pending";
+
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
+
+  // The resolved call-session id. When we navigate to /call/pending optimistically
+  // from the workspace button, this stays null until the create POST resolves;
+  // after that everything in this screen keys off resolvedRoomId.
+  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(
+    isPendingRoute ? null : (routeRoomId ?? null),
+  );
+  const roomId = resolvedRoomId;
 
   // After a call ends the screen should always exit to the tabs, regardless
   // of how deep the navigation stack is.  Using router.canGoBack() here caused
@@ -95,7 +117,9 @@ export default function CallScreen() {
   const goBack = () => router.replace("/(tabs)/channels" as any);
 
   const [session, setSession] = useState<CallSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  // For the optimistic-pending path we render the RINGING UI immediately and
+  // never block on a "loading" spinner, so default to false there.
+  const [loading, setLoading] = useState(!isPendingRoute);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
@@ -208,12 +232,94 @@ export default function CallScreen() {
     }
   }, []);
 
-  // ── Session initialization ────────────────────────────────────────────────
-  // OPT-8: If the incoming-call-overlay already accepted the call and stored
-  // the response data, go straight to ACTIVE. Otherwise fetch from server.
-  // Must be a single effect to prevent the API fetch from overwriting ACTIVE.
+  // ── Pre-warmed room (caller or callee) ────────────────────────────────────
+  // If the workspace pre-warmed a LiveKit room for this channel, or if the
+  // realtime-bridge pre-warmed one from the incoming-call Pusher payload,
+  // we hand it directly to LiveKit state below instead of doing room.connect()
+  // again. Set once on first non-pending mount and consumed lazily.
+  const prewarmedRoomRef = useRef<Room | null>(null);
+
+  // ── Optimistic-pending bootstrap ──────────────────────────────────────────
+  // When this screen was opened via the workspace call button we navigated
+  // optimistically to /call/pending while POST /calls/create was still in
+  // flight. Render the caller-ringing UI immediately, then swap to the real
+  // session id once create resolves.
   useEffect(() => {
-    if (!roomId) return;
+    if (!isPendingRoute || !pendingChannelId || !userId) return;
+    if (resolvedRoomId) return; // already resolved
+
+    // Show the "Calling…" UI right away with a synthetic session.
+    setSession({
+      callSessionId: "pending",
+      channelId: pendingChannelId,
+      callerId: userId,
+      teacherId: "",
+      studentId: "",
+      mode: pendingModeParam,
+      status: "RINGING" as CallStatus,
+      roomName: `channel_${pendingChannelId}`,
+    });
+
+    const pending = consumePendingCreate(pendingChannelId);
+    const createPromise =
+      pending?.promise ??
+      api.post("/calls/create", {
+        channelId: pendingChannelId,
+        mode: pendingModeParam,
+      });
+
+    let cancelled = false;
+    createPromise
+      .then((res: any) => {
+        if (cancelled) return;
+        const data = res?.data ?? {};
+        const realId = data.callSessionId ?? data.id;
+        if (!realId) {
+          throw new Error("Server did not return a call session id.");
+        }
+        // Cache caller token so connectToRoom skips a separate /token fetch.
+        if (data.token && data.serverUrl) {
+          prefetchedTokenRef.current = {
+            token: data.token,
+            serverUrl: data.serverUrl,
+            channelId: data.channelId ?? pendingChannelId,
+            timerDeadline: data.timerDeadline,
+            timeExtensionCount: data.timeExtensionCount ?? 0,
+          };
+        }
+        setSession({
+          callSessionId: realId,
+          channelId: data.channelId ?? pendingChannelId,
+          callerId: data.callerId ?? userId,
+          teacherId: data.teacherId ?? "",
+          studentId: data.studentId ?? "",
+          mode: (data.mode ?? pendingModeParam) as "AUDIO" | "VIDEO",
+          status: "RINGING" as CallStatus,
+          roomName: data.roomName ?? `channel_${pendingChannelId}`,
+        });
+        setResolvedRoomId(realId);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        const message =
+          err?.response?.data?.error ??
+          (err instanceof Error ? err.message : "Failed to start call");
+        Toast.show({ type: "error", text1: message });
+        goBack();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPendingRoute, pendingChannelId, pendingModeParam, userId, resolvedRoomId]);
+
+  // ── Session initialization (non-pending route) ────────────────────────────
+  // Callee path: preAcceptedCallRef may already hold a token from
+  // full-screen-notification.acceptCall — go straight to ACTIVE in that case.
+  // Otherwise fetch the session from the server.
+  useEffect(() => {
+    if (isPendingRoute) return;
+    if (!routeRoomId) return;
     hideFullScreenCallNotification();
 
     const pre = preAcceptedCallRef.current;
@@ -226,8 +332,13 @@ export default function CallScreen() {
         timerDeadline: pre.timerDeadline,
         timeExtensionCount: pre.timeExtensionCount,
       };
+      // Pull in any pre-warmed callee room (started by realtime-bridge).
+      const calleePrewarm = consumeCalleePrewarm(routeRoomId);
+      if (calleePrewarm) {
+        prewarmedRoomRef.current = calleePrewarm.room;
+      }
       setSession({
-        callSessionId: roomId,
+        callSessionId: routeRoomId,
         channelId: pre.channelId,
         callerId: pre.callerId,
         mode: pre.mode,
@@ -237,9 +348,8 @@ export default function CallScreen() {
       return;
     }
 
-    // Normal path: fetch session from server
     api
-      .get(`/calls/${roomId}`)
+      .get(`/calls/${routeRoomId}`)
       .then((res) => setSession(res.data as CallSession))
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
@@ -250,7 +360,27 @@ export default function CallScreen() {
         });
       })
       .finally(() => setLoading(false));
-  }, [roomId]);
+  }, [isPendingRoute, routeRoomId]);
+
+  // ── Consume the caller-side pre-warmed room ───────────────────────────────
+  // Workspace pre-warms `channel_${channelId}` while the user is in chat.
+  // Pick it up here so room.connect() in connectToRoom() becomes a no-op.
+  useEffect(() => {
+    if (prewarmedRoomRef.current) return;
+    const channelIdToConsume = session?.channelId;
+    if (!channelIdToConsume) return;
+    const slot = consumeCallerPrewarm(channelIdToConsume);
+    if (slot) {
+      prewarmedRoomRef.current = slot.room;
+      // If the pre-warm endpoint returned a fresher token than the caller
+      // got from /calls/create, prefer that one (covers the rare case where
+      // create response had no token because LiveKit wasn't yet configured
+      // at the moment of the POST).
+      if (!prefetchedTokenRef.current) {
+        prefetchedTokenRef.current = slot.token;
+      }
+    }
+  }, [session?.channelId]);
 
   // ── Connect to LiveKit ─────────────────────────────────────────────────────
   // Supports both ACTIVE (both users) and RINGING (caller only, OPT-3).
@@ -295,7 +425,12 @@ export default function CallScreen() {
       setTimerDeadline(data.timerDeadline);
       setTimeExtensionCount(data.timeExtensionCount);
 
-      const room = new Room({ adaptiveStream: true, dynacast: true });
+      // Reuse a pre-warmed room if one is waiting. The WebSocket + DTLS
+      // handshake (the slowest part of room.connect, ~1.5-3s) is already done
+      // — we just attach our event listeners and skip straight to publishing.
+      const prewarmed = prewarmedRoomRef.current;
+      prewarmedRoomRef.current = null;
+      const room = prewarmed ?? new Room({ adaptiveStream: true, dynacast: true });
       roomRef.current = room;
 
       room.on(RoomEvent.TrackSubscribed, (track) => {
@@ -324,11 +459,41 @@ export default function CallScreen() {
       });
 
       const isVideo = session?.mode === "VIDEO";
-      await room.connect(data.serverUrl, data.token);
+      if (prewarmed && prewarmed.state === ConnectionState.Connected) {
+        // Pre-warm already finished — nothing to do.
+      } else if (prewarmed && prewarmed.state === ConnectionState.Connecting) {
+        // Pre-warm raced with accept; wait for the in-flight handshake.
+        await new Promise<void>((resolve, reject) => {
+          const onState = (state: ConnectionState) => {
+            if (state === ConnectionState.Connected) {
+              room.off(RoomEvent.ConnectionStateChanged, onState);
+              resolve();
+            } else if (state === ConnectionState.Disconnected) {
+              room.off(RoomEvent.ConnectionStateChanged, onState);
+              reject(new Error("Pre-warmed room disconnected before activation."));
+            }
+          };
+          room.on(RoomEvent.ConnectionStateChanged, onState);
+        });
+      } else {
+        // Cold path — no pre-warm, or pre-warm dropped — do the full connect.
+        await room.connect(data.serverUrl, data.token);
+      }
 
       if (timedOut) {
         room.disconnect();
         return;
+      }
+
+      // Pick up any remote tracks the pre-warmed room subscribed to before we
+      // attached the listener above (race: caller publishes between callee
+      // pre-warm-connect and callee accept).
+      for (const participant of room.remoteParticipants.values()) {
+        for (const pub of participant.trackPublications.values()) {
+          if (pub.track && pub.track.kind === Track.Kind.Video) {
+            setRemoteVideoTrack(pub.track as LKVideoTrack);
+          }
+        }
       }
 
       await room.localParticipant.enableCameraAndMicrophone();
@@ -446,6 +611,16 @@ export default function CallScreen() {
         }
       }
       roomRef.current = null;
+      // Pre-warmed room that we consumed but never promoted to roomRef
+      // (e.g. user backed out before connectToRoom ran).
+      const stale = prewarmedRoomRef.current;
+      if (stale) {
+        stale.removeAllListeners();
+        if (stale.state !== ConnectionState.Disconnected) {
+          stale.disconnect();
+        }
+        prewarmedRoomRef.current = null;
+      }
     };
   }, [stopOutgoingRingtone, roomId]);
 
@@ -581,6 +756,18 @@ export default function CallScreen() {
     stopOutgoingRingtone();
     endingRef.current = true;
     setIsEnding(true);
+
+    // Caller pressed end while /calls/create was still in flight. We don't
+    // have a real session id yet, so just bail to channels — the in-flight
+    // POST will land and the server will mark the call MISSED when the
+    // 30s RINGING timeout fires. (Could await + cancel for cleaner UX,
+    // but this is a sub-second race window.)
+    if (isPendingRoute && !resolvedRoomId) {
+      setIsEnding(false);
+      goBack();
+      return;
+    }
+
     endCallKeepCall(session.callSessionId);
 
     // Disconnect room FIRST to prevent NegotiationError from stale PC
@@ -828,20 +1015,11 @@ export default function CallScreen() {
       );
     }
 
-    if (connecting || !connected) {
-      return (
-        <View style={styles.centered}>
-          <ActivityIndicator color="#fff" size="large" />
-          <Text style={[styles.mutedText, { marginTop: 12 }]}>Connecting to room…</Text>
-          <TouchableOpacity
-            onPress={() => goBack()}
-            style={[styles.backBtn, { marginTop: 32 }]}
-          >
-            <Text style={[styles.mutedText, { marginTop: 0, fontSize: 14 }]}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
+    // Render the active call UI as soon as we hit ACTIVE — even before the
+    // LiveKit room finishes connecting. The user sees their own camera feed
+    // (or a "Voice call" placeholder) instead of a black "Connecting…" screen,
+    // and remote tracks pop in as they arrive. WhatsApp-style perceived speed.
+    // No early return here; falls through to the layout below.
 
     // PiP / swap layout: by default the remote feed is fullscreen and the
     // local camera sits in the corner.  Tapping the PiP swaps them so the
