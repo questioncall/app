@@ -8,8 +8,10 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 import { Audio } from "expo-av";
@@ -26,6 +28,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from "react-native-reanimated";
 
 import { api } from "@/lib/api";
@@ -64,6 +69,10 @@ type CallSession = {
   status: CallStatus;
   mode: "AUDIO" | "VIDEO";
   roomName: string;
+  teacherName?: string | null;
+  studentName?: string | null;
+  teacherImage?: string | null;
+  studentImage?: string | null;
 };
 
 type TokenPayload = {
@@ -92,11 +101,18 @@ export default function CallScreen() {
     roomId: string;
     channelId?: string;
     mode?: string;
+    fromColdBoot?: string;
   }>();
   const routeRoomId = params.roomId;
   const pendingChannelId = params.channelId ?? null;
   const pendingModeParam = params.mode === "VIDEO" ? "VIDEO" : "AUDIO";
   const isPendingRoute = routeRoomId === "pending";
+  // Cold-boot path: user tapped Accept on the full-screen call UI while the
+  // app was killed. The native side fired a `questioncall://call/{id}?fromColdBoot=1`
+  // deep link. No JS handler ran, so /accept hasn't been called on the server —
+  // we have to do that here ourselves before connecting to LiveKit.
+  // See: patches/react-native-full-screen-notification-incoming-call+1.1.0.patch
+  const isFromColdBoot = params.fromColdBoot === "1";
 
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
 
@@ -202,6 +218,47 @@ export default function CallScreen() {
   const pipAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: pipTranslateX.value }, { translateY: pipTranslateY.value }],
   }));
+
+  // ── Pulse ring animation for ringing screen ───────────────────────────────
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.5);
+  useEffect(() => {
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.5, { duration: 1000 }),
+        withTiming(1, { duration: 1000 }),
+      ),
+      -1,
+      false,
+    );
+    pulseOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 1000 }),
+        withTiming(0.5, { duration: 1000 }),
+      ),
+      -1,
+      false,
+    );
+  }, [pulseOpacity, pulseScale]);
+
+  const pulseRingStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
+
+  // ── Peer info (other call participant) ───────────────────────────────────
+  const peerName = session
+    ? userId === session.teacherId
+      ? (session.studentName ?? null)
+      : (session.teacherName ?? null)
+    : null;
+  const peerImage = session
+    ? userId === session.teacherId
+      ? (session.studentImage ?? null)
+      : (session.teacherImage ?? null)
+    : null;
+  const peerInitial = peerName ? peerName.charAt(0).toUpperCase() : null;
+
   // Refs to break the infinite-retry loop and enforce single-flight connections
   const connectingRef = useRef(false);
   const connectionBlockedRef = useRef(false);
@@ -314,13 +371,82 @@ export default function CallScreen() {
   }, [isPendingRoute, pendingChannelId, pendingModeParam, userId, resolvedRoomId]);
 
   // ── Session initialization (non-pending route) ────────────────────────────
-  // Callee path: preAcceptedCallRef may already hold a token from
-  // full-screen-notification.acceptCall — go straight to ACTIVE in that case.
-  // Otherwise fetch the session from the server.
+  // Three entry paths, in priority order:
+  //
+  //   1. fromColdBoot=1   — user accepted from the killed-app full-screen UI;
+  //                          server hasn't been told yet. POST /accept now.
+  //   2. preAcceptedCallRef — JS-side acceptCall() in full-screen-notification.ts
+  //                          already POSTed /accept and stashed the token.
+  //   3. Plain fetch       — opened via channels list / notification tap; just
+  //                          GET the session and let the user decide.
   useEffect(() => {
     if (isPendingRoute) return;
     if (!routeRoomId) return;
     hideFullScreenCallNotification();
+
+    if (isFromColdBoot) {
+      // Cold-boot accept path: native full-screen UI accept tap deep-linked us
+      // here without the JS bridge ever running. We must call /accept ourselves
+      // before LiveKit can join.
+      console.log("[call] Cold-boot accept dispatch for", routeRoomId);
+      api
+        .post(`/calls/${routeRoomId}/accept`)
+        .then((res) => {
+          const data = res.data as {
+            token?: string;
+            serverUrl?: string;
+            channelId?: string;
+            timerDeadline?: string;
+            timeExtensionCount?: number;
+            mode?: "AUDIO" | "VIDEO";
+            callerId?: string;
+          };
+          if (data?.token && data?.serverUrl) {
+            prefetchedTokenRef.current = {
+              token: data.token,
+              serverUrl: data.serverUrl,
+              channelId: data.channelId ?? "",
+              timerDeadline: data.timerDeadline ?? "",
+              timeExtensionCount: data.timeExtensionCount ?? 0,
+            };
+          }
+          setSession({
+            callSessionId: routeRoomId,
+            channelId: data.channelId ?? "",
+            callerId: data.callerId ?? null,
+            mode: data.mode ?? "AUDIO",
+            status: "ACTIVE" as CallStatus,
+          } as CallSession);
+        })
+        .catch((err: any) => {
+          const status = err?.response?.status;
+          // 409 = already accepted on another device. Just fetch the session
+          // and proceed — the call is live somewhere.
+          if (status === 409) {
+            return api
+              .get(`/calls/${routeRoomId}`)
+              .then((r) => setSession(r.data as CallSession));
+          }
+          // 410 / 404 = cancelled or already ended. Bail to channels with a
+          // clear message instead of getting stuck on a "Connecting..." screen.
+          if (status === 410 || status === 404) {
+            Toast.show({ type: "info", text1: "Call already ended." });
+            goBack();
+            return;
+          }
+          console.error(
+            "[call] Cold-boot accept failed:",
+            err instanceof Error ? err.message : String(err),
+          );
+          Toast.show({
+            type: "error",
+            text1: "Couldn't join the call. Please try again.",
+          });
+          goBack();
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
 
     const pre = preAcceptedCallRef.current;
     if (pre) {
@@ -360,7 +486,8 @@ export default function CallScreen() {
         });
       })
       .finally(() => setLoading(false));
-  }, [isPendingRoute, routeRoomId]);
+     
+  }, [isPendingRoute, routeRoomId, isFromColdBoot]);
 
   // ── Consume the caller-side pre-warmed room ───────────────────────────────
   // Workspace pre-warms `channel_${channelId}` while the user is in chat.
@@ -913,12 +1040,28 @@ export default function CallScreen() {
 
   // ── Render: RINGING ───────────────────────────────────────────────────────
   if (session.status === "RINGING") {
+    const gradientColors = isIncoming
+      ? (["#0f0c29", "#302b63", "#24243e"] as const)
+      : (["#0d1b2a", "#1b4332", "#0d1b2a"] as const);
+
     return (
-      <View style={styles.ringingContainer}>
+      <LinearGradient colors={gradientColors} style={styles.ringingContainer}>
         <View style={styles.ringingTop}>
-          <View style={[styles.avatarCircle, { backgroundColor: "#2563eb" }]}>
-            <Ionicons name={isVideo ? "videocam" : "call"} size={48} color="#fff" />
+          {/* Pulsing ring behind avatar */}
+          <View style={styles.avatarWrapper}>
+            <Animated.View style={[styles.pulseRing, pulseRingStyle]} />
+            <View style={styles.avatarCircle}>
+              {peerImage ? (
+                <Image source={{ uri: peerImage }} style={styles.avatarImage} />
+              ) : peerInitial ? (
+                <Text style={styles.avatarInitial}>{peerInitial}</Text>
+              ) : (
+                <Ionicons name={isVideo ? "videocam" : "call"} size={48} color="#fff" />
+              )}
+            </View>
           </View>
+
+          {peerName ? <Text style={styles.peerNameText}>{peerName}</Text> : null}
           <Text style={styles.titleText}>
             {isIncoming ? "Incoming call" : "Calling…"}
           </Text>
@@ -974,7 +1117,7 @@ export default function CallScreen() {
             />
           </TouchableOpacity>
         )}
-      </View>
+      </LinearGradient>
     );
   }
 
@@ -1045,12 +1188,24 @@ export default function CallScreen() {
             mirror={mainIsLocal}
           />
         ) : (
-          <View style={styles.noVideoPlaceholder}>
-            <Ionicons name="person" size={80} color="#ffffff30" />
+          <LinearGradient
+            colors={["#0d1b2a", "#1a1a2e", "#0f0c29"]}
+            style={styles.noVideoPlaceholder}
+          >
+            {peerImage ? (
+              <Image source={{ uri: peerImage }} style={styles.audioAvatarImage} />
+            ) : peerInitial ? (
+              <View style={styles.audioAvatarCircle}>
+                <Text style={styles.audioAvatarInitial}>{peerInitial}</Text>
+              </View>
+            ) : (
+              <Ionicons name="person" size={80} color="#ffffff30" />
+            )}
+            {peerName ? <Text style={styles.audioPeerName}>{peerName}</Text> : null}
             <Text style={styles.mutedText}>
               {isVideo ? "Waiting for video…" : "Voice call"}
             </Text>
-          </View>
+          </LinearGradient>
         )}
 
         {/* PiP overlay — drag to reposition, tap to swap with main */}
@@ -1199,7 +1354,7 @@ export default function CallScreen() {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#0d1b2a",
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
@@ -1224,7 +1379,6 @@ const styles = StyleSheet.create({
   // Ringing
   ringingContainer: {
     flex: 1,
-    backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 96,
@@ -1234,21 +1388,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  avatarWrapper: {
+    width: 130,
+    height: 130,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pulseRing: {
+    position: "absolute",
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 3,
+    borderColor: "#ffffff60",
+    backgroundColor: "transparent",
+  },
   avatarCircle: {
     width: 112,
     height: 112,
     borderRadius: 56,
+    backgroundColor: "#3b82f6",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+  },
+  avatarInitial: {
+    color: "#fff",
+    fontSize: 44,
+    fontWeight: "700",
+  },
+  peerNameText: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "700",
+    marginTop: 4,
   },
   titleText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 16,
+    color: "#ffffffb0",
+    fontSize: 16,
+    fontWeight: "500",
+    marginTop: 4,
   },
   subtitleText: {
-    color: "#ffffff80",
+    color: "#ffffff60",
     fontSize: 14,
   },
   ringingButtons: {
@@ -1281,7 +1468,34 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#111",
+  },
+  audioAvatarCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#3b82f640",
+    borderWidth: 2,
+    borderColor: "#3b82f660",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  audioAvatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 12,
+  },
+  audioAvatarInitial: {
+    color: "#ffffffcc",
+    fontSize: 42,
+    fontWeight: "700",
+  },
+  audioPeerName: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "600",
+    marginBottom: 4,
   },
   pipContainer: {
     position: "absolute",

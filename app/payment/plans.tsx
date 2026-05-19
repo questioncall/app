@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -20,6 +20,7 @@ interface SubscriptionInfo {
   subscriptionStatus: string;
   subscriptionEnd: string | null;
   pendingManualPayment: boolean;
+  pendingPlanSlug: string | null;
   questionsAsked: number;
   questionsRemaining: number | null;
   maxQuestions: number;
@@ -57,9 +58,11 @@ export default function PlansScreen() {
     setLoadingSub(false);
   }, []);
 
-  useEffect(() => {
-    if (user?.role === "STUDENT") void fetchSubscription();
-  }, [user?.role, fetchSubscription]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.role === "STUDENT") void fetchSubscription();
+    }, [user?.role, fetchSubscription]),
+  );
 
   const isLoading = configLoading || loadingSub;
 
@@ -132,7 +135,9 @@ export default function PlansScreen() {
                 <View className="mt-3 flex-row items-center gap-2 rounded-lg bg-amber-500/10 p-2.5">
                   <Ionicons name="time-outline" size={16} color="#f59e0b" />
                   <Text className="flex-1 text-xs text-amber-600">
-                    You have a pending payment. Please wait for admin verification.
+                    {subInfo.pendingPlanSlug
+                      ? `Pending upgrade to ${subInfo.pendingPlanSlug.toUpperCase()} — awaiting admin verification.`
+                      : "You have a pending payment. Please wait for admin verification."}
                   </Text>
                 </View>
               ) : null}
@@ -143,6 +148,7 @@ export default function PlansScreen() {
           {plans.map((plan) => {
             const isCurrent = currentPlan === plan.slug;
             const isPending = subInfo?.pendingManualPayment ?? false;
+            const isPendingPlan = isPending && subInfo?.pendingPlanSlug === plan.slug;
 
             return (
               <View
@@ -150,7 +156,12 @@ export default function PlansScreen() {
                 className="overflow-hidden rounded-2xl border"
                 style={{
                   backgroundColor: isCurrent ? primarySoftColor : cardColor,
-                  borderColor: isCurrent ? primaryColor : borderColor,
+                  borderColor: isPendingPlan
+                    ? "#f59e0b"
+                    : isCurrent
+                      ? primaryColor
+                      : borderColor,
+                  borderWidth: isPendingPlan ? 2 : 1,
                 }}
               >
                 <View className="p-5">
@@ -179,6 +190,13 @@ export default function PlansScreen() {
                           >
                             <Text className="text-[10px] font-bold text-white">
                               CURRENT
+                            </Text>
+                          </View>
+                        ) : null}
+                        {isPendingPlan ? (
+                          <View className="rounded-full bg-amber-500/20 px-2 py-0.5">
+                            <Text className="text-[10px] font-bold text-amber-500">
+                              PENDING
                             </Text>
                           </View>
                         ) : null}

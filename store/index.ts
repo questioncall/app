@@ -26,6 +26,7 @@ import walletReducer from "./slices/walletSlice";
 import quizReducer from "./slices/quizSlice";
 import incomingCallReducer from "./slices/incomingCallSlice";
 import notesReducer from "./slices/notesSlice";
+import notificationsReducer from "./slices/notificationsSlice";
 import { channelCacheLimiter } from "./transforms";
 
 const persistConfig = {
@@ -41,6 +42,7 @@ const persistConfig = {
     "config",
     "quiz",
     "notes",
+    "notifications",
   ],
   transforms: [channelCacheLimiter],
 };
@@ -62,6 +64,7 @@ const rootReducer = combineReducers({
   quiz: quizReducer,
   incomingCall: incomingCallReducer,
   notes: notesReducer,
+  notifications: notificationsReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig as any, rootReducer);

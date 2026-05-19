@@ -25,6 +25,7 @@ import {
 } from "@/store/slices/realtimeSlice";
 import { updateChannelLastMessage, upsertChannel } from "@/store/slices/channelsSlice";
 import { updateUser } from "@/store/slices/userSlice";
+import { prependNotification } from "@/store/slices/notificationsSlice";
 import {
   displayIncomingCall,
   endCallKeepCall,
@@ -35,6 +36,29 @@ import {
   hideFullScreenCallNotification,
 } from "@/lib/full-screen-call-notification";
 import { prewarmCalleeRoom, clearCalleePrewarm } from "@/lib/call-prewarm";
+
+// Dedupe window for repeat CALL_INCOMING_EVENT arrivals. Pusher can re-deliver
+// after reconnect, and the native FCM service (CallAwareMessagingService) also
+// dispatches the same call independently. Without this, the library's
+// `IncomingCallService.handleIncomingCall` stops + restarts the ringtone on the
+// second dispatch, producing a "double ring". Matches the 30s window on the
+// native side — see CallAwareMessagingService.kt#DEDUPE_WINDOW_MS.
+const CALL_DEDUPE_WINDOW_MS = 30_000;
+const recentCallDispatches = new Map<string, number>();
+
+function shouldDispatchCall(callSessionId: string): boolean {
+  const now = Date.now();
+  // Evict stale entries opportunistically so the map can't grow unbounded.
+  for (const [id, ts] of recentCallDispatches) {
+    if (now - ts > CALL_DEDUPE_WINDOW_MS) recentCallDispatches.delete(id);
+  }
+  const last = recentCallDispatches.get(callSessionId);
+  if (last !== undefined && now - last < CALL_DEDUPE_WINDOW_MS) {
+    return false;
+  }
+  recentCallDispatches.set(callSessionId, now);
+  return true;
+}
 
 type ChannelUpdatedPayload = {
   channelId: string;
@@ -111,20 +135,23 @@ export function RealtimeBridge() {
       const notification = payload?.notification ?? payload;
       if (!notification?.id && !notification?._id) return;
 
-      dispatch(
-        addRealtimeNotification({
-          id: String(notification.id ?? notification._id),
-          type: String(notification.type ?? "notification"),
-          message: String(notification.message ?? "New notification"),
-          href: notification.href ?? null,
-          isRead: Boolean(notification.isRead),
-          createdAt: notification.createdAt,
-        }),
-      );
+      const id = String(notification.id ?? notification._id);
+      const type = String(notification.type ?? "notification");
+      const message = String(notification.message ?? "New notification");
+      const href = notification.href ?? null;
+      const isRead = Boolean(notification.isRead);
+      const createdAt = notification.createdAt ?? new Date().toISOString();
+
+      // Transient: fed into the legacy realtime feed (kept for backwards compat
+      // with any consumers reading state.realtime.notifications).
+      dispatch(addRealtimeNotification({ id, type, message, href, isRead, createdAt }));
+      // Persistent: notification center slice. Prepend de-dupes by id so a
+      // Pusher re-delivery after reconnect doesn't double-count unread.
+      dispatch(prependNotification({ id, type, message, href, isRead, createdAt }));
       Toast.show({
         type: "info",
         text1: "New notification",
-        text2: String(notification.message ?? ""),
+        text2: message,
       });
     });
 
@@ -161,15 +188,22 @@ export function RealtimeBridge() {
       const callerName = String(payload.callerName ?? "Unknown");
       const mode: "AUDIO" | "VIDEO" = payload.mode === "VIDEO" ? "VIDEO" : "AUDIO";
       const channelId = String(payload.channelId ?? "");
-      // Cache the authoritative metadata BEFORE showing the notification.
-      // The native answer event only carries a callUUID; this is how mode
-      // and callerId survive the round-trip to the call screen.
+      // Cache the authoritative metadata BEFORE the dedupe check. We always
+      // want the freshest metadata cached even if we skip the visible dispatch
+      // — a later acceptCall reads this map for mode/callerId.
       incomingCallMetadataMap.set(callSessionId, {
         mode,
         callerId: String(payload.callerId ?? ""),
         channelId,
         callerName,
       });
+      // Skip the visible dispatch if the same call was already surfaced (by
+      // a prior Pusher delivery, Pusher reconnect re-fire, or the native FCM
+      // service). The library's IncomingCallService restarts its ringtone on
+      // every dispatch and we don't want a double-ring.
+      if (!shouldDispatchCall(callSessionId)) {
+        return;
+      }
       displayIncomingCall(callSessionId, callerName, mode === "VIDEO");
       showFullScreenCallNotification(callSessionId, callerName, mode === "VIDEO");
 
@@ -218,6 +252,9 @@ export function RealtimeBridge() {
           planSlug: payload.planSlug,
           ...(payload.questionsAsked !== undefined
             ? { questionsAsked: payload.questionsAsked }
+            : {}),
+          ...(payload.bonusQuestions !== undefined
+            ? { bonusQuestions: payload.bonusQuestions }
             : {}),
         }),
       );

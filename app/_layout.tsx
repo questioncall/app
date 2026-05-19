@@ -22,6 +22,11 @@ import { setUser } from "@/store/slices/userSlice";
 import { setConfig } from "@/store/slices/configSlice";
 import { setChannels, selectIsChannelsStale } from "@/store/slices/channelsSlice";
 import { setNotes, selectIsNotesStale } from "@/store/slices/notesSlice";
+import {
+  selectIsNotificationsStale,
+  setNotifications,
+  type AppNotification,
+} from "@/store/slices/notificationsSlice";
 import { api, SECURE_STORE_KEYS } from "@/lib/api";
 import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
 import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
@@ -112,6 +117,25 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
         .get("/notes?limit=30")
         .then((res) => {
           store.dispatch(setNotes(Array.isArray(res.data) ? res.data : []));
+        })
+        .catch(() => {});
+    }
+    // Notifications — drives the menu badge. Cheap (server caps at 50) and
+    // critical for the unread count to be accurate on cold start.
+    if (userId && selectIsNotificationsStale(s.notifications?.lastFetchedAt ?? null)) {
+      api
+        .get("/notifications")
+        .then((res) => {
+          const raw = Array.isArray(res.data) ? res.data : [];
+          const normalized: AppNotification[] = raw.map((n: any) => ({
+            id: String(n.id ?? n._id),
+            type: String(n.type ?? "SYSTEM"),
+            message: String(n.message ?? ""),
+            href: n.href ?? null,
+            isRead: Boolean(n.isRead),
+            createdAt: n.createdAt ?? new Date().toISOString(),
+          }));
+          store.dispatch(setNotifications({ list: normalized, userId }));
         })
         .catch(() => {});
     }
@@ -264,6 +288,7 @@ function RootLayout() {
                     <Stack.Screen name="payment/manual" />
                     <Stack.Screen name="payment/plans" />
                     <Stack.Screen name="notes" />
+                    <Stack.Screen name="notifications" />
                     <Stack.Screen name="profile/index" />
                     <Stack.Screen name="profile/edit" />
                     <Stack.Screen name="profile/activity" />

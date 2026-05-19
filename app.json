@@ -47,9 +47,9 @@
     "plugins": [
       "./plugins/withCallKeep",
       "./plugins/withAsyncStorageRepo",
+      "./plugins/withCallAwareMessagingService",
       "expo-router",
       "react-native-full-screen-notification-incoming-call",
-      // ["@sentry/react-native/expo", { "uploadSourceMaps": false }],
       [
         "expo-splash-screen",
         {
@@ -86,11 +86,27 @@
         {
           "faceIDPermission": "Allow QuestionCall to use Face ID for secure wallet access."
         }
-      ]
+      ],
+      "expo-asset",
+      [
+        "@sentry/react-native",
+        {
+          "organization": "question-call",
+          "project": "react-native"
+        }
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
+    },
+    "updates": {
+      "enabled": true,
+      "url": "https://u.expo.dev/86d256ec-943f-49e8-adaf-659400e4edac"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "extra": {
       "router": {},

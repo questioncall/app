@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StatusBar,
   Switch,
@@ -9,70 +10,120 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import Toast from "react-native-toast-message";
 
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { api } from "@/lib/api";
 
-const STORAGE_KEY = "notification_prefs";
-
-interface NotifPrefs {
-  newQuestion: boolean;
-  questionAccepted: boolean;
-  newMessage: boolean;
-  withdrawal: boolean;
-  subscription: boolean;
-  monthlyBonus: boolean;
-  dailyTarget: boolean;
+// ─── Shape — must match web/lib/notification-prefs.ts ──────────────────────
+// Four categories cover every backend NOTIFICATION_TYPES enum value.
+// Calls live in /settings/call-settings (callSettings.silentIncomingCalls).
+type NotifPrefs = {
+  questions: boolean;
+  chat: boolean;
+  wallet: boolean;
   announcements: boolean;
-}
+};
 
 const DEFAULT_PREFS: NotifPrefs = {
-  newQuestion: true,
-  questionAccepted: true,
-  newMessage: true,
-  withdrawal: true,
-  subscription: true,
-  monthlyBonus: true,
-  dailyTarget: true,
+  questions: true,
+  chat: true,
+  wallet: true,
   announcements: true,
 };
 
+type PrefKey = keyof NotifPrefs;
+
+const ROWS: readonly {
+  key: PrefKey;
+  icon: string;
+  label: string;
+  subtitle: string;
+}[] = [
+  {
+    key: "questions",
+    icon: "help-circle-outline",
+    label: "Questions",
+    subtitle: "Accepted, reset, answer submitted, deadline warnings",
+  },
+  {
+    key: "chat",
+    icon: "chatbubble-outline",
+    label: "Chat",
+    subtitle: "Channel closed and expired alerts",
+  },
+  {
+    key: "wallet",
+    icon: "wallet-outline",
+    label: "Wallet & Rewards",
+    subtitle: "Payments, ratings, monthly bonus, daily targets",
+  },
+  {
+    key: "announcements",
+    icon: "megaphone-outline",
+    label: "Announcements",
+    subtitle: "Platform notices and product updates",
+  },
+];
+
 export default function NotificationsScreen() {
-  const { statusBarStyle, backgroundColor, primaryColor, borderColor } = useAppTheme();
+  const { statusBarStyle, backgroundColor, primaryColor, borderColor, mutedIconColor } =
+    useAppTheme();
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<PrefKey | null>(null);
 
   useEffect(() => {
-    SecureStore.getItemAsync(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+    api
+      .get("/users/notification-prefs")
+      .then((res) => {
+        if (res.data?.notificationPrefs) {
+          setPrefs({ ...DEFAULT_PREFS, ...res.data.notificationPrefs });
+        }
       })
-      .catch(() => {});
+      .catch((err: any) => {
+        console.warn("[notifications] Failed to load prefs:", err?.message);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const toggle = useCallback(
-    (key: keyof NotifPrefs) => (value: boolean) => {
-      setPrefs((prev) => {
-        const next = { ...prev, [key]: value };
-        SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-        return next;
-      });
+    async (key: PrefKey, value: boolean) => {
+      // Optimistic: flip locally first so the switch responds instantly.
+      const previous = prefs;
+      const next = { ...prefs, [key]: value };
+      setPrefs(next);
+      setSavingKey(key);
+      try {
+        await api.patch("/users/notification-prefs", next);
+      } catch (err: any) {
+        // Rollback on failure so the UI never lies about server state.
+        setPrefs(previous);
+        Toast.show({
+          type: "error",
+          text1: "Couldn't save preference. Please try again.",
+        });
+        console.warn("[notifications] Save failed:", err?.message);
+      } finally {
+        setSavingKey(null);
+      }
     },
-    [],
+    [prefs],
   );
 
   function Row({
+    rowKey,
     icon,
     label,
     subtitle,
-    value,
-    onToggle,
   }: {
+    rowKey: PrefKey;
     icon: string;
     label: string;
     subtitle: string;
-    value: boolean;
-    onToggle: (v: boolean) => void;
   }) {
+    const value = prefs[rowKey];
+    const saving = savingKey === rowKey;
     return (
       <View className="flex-row items-center bg-card px-4 py-3.5">
         <View
@@ -87,9 +138,17 @@ export default function NotificationsScreen() {
           <Text className="text-sm font-medium text-foreground">{label}</Text>
           <Text className="mt-0.5 text-xs text-muted-foreground">{subtitle}</Text>
         </View>
+        {saving ? (
+          <ActivityIndicator
+            size="small"
+            color={primaryColor}
+            style={{ marginRight: 8 }}
+          />
+        ) : null}
         <Switch
           value={value}
-          onValueChange={onToggle}
+          disabled={saving}
+          onValueChange={(v) => toggle(rowKey, v)}
           trackColor={{ false: "#d1d5db", true: `${primaryColor}60` }}
           thumbColor={value ? primaryColor : "#f4f3f4"}
         />
@@ -111,106 +170,60 @@ export default function NotificationsScreen() {
         <Text className="flex-1 text-2xl font-bold text-foreground">Notifications</Text>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <View className="px-4 pb-2 pt-5">
-          <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Questions
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={primaryColor} />
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          <Text className="px-5 pb-3 pt-2 text-sm text-muted-foreground">
+            Turn categories off to stop receiving push notifications. The in-app
+            notification center will still show them.
           </Text>
-        </View>
-        <View className="mx-4 overflow-hidden rounded-2xl border" style={{ borderColor }}>
-          <Row
-            icon="help-circle-outline"
-            label="New Question"
-            subtitle="When a student posts a question"
-            value={prefs.newQuestion}
-            onToggle={toggle("newQuestion")}
-          />
-          <Divider />
-          <Row
-            icon="checkmark-circle-outline"
-            label="Question Accepted"
-            subtitle="When a teacher accepts your question"
-            value={prefs.questionAccepted}
-            onToggle={toggle("questionAccepted")}
-          />
-        </View>
 
-        <View className="px-4 pb-2 pt-5">
-          <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Chat
-          </Text>
-        </View>
-        <View className="mx-4 overflow-hidden rounded-2xl border" style={{ borderColor }}>
-          <Row
-            icon="chatbubble-outline"
-            label="New Message"
-            subtitle="When you receive a chat message"
-            value={prefs.newMessage}
-            onToggle={toggle("newMessage")}
-          />
-        </View>
+          <View
+            className="mx-4 overflow-hidden rounded-2xl border"
+            style={{ borderColor }}
+          >
+            {ROWS.map((row, i) => (
+              <View key={row.key}>
+                <Row
+                  rowKey={row.key}
+                  icon={row.icon}
+                  label={row.label}
+                  subtitle={row.subtitle}
+                />
+                {i < ROWS.length - 1 ? <Divider /> : null}
+              </View>
+            ))}
+          </View>
 
-        <View className="px-4 pb-2 pt-5">
-          <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Wallet
-          </Text>
-        </View>
-        <View className="mx-4 overflow-hidden rounded-2xl border" style={{ borderColor }}>
-          <Row
-            icon="cash-outline"
-            label="Withdrawal Processed"
-            subtitle="When your withdrawal is approved"
-            value={prefs.withdrawal}
-            onToggle={toggle("withdrawal")}
-          />
-          <Divider />
-          <Row
-            icon="gift-outline"
-            label="Monthly Bonus"
-            subtitle="Your monthly point bonus has arrived"
-            value={prefs.monthlyBonus}
-            onToggle={toggle("monthlyBonus")}
-          />
-          <Divider />
-          <Row
-            icon="trophy-outline"
-            label="Daily Target"
-            subtitle="Reminders to hit your daily answer goal"
-            value={prefs.dailyTarget}
-            onToggle={toggle("dailyTarget")}
-          />
-        </View>
-
-        <View className="px-4 pb-2 pt-5">
-          <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Account
-          </Text>
-        </View>
-        <View className="mx-4 overflow-hidden rounded-2xl border" style={{ borderColor }}>
-          <Row
-            icon="diamond-outline"
-            label="Subscription Activated"
-            subtitle="When your plan upgrade is confirmed"
-            value={prefs.subscription}
-            onToggle={toggle("subscription")}
-          />
-          <Divider />
-          <Row
-            icon="megaphone-outline"
-            label="Announcements"
-            subtitle="Platform notices and updates"
-            value={prefs.announcements}
-            onToggle={toggle("announcements")}
-          />
-        </View>
-
-        <Text className="mx-4 mt-4 text-xs text-muted-foreground">
-          Preferences saved locally. Push notifications delivered via FCM.
-        </Text>
-      </ScrollView>
+          {/* Pointer to call settings — calls live in a separate screen */}
+          <TouchableOpacity
+            onPress={() => router.push("/settings/call-settings" as any)}
+            className="mx-4 mt-4 flex-row items-center rounded-2xl border bg-card px-4 py-3.5"
+            style={{ borderColor }}
+            activeOpacity={0.7}
+          >
+            <View
+              className="mr-3 h-9 w-9 items-center justify-center rounded-xl"
+              style={{ backgroundColor: `${primaryColor}20` }}
+            >
+              <Ionicons name="call-outline" size={18} color={primaryColor} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-foreground">Call alerts</Text>
+              <Text className="mt-0.5 text-xs text-muted-foreground">
+                Silent calls and ringtones — open Call Settings
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={mutedIconColor} />
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </View>
   );
 }

@@ -19,6 +19,7 @@ import { clearActivityCache } from "@/store/slices/activitySlice";
 import { clearNotices } from "@/store/slices/noticesSlice";
 import { clearOnboarding } from "@/store/slices/onboardingSlice";
 import { clearRealtime } from "@/store/slices/realtimeSlice";
+import { clearNotifications } from "@/store/slices/notificationsSlice";
 import { SECURE_STORE_KEYS } from "@/lib/api";
 import { resetPusherClient } from "@/lib/realtime";
 import { unsubscribePushToken, getCurrentPushToken } from "@/lib/push-notifications";
@@ -108,6 +109,7 @@ export default function MenuScreen() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.user.data);
   const config = useAppSelector((s) => s.config.data);
+  const unreadNotificationCount = useAppSelector((s) => s.notifications.unreadCount);
   const { statusBarStyle, backgroundColor, cardColor, primaryColor, primarySoftColor } =
     useAppTheme();
   const isTeacher = user?.role === "TEACHER";
@@ -131,6 +133,7 @@ export default function MenuScreen() {
           dispatch(clearNotices());
           dispatch(clearOnboarding());
           dispatch(clearRealtime());
+          dispatch(clearNotifications());
           resetPusherClient();
           router.replace("/");
         },
@@ -385,7 +388,26 @@ export default function MenuScreen() {
           ) : null}
           <MenuItem
             icon="notifications-outline"
-            label="Notifications"
+            label="Notification Center"
+            subtitle={
+              unreadNotificationCount > 0
+                ? `${unreadNotificationCount} unread`
+                : "Recent updates and alerts"
+            }
+            badge={
+              unreadNotificationCount > 0
+                ? unreadNotificationCount > 99
+                  ? "99+"
+                  : String(unreadNotificationCount)
+                : undefined
+            }
+            onPress={() => router.push("/notifications" as any)}
+          />
+          <Divider />
+          <MenuItem
+            icon="options-outline"
+            label="Notification Settings"
+            subtitle="Mute categories of push notifications"
             onPress={() => router.push("/settings/notifications" as any)}
           />
           <Divider />
