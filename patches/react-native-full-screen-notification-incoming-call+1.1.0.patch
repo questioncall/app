@@ -25,7 +25,7 @@ index 3395f00..f88c697 100644
      } else {
        setContentView(R.layout.activity_call_incoming);
      }
-@@ -166,15 +156,41 @@ public class IncomingCallActivity extends AppCompatActivity implements DefaultHa
+@@ -166,15 +156,39 @@ public class IncomingCallActivity extends AppCompatActivity implements DefaultHa
  
    private void acceptDialing() {
      active = false;
@@ -56,11 +56,9 @@ index 3395f00..f88c697 100644
 +        startActivity(launchIntent);
 +      }
 +    } else {
-+      // App is killed — deep link cold-starts directly to call screen.
-+      // fromColdBoot=1 tells the call screen the user already accepted at the
-+      // native UI, so it should POST /accept itself (no JS handler ran).
++      // App is killed — deep link cold-starts directly to call screen
 +      Intent deepLink = new Intent(Intent.ACTION_VIEW,
-+        android.net.Uri.parse("questioncall://call/" + uuid + "?fromColdBoot=1"));
++        android.net.Uri.parse("questioncall://call/" + uuid));
 +      deepLink.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 +      startActivity(deepLink);
 +    }
@@ -89,26 +87,10 @@ index 502fe36..ee4bccc 100644
  
    public int onStartCommand(Intent intent, int flags, int startId) {
      String action = intent.getAction();
-@@ -90,6 +93,26 @@ public class IncomingCallService extends Service {
+@@ -90,6 +93,10 @@ public class IncomingCallService extends Service {
    }
  
    private void handleIncomingCall(Intent intent) {
-+    Bundle incomingBundle = intent.getExtras();
-+    String incomingUuid = incomingBundle != null ? incomingBundle.getString("uuid") : null;
-+
-+    // Cross-path dedupe: when the app is foreground, BOTH Pusher (via JS) and
-+    // FCM (via CallAwareMessagingService) dispatch the same call. The ringtone
-+    // is started here from MediaPlayer, so re-entering this method would stop
-+    // and restart it — an audible "double ring". If the incoming uuid matches
-+    // the currently-ringing one, this is the duplicate; ignore it.
-+    if (incomingUuid != null
-+        && incomingUuid.equals(this.uuid)
-+        && mediaPlayer != null
-+        && mediaPlayer.isPlaying()) {
-+      Log.d(TAG, "Suppressing duplicate ACTION_SHOW_INCOMING_CALL for uuid=" + incomingUuid);
-+      return;
-+    }
-+
 +    // Stop any existing ringtone from a previous call
 +    stopRingtone();
 +    cancelTimer();
@@ -116,7 +98,7 @@ index 502fe36..ee4bccc 100644
      NotificationReceiverHandler.updateCanClick(true);
      registerBroadcastPressEvent();
  
-@@ -150,6 +172,39 @@ public class IncomingCallService extends Service {
+@@ -150,6 +157,39 @@ public class IncomingCallService extends Service {
      } else {
        startForeground(1, notification);
      }
@@ -156,7 +138,7 @@ index 502fe36..ee4bccc 100644
    }
  
    private PendingIntent onButtonNotificationClick(int id, String action, String eventName) {
-@@ -212,7 +267,7 @@ public class IncomingCallService extends Service {
+@@ -212,7 +252,7 @@ public class IncomingCallService extends Service {
        .setOngoing(true)
        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
        .setVibrate(new long[]{0, 1000, 800})
@@ -165,7 +147,7 @@ index 502fe36..ee4bccc 100644
        .setFullScreenIntent(emptyPendingIntent, true);
    }
  
-@@ -245,11 +300,7 @@ public class IncomingCallService extends Service {
+@@ -245,11 +285,7 @@ public class IncomingCallService extends Service {
      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
        NotificationChannel notificationChannel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
@@ -178,7 +160,7 @@ index 502fe36..ee4bccc 100644
        notificationChannel.enableLights(true);
        notificationChannel.enableVibration(true);
        notificationChannel.setLightColor(Color.WHITE);
-@@ -303,6 +354,7 @@ public class IncomingCallService extends Service {
+@@ -303,6 +339,7 @@ public class IncomingCallService extends Service {
    public void onDestroy() {
      super.onDestroy();
      Log.d(TAG, "onDestroy service");
@@ -186,7 +168,7 @@ index 502fe36..ee4bccc 100644
      cancelTimer();
      stopForeground(true);
      unregisterBroadcastPressEvent();
-@@ -341,7 +393,7 @@ public class IncomingCallService extends Service {
+@@ -341,7 +378,7 @@ public class IncomingCallService extends Service {
          params.putString("endAction", Constants.ACTION_HIDE_CALL);
          FullScreenNotificationIncomingCallModule.sendEventToJs(Constants.RNNotificationEndCallAction, params);
          cancelTimer();
@@ -195,7 +177,7 @@ index 502fe36..ee4bccc 100644
        }
      };
      callhandle.postDelayed(handleTimeout, timeoutNumber);
-@@ -392,7 +444,7 @@ public class IncomingCallService extends Service {
+@@ -392,7 +429,7 @@ public class IncomingCallService extends Service {
            params.putString("callUUID", uuid);
            params.putString("endAction", Constants.ACTION_REJECTED_CALL);
            FullScreenNotificationIncomingCallModule.sendEventToJs(Constants.RNNotificationEndCallAction, params);
@@ -208,7 +190,7 @@ diff --git a/node_modules/react-native-full-screen-notification-incoming-call/an
 index beb50db..d8cfd87 100644
 --- a/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/NotificationReceiverHandler.java
 +++ b/node_modules/react-native-full-screen-notification-incoming-call/android/src/main/java/com/reactnativefullscreennotificationincomingcall/NotificationReceiverHandler.java
-@@ -72,8 +72,27 @@ public class NotificationReceiverHandler {
+@@ -72,8 +72,25 @@ public class NotificationReceiverHandler {
      }
      params.putBoolean("accept", true);
      params.putString("callUUID", uuid);
@@ -225,11 +207,9 @@ index beb50db..d8cfd87 100644
 +
 +    if (Constants.RNNotificationAnswerAction.equals(eventName) && uuid != null && !uuid.isEmpty()) {
 +      if (!eventSent) {
-+        // App killed — deep link cold-starts directly to call screen.
-+        // fromColdBoot=1 tells the call screen the user already accepted at
-+        // the native UI, so it should POST /accept itself (no JS handler ran).
++        // App killed — deep link cold-starts directly to call screen
 +        Intent deepLink = new Intent(Intent.ACTION_VIEW,
-+          android.net.Uri.parse("questioncall://call/" + uuid + "?fromColdBoot=1"));
++          android.net.Uri.parse("questioncall://call/" + uuid));
 +        deepLink.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 +        context.startActivity(deepLink);
 +      }

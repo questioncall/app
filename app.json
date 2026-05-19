@@ -47,7 +47,6 @@
     "plugins": [
       "./plugins/withCallKeep",
       "./plugins/withAsyncStorageRepo",
-      "./plugins/withCallAwareMessagingService",
       "expo-router",
       "react-native-full-screen-notification-incoming-call",
       [

@@ -101,18 +101,11 @@ export default function CallScreen() {
     roomId: string;
     channelId?: string;
     mode?: string;
-    fromColdBoot?: string;
   }>();
   const routeRoomId = params.roomId;
   const pendingChannelId = params.channelId ?? null;
   const pendingModeParam = params.mode === "VIDEO" ? "VIDEO" : "AUDIO";
   const isPendingRoute = routeRoomId === "pending";
-  // Cold-boot path: user tapped Accept on the full-screen call UI while the
-  // app was killed. The native side fired a `questioncall://call/{id}?fromColdBoot=1`
-  // deep link. No JS handler ran, so /accept hasn't been called on the server —
-  // we have to do that here ourselves before connecting to LiveKit.
-  // See: patches/react-native-full-screen-notification-incoming-call+1.1.0.patch
-  const isFromColdBoot = params.fromColdBoot === "1";
 
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
 
@@ -371,82 +364,13 @@ export default function CallScreen() {
   }, [isPendingRoute, pendingChannelId, pendingModeParam, userId, resolvedRoomId]);
 
   // ── Session initialization (non-pending route) ────────────────────────────
-  // Three entry paths, in priority order:
-  //
-  //   1. fromColdBoot=1   — user accepted from the killed-app full-screen UI;
-  //                          server hasn't been told yet. POST /accept now.
-  //   2. preAcceptedCallRef — JS-side acceptCall() in full-screen-notification.ts
-  //                          already POSTed /accept and stashed the token.
-  //   3. Plain fetch       — opened via channels list / notification tap; just
-  //                          GET the session and let the user decide.
+  // Callee path: preAcceptedCallRef may already hold a token from
+  // full-screen-notification.acceptCall — go straight to ACTIVE in that case.
+  // Otherwise fetch the session from the server.
   useEffect(() => {
     if (isPendingRoute) return;
     if (!routeRoomId) return;
     hideFullScreenCallNotification();
-
-    if (isFromColdBoot) {
-      // Cold-boot accept path: native full-screen UI accept tap deep-linked us
-      // here without the JS bridge ever running. We must call /accept ourselves
-      // before LiveKit can join.
-      console.log("[call] Cold-boot accept dispatch for", routeRoomId);
-      api
-        .post(`/calls/${routeRoomId}/accept`)
-        .then((res) => {
-          const data = res.data as {
-            token?: string;
-            serverUrl?: string;
-            channelId?: string;
-            timerDeadline?: string;
-            timeExtensionCount?: number;
-            mode?: "AUDIO" | "VIDEO";
-            callerId?: string;
-          };
-          if (data?.token && data?.serverUrl) {
-            prefetchedTokenRef.current = {
-              token: data.token,
-              serverUrl: data.serverUrl,
-              channelId: data.channelId ?? "",
-              timerDeadline: data.timerDeadline ?? "",
-              timeExtensionCount: data.timeExtensionCount ?? 0,
-            };
-          }
-          setSession({
-            callSessionId: routeRoomId,
-            channelId: data.channelId ?? "",
-            callerId: data.callerId ?? null,
-            mode: data.mode ?? "AUDIO",
-            status: "ACTIVE" as CallStatus,
-          } as CallSession);
-        })
-        .catch((err: any) => {
-          const status = err?.response?.status;
-          // 409 = already accepted on another device. Just fetch the session
-          // and proceed — the call is live somewhere.
-          if (status === 409) {
-            return api
-              .get(`/calls/${routeRoomId}`)
-              .then((r) => setSession(r.data as CallSession));
-          }
-          // 410 / 404 = cancelled or already ended. Bail to channels with a
-          // clear message instead of getting stuck on a "Connecting..." screen.
-          if (status === 410 || status === 404) {
-            Toast.show({ type: "info", text1: "Call already ended." });
-            goBack();
-            return;
-          }
-          console.error(
-            "[call] Cold-boot accept failed:",
-            err instanceof Error ? err.message : String(err),
-          );
-          Toast.show({
-            type: "error",
-            text1: "Couldn't join the call. Please try again.",
-          });
-          goBack();
-        })
-        .finally(() => setLoading(false));
-      return;
-    }
 
     const pre = preAcceptedCallRef.current;
     if (pre) {
@@ -486,8 +410,7 @@ export default function CallScreen() {
         });
       })
       .finally(() => setLoading(false));
-     
-  }, [isPendingRoute, routeRoomId, isFromColdBoot]);
+  }, [isPendingRoute, routeRoomId]);
 
   // ── Consume the caller-side pre-warmed room ───────────────────────────────
   // Workspace pre-warms `channel_${channelId}` while the user is in chat.
