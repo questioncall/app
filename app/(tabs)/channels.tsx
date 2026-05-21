@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
@@ -268,29 +268,30 @@ function Separator({ borderColor }: { borderColor: string }) {
 }
 
 // ─── Online users bar ─────────────────────────────────────────
-interface OnlineUser {
-  _id: string;
+interface Counterpart {
+  id: string;
   name: string;
-  image: string | null;
-  role: string;
+  image?: string;
 }
 
 function OnlineBar({
-  users,
+  counterparts,
+  onlineIds,
   primaryColor,
   primarySoftColor,
   mutedIconColor,
   borderColor,
   isDark,
 }: {
-  users: OnlineUser[];
+  counterparts: Counterpart[];
+  onlineIds: Set<string>;
   primaryColor: string;
   primarySoftColor: string;
   mutedIconColor: string;
   borderColor: string;
   isDark: boolean;
 }) {
-  if (users.length === 0) return null;
+  if (counterparts.length === 0) return null;
 
   return (
     <View
@@ -300,90 +301,75 @@ function OnlineBar({
         borderBottomColor: borderColor,
       }}
     >
-      <Text
-        style={{
-          fontSize: 12,
-          fontWeight: "600",
-          color: mutedIconColor,
-          paddingHorizontal: 16,
-          marginBottom: 8,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-        }}
-      >
-        Online now
-      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 12 }}
       >
-        {users.map((user) => (
-          <View
-            key={user._id}
-            style={{
-              alignItems: "center",
-              marginHorizontal: 6,
-              width: 56,
-            }}
-          >
-            <View style={{ width: 44, height: 44 }}>
-              {user.image ? (
-                <Image
-                  source={{ uri: user.image }}
-                  style={{ width: 44, height: 44, borderRadius: 22 }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: primarySoftColor,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
+        {counterparts.map((user) => {
+          const isOnline = onlineIds.has(user.id);
+          return (
+            <View
+              key={user.id}
+              style={{ alignItems: "center", marginHorizontal: 6, width: 56 }}
+            >
+              <View style={{ width: 46, height: 46 }}>
+                {user.image ? (
+                  <Image
+                    source={{ uri: user.image }}
+                    style={{ width: 46, height: 46, borderRadius: 23 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
                     style={{
-                      fontSize: 17,
-                      fontWeight: "700",
-                      color: primaryColor,
+                      width: 46,
+                      height: 46,
+                      borderRadius: 23,
+                      backgroundColor: primarySoftColor,
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    {(user.name ?? "?")[0].toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <View
+                    <Text
+                      style={{ fontSize: 18, fontWeight: "700", color: primaryColor }}
+                    >
+                      {(user.name ?? "?")[0].toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                {isOnline && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      bottom: 1,
+                      right: 1,
+                      width: 13,
+                      height: 13,
+                      borderRadius: 7,
+                      backgroundColor: "#22c55e",
+                      borderWidth: 2,
+                      borderColor: isDark ? "#1e293b" : "#ffffff",
+                    }}
+                  />
+                )}
+              </View>
+              <Text
+                numberOfLines={1}
                 style={{
-                  position: "absolute",
-                  bottom: 0,
-                  right: 0,
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: "#22c55e",
-                  borderWidth: 2,
-                  borderColor: isDark ? "#1e293b" : "#ffffff",
+                  fontSize: 11,
+                  color: isOnline ? (isDark ? "#e2e8f0" : "#0f172a") : mutedIconColor,
+                  fontWeight: isOnline ? "600" : "400",
+                  marginTop: 4,
+                  textAlign: "center",
+                  width: 56,
                 }}
-              />
+              >
+                {user.name.split(" ")[0]}
+              </Text>
             </View>
-            <Text
-              numberOfLines={1}
-              style={{
-                fontSize: 11,
-                color: isDark ? "#94a3b8" : "#64748b",
-                marginTop: 4,
-                textAlign: "center",
-                width: 56,
-              }}
-            >
-              {user.name.split(" ")[0]}
-            </Text>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -406,7 +392,7 @@ export default function ChannelsScreen() {
     isDark,
   } = useAppTheme();
 
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
 
   const cacheMatchesUser = loadedForUserId === userId;
   const channels = cacheMatchesUser ? list : [];
@@ -440,7 +426,7 @@ export default function ChannelsScreen() {
   const loadOnlineUsers = useCallback(async () => {
     try {
       const res = await api.get("/users/online");
-      if (Array.isArray(res.data)) setOnlineUsers(res.data);
+      if (Array.isArray(res.data)) setOnlineIds(new Set<string>(res.data));
     } catch {}
   }, []);
 
@@ -455,6 +441,22 @@ export default function ChannelsScreen() {
   }, [dispatch, loadChannels, loadOnlineUsers]);
 
   const activeCount = channels.filter((c) => c.status === "ACTIVE").length;
+
+  // Unique counterparts across all channels (deduplicated by user ID)
+  const counterparts = useMemo(() => {
+    const seen = new Set<string>();
+    const result: Counterpart[] = [];
+    for (const ch of channels) {
+      if (!ch.counterpartId || seen.has(ch.counterpartId)) continue;
+      seen.add(ch.counterpartId);
+      result.push({
+        id: ch.counterpartId,
+        name: ch.counterpartName,
+        image: ch.counterpartImage,
+      });
+    }
+    return result;
+  }, [channels]);
 
   return (
     <View style={{ flex: 1, backgroundColor }}>
@@ -522,7 +524,8 @@ export default function ChannelsScreen() {
 
       {/* ── Online users ────────────────────────────────── */}
       <OnlineBar
-        users={onlineUsers}
+        counterparts={counterparts}
+        onlineIds={onlineIds}
         primaryColor={primaryColor}
         primarySoftColor={primarySoftColor}
         mutedIconColor={mutedIconColor}

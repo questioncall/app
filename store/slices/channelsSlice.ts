@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface ChannelListItem {
   id: string;
   questionTitle: string;
+  counterpartId: string;
   counterpartName: string;
   counterpartImage?: string;
   status: "ACTIVE" | "CLOSED" | "EXPIRED";
