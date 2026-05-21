@@ -7,9 +7,10 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
@@ -266,6 +267,128 @@ function Separator({ borderColor }: { borderColor: string }) {
   );
 }
 
+// ─── Online users bar ─────────────────────────────────────────
+interface OnlineUser {
+  _id: string;
+  name: string;
+  image: string | null;
+  role: string;
+}
+
+function OnlineBar({
+  users,
+  primaryColor,
+  primarySoftColor,
+  mutedIconColor,
+  borderColor,
+  isDark,
+}: {
+  users: OnlineUser[];
+  primaryColor: string;
+  primarySoftColor: string;
+  mutedIconColor: string;
+  borderColor: string;
+  isDark: boolean;
+}) {
+  if (users.length === 0) return null;
+
+  return (
+    <View
+      style={{
+        paddingVertical: 10,
+        borderBottomWidth: 0.5,
+        borderBottomColor: borderColor,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: "600",
+          color: mutedIconColor,
+          paddingHorizontal: 16,
+          marginBottom: 8,
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+        }}
+      >
+        Online now
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 12 }}
+      >
+        {users.map((user) => (
+          <View
+            key={user._id}
+            style={{
+              alignItems: "center",
+              marginHorizontal: 6,
+              width: 56,
+            }}
+          >
+            <View style={{ width: 44, height: 44 }}>
+              {user.image ? (
+                <Image
+                  source={{ uri: user.image }}
+                  style={{ width: 44, height: 44, borderRadius: 22 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: primarySoftColor,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 17,
+                      fontWeight: "700",
+                      color: primaryColor,
+                    }}
+                  >
+                    {(user.name ?? "?")[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 0,
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: "#22c55e",
+                  borderWidth: 2,
+                  borderColor: isDark ? "#1e293b" : "#ffffff",
+                }}
+              />
+            </View>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 11,
+                color: isDark ? "#94a3b8" : "#64748b",
+                marginTop: 4,
+                textAlign: "center",
+                width: 56,
+              }}
+            >
+              {user.name.split(" ")[0]}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────
 export default function ChannelsScreen() {
   const dispatch = useAppDispatch();
@@ -282,6 +405,8 @@ export default function ChannelsScreen() {
     borderColor,
     isDark,
   } = useAppTheme();
+
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
   const cacheMatchesUser = loadedForUserId === userId;
   const channels = cacheMatchesUser ? list : [];
@@ -312,14 +437,22 @@ export default function ChannelsScreen() {
     [dispatch, isLoading, shouldUseCache, userId, list.length],
   );
 
+  const loadOnlineUsers = useCallback(async () => {
+    try {
+      const res = await api.get("/users/online");
+      if (Array.isArray(res.data)) setOnlineUsers(res.data);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     void loadChannels();
-  }, [loadChannels]);
+    void loadOnlineUsers();
+  }, [loadChannels, loadOnlineUsers]);
 
   const handleRefresh = useCallback(async () => {
     dispatch(setChannelsRefreshing(true));
-    await loadChannels(true);
-  }, [dispatch, loadChannels]);
+    await Promise.all([loadChannels(true), loadOnlineUsers()]);
+  }, [dispatch, loadChannels, loadOnlineUsers]);
 
   const activeCount = channels.filter((c) => c.status === "ACTIVE").length;
 
@@ -386,6 +519,16 @@ export default function ChannelsScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── Online users ────────────────────────────────── */}
+      <OnlineBar
+        users={onlineUsers}
+        primaryColor={primaryColor}
+        primarySoftColor={primarySoftColor}
+        mutedIconColor={mutedIconColor}
+        borderColor={borderColor}
+        isDark={isDark}
+      />
 
       {/* ── Content ──────────────────────────────────────── */}
       {showInitialSpinner ? (
