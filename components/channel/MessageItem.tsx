@@ -20,8 +20,32 @@ type Props = {
   onToggleMark: (id: string, isMarked: boolean) => void;
 };
 
-// ── Audio player sub-component ────────────────────────────────────────────────
-// Kept separate so hooks always run unconditionally in MessageItemInner.
+// ── Waveform bars (static decorative) ────────────────────────
+const BARS = [4, 8, 14, 10, 18, 12, 20, 14, 10, 16, 8, 18, 12, 6, 14, 10, 18, 8, 12, 16];
+
+function WaveformBars({ progress, isOwn }: { progress: number; isOwn: boolean }) {
+  const activeColor = isOwn ? "#ffffff" : "#374151";
+  const inactiveColor = isOwn ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)";
+  const cutoff = Math.round(progress * BARS.length);
+
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 2, height: 24 }}>
+      {BARS.map((h, i) => (
+        <View
+          key={i}
+          style={{
+            width: 3,
+            height: h,
+            borderRadius: 2,
+            backgroundColor: i < cutoff ? activeColor : inactiveColor,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ── Audio player ──────────────────────────────────────────────
 function AudioMessagePlayer({
   mediaUrl,
   isOwn,
@@ -37,7 +61,6 @@ function AudioMessagePlayer({
   const [durationSec, setDurationSec] = useState(0);
   const soundRef = useRef<Audio.Sound | null>(null);
 
-  // Clean up sound on unmount
   useEffect(() => {
     return () => {
       soundRef.current?.stopAsync().catch(() => {});
@@ -53,7 +76,6 @@ function AudioMessagePlayer({
   };
 
   const handlePress = useCallback(async () => {
-    // If already playing — pause
     if (isPlaying && soundRef.current) {
       try {
         await soundRef.current.pauseAsync();
@@ -61,8 +83,6 @@ function AudioMessagePlayer({
       } catch {}
       return;
     }
-
-    // If sound exists but paused — resume
     if (soundRef.current) {
       try {
         await soundRef.current.playAsync();
@@ -70,8 +90,6 @@ function AudioMessagePlayer({
       } catch {}
       return;
     }
-
-    // Load and play fresh
     setIsLoading(true);
     try {
       await Audio.setAudioModeAsync({
@@ -90,7 +108,6 @@ function AudioMessagePlayer({
           if (status.didJustFinish) {
             setIsPlaying(false);
             setPositionSec(0);
-            // Unload so next tap reloads from start
             sound.unloadAsync().catch(() => {});
             soundRef.current = null;
           }
@@ -99,74 +116,60 @@ function AudioMessagePlayer({
       soundRef.current = sound;
       setIsPlaying(true);
     } catch {
-      // silent — network / format errors
+      // silent
     } finally {
       setIsLoading(false);
     }
   }, [isPlaying, mediaUrl]);
 
-  const iconColor = isOwn ? "#fff" : "#1c1917";
-  const textColor = isOwn ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.6)";
-  const trackBg = isOwn ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.1)";
-  const trackFg = isOwn ? "#fff" : primaryColor;
   const progress = durationSec > 0 ? positionSec / durationSec : 0;
+  const timeLabel =
+    durationSec > 0 ? formatTime(isPlaying ? positionSec : durationSec) : "0:00";
 
   return (
-    <View className="my-1 flex-row items-center gap-2" style={{ minWidth: 180 }}>
-      {/* Play / Pause button */}
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, minWidth: 200 }}>
+      {/* Play/Pause circle */}
       <TouchableOpacity
         onPress={handlePress}
         disabled={isLoading}
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 38,
+          height: 38,
+          borderRadius: 19,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: isOwn ? "rgba(255,255,255,0.2)" : `${primaryColor}20`,
+          backgroundColor: isOwn ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.08)",
         }}
       >
         {isLoading ? (
-          <ActivityIndicator size="small" color={iconColor} />
+          <ActivityIndicator size="small" color={isOwn ? "#fff" : "#374151"} />
         ) : (
-          <Ionicons name={isPlaying ? "pause" : "play"} size={18} color={iconColor} />
+          <Ionicons
+            name={isPlaying ? "pause" : "play"}
+            size={18}
+            color={isOwn ? "#fff" : "#374151"}
+          />
         )}
       </TouchableOpacity>
 
-      {/* Progress bar + time */}
-      <View className="flex-1 gap-1">
-        {/* Track */}
-        <View
+      {/* Waveform + duration */}
+      <View style={{ flex: 1 }}>
+        <WaveformBars progress={progress} isOwn={isOwn} />
+        <Text
           style={{
-            height: 3,
-            borderRadius: 2,
-            backgroundColor: trackBg,
-            overflow: "hidden",
+            fontSize: 11,
+            marginTop: 3,
+            color: isOwn ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.45)",
           }}
         >
-          <View
-            style={{
-              height: 3,
-              width: `${Math.round(progress * 100)}%`,
-              backgroundColor: trackFg,
-              borderRadius: 2,
-            }}
-          />
-        </View>
-        {/* Time label */}
-        <Text style={{ fontSize: 11, color: textColor }}>
-          {durationSec > 0
-            ? `${formatTime(positionSec)} / ${formatTime(durationSec)}`
-            : isPlaying
-              ? formatTime(positionSec)
-              : "Voice message"}
+          {timeLabel}
         </Text>
       </View>
     </View>
   );
 }
 
-// ── Main message item ─────────────────────────────────────────────────────────
+// ── Main message item ─────────────────────────────────────────
 function MessageItemInner({
   item,
   userId,
@@ -182,12 +185,19 @@ function MessageItemInner({
   onRetry,
   onToggleMark,
 }: Props) {
-  // ── Date separator ──
+  // ── Date separator ────────────────────────────────────────
   if ("__dateSeparator" in item) {
     return (
-      <View className="my-3 items-center">
-        <View className="bg-muted/30 rounded-full px-3 py-1">
-          <Text className="text-[13px] font-medium text-muted-foreground">
+      <View style={{ alignItems: "center", marginVertical: 14 }}>
+        <View
+          style={{
+            backgroundColor: "rgba(100,116,139,0.15)",
+            borderRadius: 20,
+            paddingHorizontal: 14,
+            paddingVertical: 4,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: "500", color: mutedIconColor }}>
             {item.__dateSeparator}
           </Text>
         </View>
@@ -197,24 +207,48 @@ function MessageItemInner({
 
   const msg = item;
 
-  // ── Deleted message ──
+  // ── Deleted ───────────────────────────────────────────────
   if (msg.isDeleted) {
     return (
-      <View className="my-1 items-center">
-        <View className="bg-muted/20 flex-row items-center gap-1.5 rounded-full px-3 py-1.5">
-          <Ionicons name="trash-outline" size={16} color={mutedIconColor} />
-          <Text className="text-[13px] text-muted-foreground">Message deleted</Text>
+      <View style={{ alignItems: "center", marginVertical: 4 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            backgroundColor: "rgba(100,116,139,0.1)",
+            borderRadius: 20,
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+          }}
+        >
+          <Ionicons name="trash-outline" size={14} color={mutedIconColor} />
+          <Text style={{ fontSize: 13, color: mutedIconColor }}>Message deleted</Text>
         </View>
       </View>
     );
   }
 
-  // ── System message ──
+  // ── System message ────────────────────────────────────────
   if (msg.isSystemMessage) {
     return (
-      <View className="my-2 items-center px-12">
-        <View className="rounded-2xl bg-sky-500/10 px-5 py-3">
-          <Text className="text-center text-[15px] leading-6 text-sky-700 dark:text-sky-300">
+      <View style={{ alignItems: "center", marginVertical: 6, paddingHorizontal: 32 }}>
+        <View
+          style={{
+            backgroundColor: "rgba(14,165,233,0.1)",
+            borderRadius: 14,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 13,
+              textAlign: "center",
+              color: "#0ea5e9",
+              lineHeight: 20,
+            }}
+          >
             {msg.content}
           </Text>
         </View>
@@ -222,46 +256,56 @@ function MessageItemInner({
     );
   }
 
-  // ── Regular message ──
+  // ── Regular message ───────────────────────────────────────
   const isOwn = msg.isOwn || msg.senderId === userId;
   const showMark = isAcceptor && isActive && isOwn && !isAnswerSubmitted;
 
+  // Bubble colours — matches the screenshot: dark for sent, light grey for received
+  const sentBg = "#111827";
+  const receivedBg = cardColor;
+  const bubbleBg = isOwn ? sentBg : receivedBg;
+  const textColor = isOwn ? "#ffffff" : "#111827";
+  const timeColor = isOwn ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.4)";
+
+  // Answer-marked overlay
+  const isMarked = !!msg.isMarkedAsAnswer;
+
   return (
-    <View className={`my-1 px-3 ${isOwn ? "items-end" : "items-start"}`}>
+    <View
+      style={{
+        marginVertical: 2,
+        paddingHorizontal: 14,
+        alignItems: isOwn ? "flex-end" : "flex-start",
+      }}
+    >
       <View
         style={{
-          maxWidth: "80%",
-          borderRadius: 18,
-          padding: 12,
-          backgroundColor: isOwn ? primaryColor : cardColor,
-          borderWidth: isOwn ? 0 : 1,
-          borderColor: isOwn ? undefined : borderColor,
-          ...(msg.isMarkedAsAnswer
-            ? {
-                borderWidth: 2,
-                borderColor: "#f59e0b",
-              }
-            : {}),
+          maxWidth: "78%",
+          borderRadius: 20,
+          // Flatten the corner on the "tail" side like a real chat bubble
+          ...(isOwn ? { borderBottomRightRadius: 4 } : { borderBottomLeftRadius: 4 }),
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          backgroundColor: bubbleBg,
+          // Answer highlighted border
+          ...(isMarked ? { borderWidth: 2, borderColor: "#f59e0b" } : {}),
         }}
       >
-        {!isOwn && msg.senderName ? (
-          <Text className="mb-1 text-[13px] font-semibold text-muted-foreground">
-            {msg.senderName}
-          </Text>
-        ) : null}
-
         {/* Image */}
         {msg.mediaUrl && msg.mediaType === "IMAGE" ? (
-          <TouchableOpacity onPress={() => onImageOpen(msg.mediaUrl!)} className="mb-1.5">
+          <TouchableOpacity
+            onPress={() => onImageOpen(msg.mediaUrl!)}
+            style={{ marginBottom: 6 }}
+          >
             <Image
               source={{ uri: msg.mediaUrl }}
-              className="h-56 w-56 rounded-xl"
+              style={{ width: 220, height: 220, borderRadius: 12 }}
               resizeMode="cover"
             />
           </TouchableOpacity>
         ) : null}
 
-        {/* Audio — playable for both sender and receiver */}
+        {/* Audio */}
         {msg.mediaType === "AUDIO" && msg.mediaUrl ? (
           <AudioMessagePlayer
             mediaUrl={msg.mediaUrl}
@@ -270,56 +314,74 @@ function MessageItemInner({
           />
         ) : null}
 
-        {/* Text content */}
+        {/* Text */}
         {msg.content ? (
-          <Text
-            className="text-[16px] leading-6"
-            style={{ color: isOwn ? "#fff" : "#1c1917" }}
-          >
+          <Text style={{ fontSize: 15, lineHeight: 22, color: textColor }}>
             {msg.content}
           </Text>
         ) : null}
 
-        {/* Footer: time + status */}
-        <View className="mt-1 flex-row items-center justify-end gap-1">
-          <Text
-            className="text-[11px]"
-            style={{ color: isOwn ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.4)" }}
-          >
+        {/* Footer: time + delivery icons */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 3,
+            marginTop: 4,
+          }}
+        >
+          <Text style={{ fontSize: 11, color: timeColor }}>
             {formatMessageTime(msg.sentAt)}
           </Text>
-          {msg.isSending && isOwn && !msg.sendFailed ? (
-            <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.5)" />
-          ) : null}
-          {msg.isDelivered && isOwn && !msg.sendFailed ? (
-            <Ionicons name="checkmark" size={13} color="rgba(255,255,255,0.5)" />
-          ) : null}
-          {msg.isSeen && isOwn ? (
-            <Ionicons name="checkmark-done" size={13} color="#60a5fa" />
-          ) : null}
+          {isOwn && !msg.sendFailed && (
+            <>
+              {msg.isSending && (
+                <Ionicons name="time-outline" size={12} color={timeColor} />
+              )}
+              {msg.isSeen ? (
+                <Ionicons name="checkmark-done" size={13} color="#60a5fa" />
+              ) : msg.isDelivered ? (
+                <Ionicons name="checkmark" size={13} color={timeColor} />
+              ) : null}
+            </>
+          )}
         </View>
 
-        {/* Retry button */}
+        {/* Retry */}
         {msg.sendFailed ? (
           <TouchableOpacity
             onPress={() => onRetry(msg)}
-            className="mt-1 flex-row items-center gap-1"
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}
           >
-            <Ionicons name="alert-circle" size={15} color="#ef4444" />
-            <Text className="text-[12px] text-red-500">Tap to retry</Text>
+            <Ionicons name="alert-circle" size={14} color="#ef4444" />
+            <Text style={{ fontSize: 12, color: "#ef4444" }}>Tap to retry</Text>
           </TouchableOpacity>
         ) : null}
 
         {/* Mark as answer star (acceptor only) */}
         {showMark ? (
           <TouchableOpacity
-            onPress={() => onToggleMark(msg.id || msg._id || "", !!msg.isMarkedAsAnswer)}
-            className="absolute -right-2 -top-2 h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: cardColor }}
+            onPress={() => onToggleMark(msg.id || msg._id || "", isMarked)}
+            style={{
+              position: "absolute",
+              top: -10,
+              right: -10,
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: cardColor,
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#000",
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
           >
             <Ionicons
-              name={msg.isMarkedAsAnswer ? "star" : "star-outline"}
-              size={20}
+              name={isMarked ? "star" : "star-outline"}
+              size={16}
               color="#f59e0b"
             />
           </TouchableOpacity>

@@ -8,6 +8,7 @@ import {
   StatusBar,
   Image,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -25,14 +26,13 @@ import type { ChannelListItem } from "@/store/slices/channelsSlice";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 
-// ─── Time formatter (WhatsApp style) ──────────────────────────
+// ─── Time formatter ───────────────────────────────────────────
 function formatChannelTime(iso?: string): string {
   if (!iso) return "";
   const date = new Date(iso);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
   if (diffDays === 0) {
     const h = date.getHours();
     const m = date.getMinutes();
@@ -40,9 +40,7 @@ function formatChannelTime(iso?: string): string {
     return `${h % 12 || 12}:${m.toString().padStart(2, "0")} ${ampm}`;
   }
   if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) {
-    return date.toLocaleDateString("en-US", { weekday: "short" });
-  }
+  if (diffDays < 7) return date.toLocaleDateString("en-US", { weekday: "short" });
   return date.toLocaleDateString("en-US", {
     month: "numeric",
     day: "numeric",
@@ -50,89 +48,125 @@ function formatChannelTime(iso?: string): string {
   });
 }
 
-// ─── Status pill ───────────────────────────────────────────────
-function StatusPill({ status }: { status: ChannelListItem["status"] }) {
-  if (status === "ACTIVE") return null;
-  return (
-    <View
-      className="flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5"
-      style={{
-        backgroundColor: status === "CLOSED" ? "#10b98115" : "#ef444415",
-      }}
-    >
-      <Ionicons
-        name={status === "CLOSED" ? "lock-closed" : "alert-circle"}
-        size={9}
-        color={status === "CLOSED" ? "#10b981" : "#ef4444"}
-      />
-      <Text
-        className="text-[9px] font-semibold"
-        style={{ color: status === "CLOSED" ? "#10b981" : "#ef4444" }}
-      >
-        {status === "CLOSED" ? "Closed" : "Expired"}
-      </Text>
-    </View>
-  );
-}
-
-// ─── Row avatar ───────────────────────────────────────────────
-function ChannelAvatar({
-  name,
-  image,
-  status,
-  primaryColor,
-  primarySoftColor,
-}: {
+// ─── Active users bar ─────────────────────────────────────────
+interface Counterpart {
+  id: string;
   name: string;
   image?: string;
-  status: ChannelListItem["status"];
+  lastChannelId: string; // most-recent channel — used for tap navigation
+}
+
+function ActiveUsersBar({
+  counterparts,
+  onlineIds,
+  primaryColor,
+  primarySoftColor,
+  borderColor,
+  isDark,
+}: {
+  counterparts: Counterpart[];
+  onlineIds: Set<string>;
   primaryColor: string;
   primarySoftColor: string;
+  borderColor: string;
+  isDark: boolean;
 }) {
+  if (counterparts.length === 0) return null;
+
+  const bg = isDark ? "#0f172a" : "#ffffff";
+
   return (
-    <View style={{ width: 50, height: 50 }}>
-      {image ? (
-        <Image
-          source={{ uri: image }}
-          style={{ width: 50, height: 50, borderRadius: 25 }}
-          resizeMode="cover"
-        />
-      ) : (
-        <View
-          style={{
-            width: 50,
-            height: 50,
-            borderRadius: 25,
-            backgroundColor: primarySoftColor,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text style={{ fontSize: 20, fontWeight: "700", color: primaryColor }}>
-            {(name ?? "?")[0].toUpperCase()}
-          </Text>
-        </View>
-      )}
-      {status === "ACTIVE" && (
-        <View
-          style={{
-            position: "absolute",
-            bottom: 1,
-            right: 1,
-            width: 13,
-            height: 13,
-            borderRadius: 7,
-            backgroundColor: "#22c55e",
-            borderWidth: 2,
-            borderColor: "#fff",
-          }}
-        />
-      )}
+    <View
+      style={{
+        backgroundColor: bg,
+        paddingTop: 14,
+        paddingBottom: 12,
+        borderBottomWidth: 0.5,
+        borderBottomColor: borderColor,
+      }}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+      >
+        {counterparts.map((user) => {
+          const online = onlineIds.has(user.id);
+          return (
+            <TouchableOpacity
+              key={user.id}
+              activeOpacity={0.7}
+              onPress={() => router.push(`/workspace/${user.lastChannelId}` as any)}
+              style={{ alignItems: "center", marginRight: 18, width: 56 }}
+            >
+              {/* Avatar */}
+              <View style={{ width: 52, height: 52 }}>
+                {user.image ? (
+                  <Image
+                    source={{ uri: user.image }}
+                    style={{ width: 52, height: 52, borderRadius: 26 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 26,
+                      backgroundColor: primarySoftColor,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text
+                      style={{ fontSize: 19, fontWeight: "700", color: primaryColor }}
+                    >
+                      {(user.name ?? "?")[0].toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Green online dot — only if actually online */}
+                {online && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      bottom: 1,
+                      right: 1,
+                      width: 14,
+                      height: 14,
+                      borderRadius: 7,
+                      backgroundColor: "#22c55e",
+                      borderWidth: 2.5,
+                      borderColor: bg,
+                    }}
+                  />
+                )}
+              </View>
+
+              {/* First name */}
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontSize: 11,
+                  marginTop: 5,
+                  textAlign: "center",
+                  width: 56,
+                  color: isDark ? "#cbd5e1" : "#374151",
+                  fontWeight: "500",
+                }}
+              >
+                {user.name.split(" ")[0]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
 
-// ─── Single channel row ───────────────────────────────────────
+// ─── Channel row (messenger style) ───────────────────────────
 function ChannelRow({
   item,
   primaryColor,
@@ -149,39 +183,81 @@ function ChannelRow({
   isDark: boolean;
 }) {
   const timeStr = formatChannelTime(item.lastMessageAt ?? item.timerDeadline);
-  const hasUnread = item.unreadCount > 0 && item.status === "ACTIVE";
-  const preview =
-    item.lastMessagePreview ?? (item.status === "ACTIVE" ? "Channel opened" : "");
+  const hasUnread = item.unreadCount > 0;
+  const isActive = item.status === "ACTIVE";
+
+  // Preview line: last message or fallback
+  const preview = item.lastMessagePreview
+    ? item.lastMessagePreview
+    : isActive
+      ? "Channel opened"
+      : item.status === "CLOSED"
+        ? "Channel closed"
+        : "Channel expired";
 
   return (
     <TouchableOpacity
       onPress={() => router.push(`/workspace/${item.id}` as any)}
-      activeOpacity={0.6}
+      activeOpacity={0.55}
       style={{
         flexDirection: "row",
         alignItems: "center",
-        paddingLeft: 16,
-        paddingRight: 16,
-        paddingVertical: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
       }}
     >
-      <ChannelAvatar
-        name={item.counterpartName}
-        image={item.counterpartImage}
-        status={item.status}
-        primaryColor={primaryColor}
-        primarySoftColor={primarySoftColor}
-      />
+      {/* Avatar */}
+      <View style={{ width: 54, height: 54, marginRight: 13 }}>
+        {item.counterpartImage ? (
+          <Image
+            source={{ uri: item.counterpartImage }}
+            style={{ width: 54, height: 54, borderRadius: 27 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: 27,
+              backgroundColor: primarySoftColor,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: "700", color: primaryColor }}>
+              {(item.counterpartName ?? "?")[0].toUpperCase()}
+            </Text>
+          </View>
+        )}
+        {/* Active channel = green dot on list row too */}
+        {isActive && (
+          <View
+            style={{
+              position: "absolute",
+              bottom: 2,
+              right: 2,
+              width: 13,
+              height: 13,
+              borderRadius: 7,
+              backgroundColor: "#22c55e",
+              borderWidth: 2,
+              borderColor: isDark ? "#0f172a" : "#ffffff",
+            }}
+          />
+        )}
+      </View>
 
-      <View style={{ flex: 1, marginLeft: 14 }}>
-        {/* Row 1: name + time */}
+      {/* Text block */}
+      <View style={{ flex: 1 }}>
+        {/* Row 1: name + timestamp */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
           <Text
             numberOfLines={1}
             style={{
               flex: 1,
-              fontSize: 16,
-              fontWeight: "600",
+              fontSize: 15,
+              fontWeight: hasUnread ? "700" : "600",
               color: isDark ? "#f1f5f9" : "#0f172a",
               marginRight: 8,
             }}
@@ -203,23 +279,23 @@ function ChannelRow({
         <Text
           numberOfLines={1}
           style={{
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: "500",
-            color: isDark ? "#94a3b8" : "#475569",
+            color: isDark ? "#64748b" : "#64748b",
             marginBottom: 2,
           }}
         >
           {item.questionTitle}
         </Text>
 
-        {/* Row 3: preview + status pill + unread badge */}
+        {/* Row 3: preview + status badges */}
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Text
             numberOfLines={1}
             style={{
               flex: 1,
               fontSize: 13,
-              color: hasUnread ? (isDark ? "#e2e8f0" : "#334155") : mutedIconColor,
+              color: hasUnread ? (isDark ? "#e2e8f0" : "#111827") : mutedIconColor,
               fontWeight: hasUnread ? "500" : "400",
               marginRight: 8,
             }}
@@ -227,8 +303,31 @@ function ChannelRow({
             {preview}
           </Text>
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <StatusPill status={item.status} />
+          {/* Right-side badges */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            {/* Non-active status pill */}
+            {!isActive && (
+              <View
+                style={{
+                  borderRadius: 6,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  backgroundColor: item.status === "CLOSED" ? "#10b98118" : "#ef444418",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: "600",
+                    color: item.status === "CLOSED" ? "#10b981" : "#ef4444",
+                  }}
+                >
+                  {item.status === "CLOSED" ? "Closed" : "Expired"}
+                </Text>
+              </View>
+            )}
+
+            {/* Unread badge */}
             {hasUnread ? (
               <View
                 style={{
@@ -238,7 +337,7 @@ function ChannelRow({
                   backgroundColor: primaryColor,
                   alignItems: "center",
                   justifyContent: "center",
-                  paddingHorizontal: 4,
+                  paddingHorizontal: 5,
                 }}
               >
                 <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>
@@ -253,125 +352,12 @@ function ChannelRow({
   );
 }
 
-// ─── Separator: left-indented like WhatsApp ───────────────────
+// ─── Separator ────────────────────────────────────────────────
 function Separator({ borderColor }: { borderColor: string }) {
   return (
     <View
-      style={{
-        height: 0.5,
-        marginLeft: 80,
-        backgroundColor: borderColor,
-        opacity: 0.6,
-      }}
+      style={{ height: 0.5, marginLeft: 83, backgroundColor: borderColor, opacity: 0.5 }}
     />
-  );
-}
-
-// ─── Online users bar ─────────────────────────────────────────
-interface Counterpart {
-  id: string;
-  name: string;
-  image?: string;
-}
-
-function OnlineBar({
-  counterparts,
-  onlineIds,
-  primaryColor,
-  primarySoftColor,
-  mutedIconColor,
-  borderColor,
-  isDark,
-}: {
-  counterparts: Counterpart[];
-  onlineIds: Set<string>;
-  primaryColor: string;
-  primarySoftColor: string;
-  mutedIconColor: string;
-  borderColor: string;
-  isDark: boolean;
-}) {
-  if (counterparts.length === 0) return null;
-
-  return (
-    <View
-      style={{
-        paddingVertical: 10,
-        borderBottomWidth: 0.5,
-        borderBottomColor: borderColor,
-      }}
-    >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 12 }}
-      >
-        {counterparts.map((user) => {
-          const isOnline = onlineIds.has(user.id);
-          return (
-            <View
-              key={user.id}
-              style={{ alignItems: "center", marginHorizontal: 6, width: 56 }}
-            >
-              <View style={{ width: 46, height: 46 }}>
-                {user.image ? (
-                  <Image
-                    source={{ uri: user.image }}
-                    style={{ width: 46, height: 46, borderRadius: 23 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 23,
-                      backgroundColor: primarySoftColor,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{ fontSize: 18, fontWeight: "700", color: primaryColor }}
-                    >
-                      {(user.name ?? "?")[0].toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-                {isOnline && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      bottom: 1,
-                      right: 1,
-                      width: 13,
-                      height: 13,
-                      borderRadius: 7,
-                      backgroundColor: "#22c55e",
-                      borderWidth: 2,
-                      borderColor: isDark ? "#1e293b" : "#ffffff",
-                    }}
-                  />
-                )}
-              </View>
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontSize: 11,
-                  color: isOnline ? (isDark ? "#e2e8f0" : "#0f172a") : mutedIconColor,
-                  fontWeight: isOnline ? "600" : "400",
-                  marginTop: 4,
-                  textAlign: "center",
-                  width: 56,
-                }}
-              >
-                {user.name.split(" ")[0]}
-              </Text>
-            </View>
-          );
-        })}
-      </ScrollView>
-    </View>
   );
 }
 
@@ -380,7 +366,7 @@ export default function ChannelsScreen() {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
-  const { list, isLoading, isRefreshing, lastFetchedAt, loadedForUserId, error } =
+  const { list, isLoading, isRefreshing, lastFetchedAt, loadedForUserId } =
     useAppSelector((s) => s.channels);
   const {
     statusBarStyle,
@@ -393,27 +379,21 @@ export default function ChannelsScreen() {
   } = useAppTheme();
 
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   const cacheMatchesUser = loadedForUserId === userId;
   const channels = cacheMatchesUser ? list : [];
   const shouldUseCache = cacheMatchesUser && !selectIsChannelsStale(lastFetchedAt);
-  // True only when we have no data yet (initial blank load)
   const showInitialSpinner = isLoading && channels.length === 0;
 
   const loadChannels = useCallback(
     async (force = false) => {
       if (!force && (isLoading || shouldUseCache)) return;
-      // Only show full-screen spinner when there is nothing cached yet
-      if (list.length === 0) {
-        dispatch(setChannelsLoading(true));
-      }
+      if (list.length === 0) dispatch(setChannelsLoading(true));
       try {
         const res = await api.get("/channels");
         dispatch(
-          setChannels({
-            channels: Array.isArray(res.data) ? res.data : [],
-            userId,
-          }),
+          setChannels({ channels: Array.isArray(res.data) ? res.data : [], userId }),
         );
       } catch {
         dispatch(setChannelsLoading(false));
@@ -427,7 +407,9 @@ export default function ChannelsScreen() {
     try {
       const res = await api.get("/users/online");
       if (Array.isArray(res.data)) setOnlineIds(new Set<string>(res.data));
-    } catch {}
+    } catch {
+      // silently ignore — dots just won't show
+    }
   }, []);
 
   useEffect(() => {
@@ -442,20 +424,33 @@ export default function ChannelsScreen() {
 
   const activeCount = channels.filter((c) => c.status === "ACTIVE").length;
 
-  // Unique counterparts across all channels (deduplicated by user ID)
-  const counterparts = useMemo(() => {
-    const seen = new Set<string>();
-    const result: Counterpart[] = [];
+  const filteredChannels = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return channels;
+    return channels.filter(
+      (c) =>
+        c.counterpartName.toLowerCase().includes(q) ||
+        c.questionTitle.toLowerCase().includes(q),
+    );
+  }, [channels, searchQuery]);
+
+  // Build unique counterparts from ALL channels (not just active).
+  // Keep track of their most-recent channel ID for tap navigation.
+  // Channels are sorted newest-first from the API, so first-seen = most recent.
+  const counterparts = useMemo<Counterpart[]>(() => {
+    const seen = new Map<string, Counterpart>();
     for (const ch of channels) {
-      if (!ch.counterpartId || seen.has(ch.counterpartId)) continue;
-      seen.add(ch.counterpartId);
-      result.push({
-        id: ch.counterpartId,
-        name: ch.counterpartName,
-        image: ch.counterpartImage,
-      });
+      if (!ch.counterpartId) continue;
+      if (!seen.has(ch.counterpartId)) {
+        seen.set(ch.counterpartId, {
+          id: ch.counterpartId,
+          name: ch.counterpartName,
+          image: ch.counterpartImage,
+          lastChannelId: ch.id,
+        });
+      }
     }
-    return result;
+    return Array.from(seen.values());
   }, [channels]);
 
   return (
@@ -466,7 +461,7 @@ export default function ChannelsScreen() {
       <View
         style={{
           paddingTop: insets.top + 8,
-          paddingBottom: 12,
+          paddingBottom: 14,
           paddingHorizontal: 16,
           backgroundColor,
           borderBottomWidth: 0.5,
@@ -488,7 +483,7 @@ export default function ChannelsScreen() {
                 color: isDark ? "#f1f5f9" : "#0f172a",
               }}
             >
-              Channels
+              Messages
             </Text>
             {activeCount > 0 && (
               <Text
@@ -522,13 +517,58 @@ export default function ChannelsScreen() {
         </View>
       </View>
 
-      {/* ── Online users ────────────────────────────────── */}
-      <OnlineBar
+      {/* ── Search bar ───────────────────────────────────── */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          backgroundColor,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            height: 40,
+          }}
+        >
+          <Ionicons
+            name="search-outline"
+            size={16}
+            color={mutedIconColor}
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search"
+            placeholderTextColor={mutedIconColor}
+            style={{
+              flex: 1,
+              fontSize: 15,
+              color: isDark ? "#f1f5f9" : "#0f172a",
+              paddingVertical: 0,
+            }}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={mutedIconColor} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* ── Active users bar ─────────────────────────────── */}
+      <ActiveUsersBar
         counterparts={counterparts}
         onlineIds={onlineIds}
         primaryColor={primaryColor}
         primarySoftColor={primarySoftColor}
-        mutedIconColor={mutedIconColor}
         borderColor={borderColor}
         isDark={isDark}
       />
@@ -538,7 +578,7 @@ export default function ChannelsScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={primaryColor} size="large" />
         </View>
-      ) : channels.length === 0 ? (
+      ) : filteredChannels.length === 0 ? (
         <View
           style={{
             flex: 1,
@@ -569,7 +609,7 @@ export default function ChannelsScreen() {
               marginBottom: 8,
             }}
           >
-            No channels yet
+            No messages yet
           </Text>
           <Text
             style={{
@@ -579,13 +619,14 @@ export default function ChannelsScreen() {
               lineHeight: 20,
             }}
           >
-            Channels open when a teacher accepts your question. They appear here
-            instantly.
+            {searchQuery
+              ? "No channels match your search."
+              : "Channels open when a teacher accepts your question. They appear here instantly."}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={channels}
+          data={filteredChannels}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item }) => (
             <ChannelRow

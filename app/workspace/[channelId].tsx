@@ -1111,7 +1111,7 @@ export default function WorkspaceScreen() {
       <View
         style={{
           backgroundColor,
-          borderBottomWidth: 1,
+          borderBottomWidth: 0.5,
           borderBottomColor: borderColor,
           paddingTop:
             Platform.OS === "ios"
@@ -1121,112 +1121,149 @@ export default function WorkspaceScreen() {
           paddingHorizontal: 16,
         }}
       >
-        <View className="flex-row items-center gap-3">
+        {/* Row 1: back + avatar/name + call icons */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {/* Back */}
           <TouchableOpacity
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace("/(tabs)" as any)
             }
             hitSlop={12}
+            style={{ marginRight: 6 }}
           >
-            <Ionicons name="arrow-back" size={24} color={isDark ? "#fff" : "#111"} />
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={isDark ? "#f1f5f9" : "#111827"}
+            />
           </TouchableOpacity>
 
+          {/* Avatar */}
           {counterpartImage ? (
             <Image
               source={{ uri: counterpartImage }}
-              className="h-9 w-9 rounded-full border border-border"
+              style={{ width: 38, height: 38, borderRadius: 19, marginRight: 10 }}
               resizeMode="cover"
             />
           ) : (
             <View
-              className="h-9 w-9 items-center justify-center rounded-full"
-              style={{ backgroundColor: primarySoftColor }}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: primarySoftColor,
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 10,
+              }}
             >
-              <Text className="text-sm font-bold" style={{ color: primaryColor }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: primaryColor }}>
                 {counterpartName.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
 
-          <View className="flex-1">
-            <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+          {/* Name + subtitle */}
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: isDark ? "#f1f5f9" : "#111827",
+              }}
+              numberOfLines={1}
+            >
               {counterpartName}
             </Text>
-            <Text className="text-[11px] text-muted-foreground" numberOfLines={1}>
+            <Text
+              style={{ fontSize: 11, color: mutedIconColor, marginTop: 1 }}
+              numberOfLines={1}
+            >
               {detail.questionTitle}
             </Text>
           </View>
 
+          {/* Call icons (right side) */}
           {isActive ? (
-            <View className="flex-row items-center gap-2">
-              <TouchableOpacity
-                onPress={() => handleStartCall("AUDIO")}
-                disabled={!!startingCallType}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  backgroundColor: primarySoftColor,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {startingCallType === "AUDIO" ? (
-                  <ActivityIndicator size={14} color={primaryColor} />
-                ) : (
-                  <Ionicons name="call-outline" size={16} color={primaryColor} />
-                )}
-              </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <TouchableOpacity
                 onPress={() => handleStartCall("VIDEO")}
                 disabled={!!startingCallType}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  backgroundColor: primarySoftColor,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                hitSlop={8}
               >
                 {startingCallType === "VIDEO" ? (
-                  <ActivityIndicator size={14} color={primaryColor} />
+                  <ActivityIndicator size={18} color={primaryColor} />
                 ) : (
-                  <Ionicons name="videocam-outline" size={16} color={primaryColor} />
+                  <Ionicons
+                    name="videocam-outline"
+                    size={24}
+                    color={isDark ? "#f1f5f9" : "#111827"}
+                  />
                 )}
               </TouchableOpacity>
-              <ChannelTimer
-                timerDeadline={detail?.timerDeadline ?? null}
-                channelId={channelId}
-                isActive={isActive}
-                isAnswerSubmitted={!!detail?.isAnswerSubmitted}
-                timeExtensionCount={detail?.timeExtensionCount ?? 0}
-                primaryColor={primaryColor}
-              />
+              <TouchableOpacity
+                onPress={() => handleStartCall("AUDIO")}
+                disabled={!!startingCallType}
+                hitSlop={8}
+              >
+                {startingCallType === "AUDIO" ? (
+                  <ActivityIndicator size={18} color={primaryColor} />
+                ) : (
+                  <Ionicons
+                    name="call-outline"
+                    size={22}
+                    color={isDark ? "#f1f5f9" : "#111827"}
+                  />
+                )}
+              </TouchableOpacity>
             </View>
           ) : (
-            <View className="bg-muted/30 rounded-full px-2.5 py-1">
-              <Text className="text-[11px] font-semibold text-muted-foreground">
+            <View
+              style={{
+                backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                borderRadius: 8,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "600", color: mutedIconColor }}>
                 {detail.status === "CLOSED" ? "Closed" : detail.status}
               </Text>
             </View>
           )}
         </View>
 
-        {/* Extend + Close buttons */}
-        {isActive ? (
-          <View className="mt-2 flex-row items-center gap-2">
-            {isAcceptor &&
-            isActive &&
-            !detail.isAnswerSubmitted &&
-            markedMessageIds.length > 0 ? (
+        {/* Row 2: timer + action buttons (only when active) */}
+        {isActive && (
+          <View
+            style={{ flexDirection: "row", alignItems: "center", marginTop: 8, gap: 8 }}
+          >
+            <ChannelTimer
+              timerDeadline={detail?.timerDeadline ?? null}
+              channelId={channelId}
+              isActive={isActive}
+              isAnswerSubmitted={!!detail?.isAnswerSubmitted}
+              timeExtensionCount={detail?.timeExtensionCount ?? 0}
+              primaryColor={primaryColor}
+            />
+
+            <View style={{ flex: 1 }} />
+
+            {isAcceptor && !detail.isAnswerSubmitted && markedMessageIds.length > 0 ? (
               <TouchableOpacity
                 onPress={handleSubmitAnswer}
-                className="flex-row items-center gap-1 rounded-full px-3 py-1.5"
-                style={{ backgroundColor: "#10b981" }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  backgroundColor: "#10b981",
+                  borderRadius: 20,
+                  paddingHorizontal: 12,
+                  paddingVertical: 5,
+                }}
               >
-                <Ionicons name="checkmark-done-outline" size={14} color="#fff" />
-                <Text className="text-[11px] font-semibold text-white">
+                <Ionicons name="checkmark-done-outline" size={13} color="#fff" />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#fff" }}>
                   Submit Answer
                 </Text>
               </TouchableOpacity>
@@ -1238,15 +1275,24 @@ export default function WorkspaceScreen() {
                   setSelectedRating(0);
                   setRatingModalVisible(true);
                 }}
-                className="flex-row items-center gap-1 rounded-full px-3 py-1.5"
-                style={{ backgroundColor: primaryColor }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  backgroundColor: primaryColor,
+                  borderRadius: 20,
+                  paddingHorizontal: 12,
+                  paddingVertical: 5,
+                }}
               >
-                <Ionicons name="checkmark-circle-outline" size={14} color="#fff" />
-                <Text className="text-[11px] font-semibold text-white">Close & Rate</Text>
+                <Ionicons name="checkmark-circle-outline" size={13} color="#fff" />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#fff" }}>
+                  Close & Rate
+                </Text>
               </TouchableOpacity>
             ) : null}
           </View>
-        ) : null}
+        )}
       </View>
 
       {/* ── Answer submitted banner (asker view) ────────────── */}
@@ -1377,117 +1423,191 @@ export default function WorkspaceScreen() {
         <View
           style={{
             backgroundColor,
-            borderTopWidth: 1,
+            borderTopWidth: 0.5,
             borderTopColor: borderColor,
             paddingHorizontal: 12,
-            paddingTop: 8,
+            paddingTop: 10,
             paddingBottom: Math.max(insets.bottom, Platform.OS === "ios" ? 20 : 8) + 4,
           }}
         >
           {/* ── Recording in progress ── */}
           {isRecording ? (
-            <View className="flex-row items-center gap-3 px-2 py-1">
-              <View className="h-2.5 w-2.5 rounded-full bg-red-500" />
-              <Text className="flex-1 font-mono text-base text-red-500">
-                Recording {formatRecordingTime(recordingDuration)}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                paddingHorizontal: 4,
+              }}
+            >
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor: "#ef4444",
+                }}
+              />
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: "monospace",
+                  fontSize: 16,
+                  color: "#ef4444",
+                }}
+              >
+                {formatRecordingTime(recordingDuration)}
               </Text>
               <TouchableOpacity
                 onPress={handleVoiceRecord}
-                className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: primaryColor }}
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  backgroundColor: "#ef4444",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <Ionicons name="stop" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
           ) : pendingAudio ? (
             /* ── Audio preview ── */
-            <View className="flex-row items-center gap-2 px-1 py-1">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <TouchableOpacity
                 onPress={togglePreviewPlayback}
-                className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: primarySoftColor }}
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <Ionicons
                   name={isPlayingPreview ? "pause" : "play"}
                   size={20}
-                  color={primaryColor}
+                  color={isDark ? "#f1f5f9" : "#111827"}
                 />
               </TouchableOpacity>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-foreground">Voice message</Text>
-                <Text className="text-xs text-muted-foreground">
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "500",
+                    color: isDark ? "#f1f5f9" : "#111827",
+                  }}
+                >
+                  Voice message
+                </Text>
+                <Text style={{ fontSize: 12, color: mutedIconColor }}>
                   {formatRecordingTime(pendingAudio.duration)}
                 </Text>
               </View>
-              {/* Delete */}
               <TouchableOpacity
                 onPress={cancelPendingAudio}
-                className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: isDark ? "#3f1212" : "#fee2e2" }}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: isDark ? "#3f1212" : "#fee2e2",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
-                <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                <Ionicons name="trash-outline" size={17} color="#ef4444" />
               </TouchableOpacity>
-              {/* Send */}
               <TouchableOpacity
                 onPress={handleSendPendingAudio}
                 disabled={isSending}
-                className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: primaryColor }}
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  backgroundColor: isDark ? "#f1f5f9" : "#111827",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 {isSending ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={isDark ? "#111827" : "#fff"} size="small" />
                 ) : (
-                  <Ionicons name="send" size={18} color="#fff" />
+                  <Ionicons name="send" size={18} color={isDark ? "#111827" : "#fff"} />
                 )}
               </TouchableOpacity>
             </View>
           ) : (
-            /* ── Normal input ── */
-            <View className="flex-row items-end gap-2">
-              {/* Gallery picker */}
+            /* ── Normal input — matches screenshot: + | input | mic circle ── */
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
+              {/* + button (gallery + camera) */}
               <TouchableOpacity
                 onPress={handlePickImage}
-                className="mb-1 h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: primarySoftColor }}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 2,
+                }}
+                hitSlop={6}
               >
-                <Ionicons name="image-outline" size={20} color={primaryColor} />
-              </TouchableOpacity>
-              {/* Camera */}
-              <TouchableOpacity
-                onPress={handleOpenCamera}
-                className="mb-1 h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: primarySoftColor }}
-              >
-                <Ionicons name="camera-outline" size={20} color={primaryColor} />
+                <Ionicons name="add" size={26} color={isDark ? "#94a3b8" : "#64748b"} />
               </TouchableOpacity>
 
+              {/* Text input pill */}
               <View
-                className="flex-1 rounded-2xl border px-3 py-2"
-                style={{ borderColor, backgroundColor: cardColor, maxHeight: 120 }}
+                style={{
+                  flex: 1,
+                  backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                  borderRadius: 22,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  maxHeight: 120,
+                }}
               >
                 <TextInput
                   value={inputText}
                   onChangeText={setInputText}
-                  placeholder="Type a message..."
+                  placeholder="Type Here..."
                   placeholderTextColor={mutedIconColor}
                   multiline
-                  className="text-[15px] text-foreground"
-                  style={{ textAlignVertical: "top", maxHeight: 100 }}
+                  style={{
+                    fontSize: 15,
+                    color: isDark ? "#f1f5f9" : "#111827",
+                    textAlignVertical: "top",
+                    maxHeight: 100,
+                    padding: 0,
+                  }}
                 />
               </View>
 
+              {/* Send / Mic — dark circle like screenshot */}
               <TouchableOpacity
                 onPress={inputText.trim() ? handleSend : handleVoiceRecord}
                 disabled={isSending}
-                className="mb-1 h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: primaryColor }}
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 21,
+                  backgroundColor: isDark ? "#f1f5f9" : "#111827",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 2,
+                }}
               >
                 {isSending ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={isDark ? "#111827" : "#fff"} size="small" />
                 ) : inputText.trim() ? (
-                  <Ionicons name="send" size={18} color="#fff" />
+                  <Ionicons name="send" size={18} color={isDark ? "#111827" : "#fff"} />
                 ) : (
-                  <Ionicons name="mic-outline" size={20} color="#fff" />
+                  <Ionicons
+                    name="mic-outline"
+                    size={20}
+                    color={isDark ? "#111827" : "#fff"}
+                  />
                 )}
               </TouchableOpacity>
             </View>
