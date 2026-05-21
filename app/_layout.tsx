@@ -64,6 +64,37 @@ if (typeof globalThis.Event === "undefined") {
 ensureLiveKitRegistered();
 setupCallKeep();
 setupFullScreenCallListeners();
+
+// Maps web-style hrefs sent in push notification payloads to valid mobile routes.
+// Falls back to the feed tab for anything unrecognised.
+function resolveNotificationRoute(href: string): string {
+  // Routes that already match mobile paths — pass through
+  if (href.startsWith("/workspace/")) return href;
+  if (href.startsWith("/call/")) return href;
+  if (href.startsWith("/course/")) return href;
+  if (href.startsWith("/quiz/")) return href;
+  if (href.startsWith("/studio/")) return href;
+  if (href.startsWith("/wallet/")) return href;
+  if (href.startsWith("/profile/")) return href;
+  if (href.startsWith("/settings/")) return href;
+  if (href.startsWith("/daily-target/")) return href;
+  if (href.startsWith("/payment/")) return href;
+
+  // Exact web routes → best mobile equivalent
+  if (href === "/wallet") return "/wallet/index";
+  if (href === "/subscription") return "/payment/plans";
+  if (href === "/settings") return "/settings/notifications";
+  if (href === "/profile") return "/profile/index";
+  if (href === "/notifications") return "/notifications";
+  if (href === "/leaderboard") return "/leaderboard";
+  if (href === "/referral") return "/referral";
+  if (href === "/notices") return "/notices";
+  if (href === "/notes") return "/notes";
+  if (href === "/channels") return "/(tabs)/channels";
+  if (href === "/daily-target") return "/daily-target/index";
+
+  return "/(tabs)/feed";
+}
 SplashScreen.preventAutoHideAsync();
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -231,15 +262,13 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
     });
     const notificationSub = addNotificationResponseListener((response) => {
       const data = response.notification.request.content.data;
-      const url = data?.url ?? data?.href;
-      if (url && typeof url === "string") {
-        // Always push so the tab stack stays in history and back works.
-        // Call routes use replace to avoid stacking duplicate call screens.
-        if (url.startsWith("/call/")) {
-          router.replace(url as any);
-        } else {
-          router.push(url as any);
-        }
+      const raw = data?.url ?? data?.href;
+      if (!raw || typeof raw !== "string") return;
+      const url = resolveNotificationRoute(raw);
+      if (url.startsWith("/call/")) {
+        router.replace(url as any);
+      } else {
+        router.push(url as any);
       }
     });
     return () => {

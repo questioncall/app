@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -72,6 +72,7 @@ export default function NotificationsCenterScreen() {
     primaryColor,
     primarySoftColor,
     mutedIconColor,
+    isDark,
   } = useAppTheme();
   const userId = useAppSelector((s) => s.user.data?._id ?? null);
   const list = useAppSelector((s) => s.notifications.list);
@@ -155,6 +156,18 @@ export default function NotificationsCenterScreen() {
     }
   }, [dispatch, unreadCount, loadNotifications]);
 
+  // Auto-mark all read after 2s of viewing the screen
+  useFocusEffect(
+    useCallback(() => {
+      const timer = setTimeout(() => {
+        if (unreadCount > 0) {
+          void handleMarkAllRead();
+        }
+      }, 2000);
+      return () => clearTimeout(timer);
+    }, [unreadCount, handleMarkAllRead]),
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: AppNotification }) => {
       const icon = iconForType(item.type);
@@ -194,10 +207,9 @@ export default function NotificationsCenterScreen() {
               style={{
                 fontSize: 14,
                 lineHeight: 20,
-                color: item.isRead ? mutedIconColor : undefined,
+                color: item.isRead ? mutedIconColor : isDark ? "#f1f5f9" : "#0f172a",
                 fontWeight: item.isRead ? "400" : "600",
               }}
-              className={item.isRead ? "" : "text-foreground"}
             >
               {item.message}
             </Text>
@@ -225,7 +237,7 @@ export default function NotificationsCenterScreen() {
         </TouchableOpacity>
       );
     },
-    [cardColor, mutedIconColor, primaryColor, primarySoftColor, handleTap],
+    [cardColor, mutedIconColor, primaryColor, primarySoftColor, isDark, handleTap],
   );
 
   const renderEmpty = useCallback(() => {

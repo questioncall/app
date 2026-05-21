@@ -511,6 +511,7 @@ export default function FeedScreen() {
   const user = useAppSelector((state) => state.user.data);
   const feedState = useAppSelector((state) => state.feed);
   const coursesState = useAppSelector((state) => state.courses);
+  const unreadCount = useAppSelector((s) => s.notifications.unreadCount);
   const {
     statusBarStyle,
     backgroundColor,
@@ -1277,8 +1278,37 @@ export default function FeedScreen() {
     () => (
       <View className="pt-3">
         {/* App bar */}
-        <View className="flex-row items-center pb-3">
+        <View className="flex-row items-center justify-between pb-3">
           <AppLogo />
+          <TouchableOpacity
+            onPress={() => router.push("/notifications" as any)}
+            hitSlop={8}
+            style={{ padding: 4 }}
+          >
+            <View>
+              <Ionicons name="notifications-outline" size={24} color={primaryColor} />
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -3,
+                    right: -3,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    backgroundColor: "#ef4444",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 3,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 9, fontWeight: "700" }}>
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
 
         {feedState.error ? (
@@ -1518,13 +1548,10 @@ export default function FeedScreen() {
           </View>
         ) : null}
 
-        {/* Divider + count */}
-        <View className="mb-3 flex-row items-center justify-between">
+        {/* Divider */}
+        <View className="mb-3">
           <Text className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Questions
-          </Text>
-          <Text className="text-[11px] text-muted-foreground">
-            {visibleQuestions.length} posts
           </Text>
         </View>
       </View>
@@ -1536,7 +1563,7 @@ export default function FeedScreen() {
       coursesState.isLoading,
       visibleCourses,
       shouldHideCoursesForSearch,
-      visibleQuestions.length,
+      unreadCount,
       borderColor,
       cardColor,
       iconColor,
