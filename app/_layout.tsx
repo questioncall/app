@@ -208,6 +208,8 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
         });
 
         await Promise.all([fetchPlatformConfig(), fetchCurrentUser(), pushPromise]);
+        // Record DAU — server deduplicates via upsert
+        api.post("/daily-active", { platform: "app" }).catch(() => {});
         // Prefetch channels + notes in background (no spinner)
         void backgroundPrefetch();
       } else {
@@ -239,6 +241,9 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 
       // Always check suspension on foreground
       void fetchCurrentUser();
+
+      // Record DAU on every foreground — server deduplicates via upsert
+      api.post("/daily-active", { platform: "app" }).catch(() => {});
 
       // Background refresh channels + notes if stale
       void backgroundPrefetch();
