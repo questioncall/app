@@ -61,6 +61,7 @@ export type FeedQuestion = QuestionRecordShape & {
   askerName: string;
   askerUsername?: string;
   askerImage?: string;
+  askerIsOnline?: boolean;
   answerCount: number;
   reactionCount: number;
   commentCount: number;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ComponentProps } from "react";
 import {
   ActionSheetIOS,
@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -38,6 +39,7 @@ function toList(value: string) {
 export default function EditProfileScreen() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.user.data);
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     statusBarStyle,
     backgroundColor,
@@ -47,21 +49,17 @@ export default function EditProfileScreen() {
     iconColor,
   } = useAppTheme();
 
-  const [name, setName] = useState("");
-  const [bio, setBio] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [skills, setSkills] = useState("");
-  const [interests, setInterests] = useState("");
+  // Initialise form from Redux user data exactly once on mount.
+  // Using lazy useState avoids a reactive useEffect that would reset
+  // the user's typed values whenever a background fetchCurrentUser()
+  // fires (e.g. phone unlock, coming back from the camera picker).
+  const [name, setName] = useState(() => user?.name ?? "");
+  const [bio, setBio] = useState(() => user?.bio ?? "");
+  const [imageUrl, setImageUrl] = useState(() => user?.image ?? "");
+  const [skills, setSkills] = useState(() => toCommaValue(user?.skills));
+  const [interests, setInterests] = useState(() => toCommaValue(user?.interests));
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-
-  useEffect(() => {
-    setName(user?.name ?? "");
-    setBio(user?.bio ?? "");
-    setImageUrl(user?.image ?? "");
-    setSkills(toCommaValue(user?.skills));
-    setInterests(toCommaValue(user?.interests));
-  }, [user]);
 
   async function pickAndUploadImage(source: "camera" | "gallery") {
     const permResult =
@@ -194,7 +192,7 @@ export default function EditProfileScreen() {
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 32 + bottomInset }}
       >
         <View className="px-5 pt-14">
           <View className="mb-7 flex-row items-center justify-between">

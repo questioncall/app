@@ -68,6 +68,7 @@ import {
   prewarmCallerRoom,
   clearCallerPrewarm,
   setPendingCreate,
+  startOutgoingRingtone,
 } from "@/lib/call-prewarm";
 
 function formatMessageTime(iso: string) {
@@ -892,6 +893,9 @@ export default function WorkspaceScreen() {
   const handleStartCall = (mode: "AUDIO" | "VIDEO") => {
     if (!channelId || startingCallType) return;
     setStartingCallType(mode);
+    // Start the ringtone immediately on button press — before navigation —
+    // so the caller hears audio with zero perceived delay.
+    void startOutgoingRingtone();
     const createPromise = api
       .post("/calls/create", { channelId, mode })
       .finally(() => setStartingCallType(null));

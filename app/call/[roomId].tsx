@@ -45,6 +45,8 @@ import {
   consumeCallerPrewarm,
   consumeCalleePrewarm,
   consumePendingCreate,
+  consumeOutgoingRingtone,
+  stopOutgoingRingtoneSingleton,
 } from "@/lib/call-prewarm";
 import { hideFullScreenCallNotification } from "@/lib/full-screen-call-notification";
 import {
@@ -268,6 +270,10 @@ export default function CallScreen() {
 
   const endingRef = useRef(false);
   const acceptHandlerRef = useRef<() => Promise<void>>(async () => {});
+  // Tracks whether mic/camera have been published. Deferred past RINGING so
+  // enableCameraAndMicrophone() doesn't claim the AVAudioSession while the
+  // outgoing ringtone is playing.
+  const tracksEnabledRef = useRef(false);
 
   // ── Outgoing ringtone (for the caller while the callee hasn't answered) ───
   const outgoingRingtoneRef = useRef<Audio.Sound | null>(null);
@@ -434,157 +440,169 @@ export default function CallScreen() {
 
   // ── Connect to LiveKit ─────────────────────────────────────────────────────
   // Supports both ACTIVE (both users) and RINGING (caller only, OPT-3).
-  const connectToRoom = useCallback(async () => {
-    if (
-      !roomId ||
-      connectingRef.current ||
-      connected ||
-      endingRef.current ||
-      connectionBlockedRef.current
-    )
-      return;
-    connectingRef.current = true;
-    setConnecting(true);
-    setConnectionError(null);
-
-    let timedOut = false;
-    const timeoutId = setTimeout(() => {
-      timedOut = true;
-      connectionBlockedRef.current = true;
-      connectingRef.current = false;
-      setConnecting(false);
-      setConnectionError("Connection timed out — check your internet and try again.");
-      roomRef.current?.disconnect();
-      roomRef.current = null;
-    }, CONNECTION_TIMEOUT_MS);
-
-    try {
-      // OPT-6: Use prefetched token from accept response if available
-      let data: TokenPayload;
-      if (prefetchedTokenRef.current) {
-        data = prefetchedTokenRef.current;
-        prefetchedTokenRef.current = null;
-      } else {
-        const res = await api.get(`/calls/${roomId}/token`);
-        data = res.data as TokenPayload;
-      }
-
-      if (timedOut) return;
-
-      setChannelId(data.channelId);
-      setTimerDeadline(data.timerDeadline);
-      setTimeExtensionCount(data.timeExtensionCount);
-
-      // Reuse a pre-warmed room if one is waiting. The WebSocket + DTLS
-      // handshake (the slowest part of room.connect, ~1.5-3s) is already done
-      // — we just attach our event listeners and skip straight to publishing.
-      const prewarmed = prewarmedRoomRef.current;
-      prewarmedRoomRef.current = null;
-      const room = prewarmed ?? new Room({ adaptiveStream: true, dynacast: true });
-      roomRef.current = room;
-
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === Track.Kind.Video) setRemoteVideoTrack(track as LKVideoTrack);
-      });
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
-        if (track.kind === Track.Kind.Video) setRemoteVideoTrack(null);
-      });
-      room.on(RoomEvent.Disconnected, () => {
-        // Immediately null out the ref so no further operations touch this room
-        roomRef.current = null;
-        setConnected(false);
-        setLocalVideoTrack(null);
-        setRemoteVideoTrack(null);
-        if (!endingRef.current) {
-          endingRef.current = true;
-          goBack();
-        }
-      });
-      room.on(RoomEvent.LocalTrackPublished, (pub) => {
-        if (pub.track?.kind === Track.Kind.Video)
-          setLocalVideoTrack(pub.track as LKVideoTrack);
-      });
-      room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
-        if (pub.track?.kind === Track.Kind.Video) setLocalVideoTrack(null);
-      });
-
-      const isVideo = session?.mode === "VIDEO";
-      if (prewarmed && prewarmed.state === ConnectionState.Connected) {
-        // Pre-warm already finished — nothing to do.
-      } else if (prewarmed && prewarmed.state === ConnectionState.Connecting) {
-        // Pre-warm raced with accept; wait for the in-flight handshake.
-        await new Promise<void>((resolve, reject) => {
-          const onState = (state: ConnectionState) => {
-            if (state === ConnectionState.Connected) {
-              room.off(RoomEvent.ConnectionStateChanged, onState);
-              resolve();
-            } else if (state === ConnectionState.Disconnected) {
-              room.off(RoomEvent.ConnectionStateChanged, onState);
-              reject(new Error("Pre-warmed room disconnected before activation."));
-            }
-          };
-          room.on(RoomEvent.ConnectionStateChanged, onState);
-        });
-      } else {
-        // Cold path — no pre-warm, or pre-warm dropped — do the full connect.
-        await room.connect(data.serverUrl, data.token);
-      }
-
-      if (timedOut) {
-        room.disconnect();
+  // Pass skipTracks=true during RINGING so enableCameraAndMicrophone() is
+  // deferred until ACTIVE — this keeps the AVAudioSession free for the ringtone.
+  const connectToRoom = useCallback(
+    async (skipTracks = false) => {
+      if (
+        !roomId ||
+        connectingRef.current ||
+        connected ||
+        endingRef.current ||
+        connectionBlockedRef.current
+      )
         return;
-      }
+      connectingRef.current = true;
+      setConnecting(true);
+      setConnectionError(null);
 
-      // Pick up any remote tracks the pre-warmed room subscribed to before we
-      // attached the listener above (race: caller publishes between callee
-      // pre-warm-connect and callee accept).
-      for (const participant of room.remoteParticipants.values()) {
-        for (const pub of participant.trackPublications.values()) {
-          if (pub.track && pub.track.kind === Track.Kind.Video) {
-            setRemoteVideoTrack(pub.track as LKVideoTrack);
-          }
-        }
-      }
-
-      await room.localParticipant.enableCameraAndMicrophone();
-
-      if (!isVideo) {
-        await room.localParticipant.setCameraEnabled(false);
-        setCamEnabled(false);
-      }
-
-      const localVideoPub = room.localParticipant.getTrackPublication(
-        Track.Source.Camera,
-      );
-      if (localVideoPub?.track) setLocalVideoTrack(localVideoPub.track as LKVideoTrack);
-
-      clearTimeout(timeoutId);
-      setConnected(true);
-      if (roomId) reportCallConnected(roomId);
-    } catch (err: unknown) {
-      clearTimeout(timeoutId);
-      if (!timedOut) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        // Filter out NegotiationError from closed PC manager — this is
-        // expected when the room was torn down during connection.
-        const isStaleNegotiation = errMsg.includes("PC manager is closed");
-        if (!isStaleNegotiation) {
-          console.error("[call] Room connection failed:", errMsg);
-          connectionBlockedRef.current = true;
-          setConnectionError(
-            "Couldn't connect to the call. Check your internet and try again.",
-          );
-        }
-        roomRef.current?.disconnect();
-        roomRef.current = null;
-      }
-    } finally {
-      if (!timedOut) {
+      let timedOut = false;
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+        connectionBlockedRef.current = true;
         connectingRef.current = false;
         setConnecting(false);
+        setConnectionError("Connection timed out — check your internet and try again.");
+        roomRef.current?.disconnect();
+        roomRef.current = null;
+      }, CONNECTION_TIMEOUT_MS);
+
+      try {
+        // OPT-6: Use prefetched token from accept response if available
+        let data: TokenPayload;
+        if (prefetchedTokenRef.current) {
+          data = prefetchedTokenRef.current;
+          prefetchedTokenRef.current = null;
+        } else {
+          const res = await api.get(`/calls/${roomId}/token`);
+          data = res.data as TokenPayload;
+        }
+
+        if (timedOut) return;
+
+        setChannelId(data.channelId);
+        setTimerDeadline(data.timerDeadline);
+        setTimeExtensionCount(data.timeExtensionCount);
+
+        // Reuse a pre-warmed room if one is waiting. The WebSocket + DTLS
+        // handshake (the slowest part of room.connect, ~1.5-3s) is already done
+        // — we just attach our event listeners and skip straight to publishing.
+        const prewarmed = prewarmedRoomRef.current;
+        prewarmedRoomRef.current = null;
+        const room = prewarmed ?? new Room({ adaptiveStream: true, dynacast: true });
+        roomRef.current = room;
+
+        room.on(RoomEvent.TrackSubscribed, (track) => {
+          if (track.kind === Track.Kind.Video) setRemoteVideoTrack(track as LKVideoTrack);
+        });
+        room.on(RoomEvent.TrackUnsubscribed, (track) => {
+          if (track.kind === Track.Kind.Video) setRemoteVideoTrack(null);
+        });
+        room.on(RoomEvent.Disconnected, () => {
+          // Immediately null out the ref so no further operations touch this room
+          roomRef.current = null;
+          setConnected(false);
+          setLocalVideoTrack(null);
+          setRemoteVideoTrack(null);
+          if (!endingRef.current) {
+            endingRef.current = true;
+            goBack();
+          }
+        });
+        room.on(RoomEvent.LocalTrackPublished, (pub) => {
+          if (pub.track?.kind === Track.Kind.Video)
+            setLocalVideoTrack(pub.track as LKVideoTrack);
+        });
+        room.on(RoomEvent.LocalTrackUnpublished, (pub) => {
+          if (pub.track?.kind === Track.Kind.Video) setLocalVideoTrack(null);
+        });
+
+        const isVideo = session?.mode === "VIDEO";
+        if (prewarmed && prewarmed.state === ConnectionState.Connected) {
+          // Pre-warm already finished — nothing to do.
+        } else if (prewarmed && prewarmed.state === ConnectionState.Connecting) {
+          // Pre-warm raced with accept; wait for the in-flight handshake.
+          await new Promise<void>((resolve, reject) => {
+            const onState = (state: ConnectionState) => {
+              if (state === ConnectionState.Connected) {
+                room.off(RoomEvent.ConnectionStateChanged, onState);
+                resolve();
+              } else if (state === ConnectionState.Disconnected) {
+                room.off(RoomEvent.ConnectionStateChanged, onState);
+                reject(new Error("Pre-warmed room disconnected before activation."));
+              }
+            };
+            room.on(RoomEvent.ConnectionStateChanged, onState);
+          });
+        } else {
+          // Cold path — no pre-warm, or pre-warm dropped — do the full connect.
+          await room.connect(data.serverUrl, data.token);
+        }
+
+        if (timedOut) {
+          room.disconnect();
+          return;
+        }
+
+        // Pick up any remote tracks the pre-warmed room subscribed to before we
+        // attached the listener above (race: caller publishes between callee
+        // pre-warm-connect and callee accept).
+        for (const participant of room.remoteParticipants.values()) {
+          for (const pub of participant.trackPublications.values()) {
+            if (pub.track && pub.track.kind === Track.Kind.Video) {
+              setRemoteVideoTrack(pub.track as LKVideoTrack);
+            }
+          }
+        }
+
+        // Only publish tracks immediately when the call is already ACTIVE.
+        // During RINGING pre-join (caller side), defer publishing so the
+        // AVAudioSession stays in Playback mode and the ringtone plays cleanly.
+        if (!skipTracks) {
+          tracksEnabledRef.current = true;
+          await room.localParticipant.enableCameraAndMicrophone();
+
+          if (!isVideo) {
+            await room.localParticipant.setCameraEnabled(false);
+            setCamEnabled(false);
+          }
+
+          const localVideoPub = room.localParticipant.getTrackPublication(
+            Track.Source.Camera,
+          );
+          if (localVideoPub?.track)
+            setLocalVideoTrack(localVideoPub.track as LKVideoTrack);
+        }
+
+        clearTimeout(timeoutId);
+        setConnected(true);
+        if (roomId) reportCallConnected(roomId);
+      } catch (err: unknown) {
+        clearTimeout(timeoutId);
+        if (!timedOut) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          // Filter out NegotiationError from closed PC manager — this is
+          // expected when the room was torn down during connection.
+          const isStaleNegotiation = errMsg.includes("PC manager is closed");
+          if (!isStaleNegotiation) {
+            console.error("[call] Room connection failed:", errMsg);
+            connectionBlockedRef.current = true;
+            setConnectionError(
+              "Couldn't connect to the call. Check your internet and try again.",
+            );
+          }
+          roomRef.current?.disconnect();
+          roomRef.current = null;
+        }
+      } finally {
+        if (!timedOut) {
+          connectingRef.current = false;
+          setConnecting(false);
+        }
       }
-    }
-  }, [roomId, connected, session?.mode]);
+    },
+    [roomId, connected, session?.mode],
+  );
 
   // OPT-3: Caller can connect during RINGING; callee auto-accepts on RINGING
   useEffect(() => {
@@ -593,8 +611,9 @@ export default function CallScreen() {
       void connectToRoom();
     } else if (session?.status === "RINGING" && session.callerId && userId) {
       if (session.callerId === userId) {
-        // Caller pre-joins the LiveKit room while ringing
-        void connectToRoom();
+        // Caller pre-joins the LiveKit room while ringing but defers
+        // enableCameraAndMicrophone() so the ringtone audio session is undisturbed.
+        void connectToRoom(true);
       } else {
         // Callee arrived at call screen (from overlay) — auto-accept
         void acceptHandlerRef.current();
@@ -610,6 +629,35 @@ export default function CallScreen() {
     connectToRoom,
   ]);
 
+  // ── Enable tracks when RINGING → ACTIVE (caller side) ───────────────────
+  // connectToRoom() was called with skipTracks=true during pre-join; once the
+  // callee accepts the session flips to ACTIVE — publish mic/cam at that point.
+  useEffect(() => {
+    if (session?.status !== "ACTIVE" || !connected || tracksEnabledRef.current) return;
+    const room = roomRef.current;
+    if (!room || room.state !== ConnectionState.Connected) return;
+    tracksEnabledRef.current = true;
+    const isVideo = session.mode === "VIDEO";
+    (async () => {
+      try {
+        await room.localParticipant.enableCameraAndMicrophone();
+        if (!isVideo) {
+          await room.localParticipant.setCameraEnabled(false);
+          setCamEnabled(false);
+        }
+        const localVideoPub = room.localParticipant.getTrackPublication(
+          Track.Source.Camera,
+        );
+        if (localVideoPub?.track) setLocalVideoTrack(localVideoPub.track as LKVideoTrack);
+      } catch (err) {
+        console.warn(
+          "[call] Failed to enable tracks on ACTIVE:",
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    })();
+  }, [session?.status, session?.mode, connected]);
+
   // ── Outgoing ringtone: play while RINGING for the caller ───────────────
   useEffect(() => {
     const status = session?.status;
@@ -621,6 +669,21 @@ export default function CallScreen() {
     if (status === "RINGING" && isCaller) {
       const play = async () => {
         try {
+          // Prefer the sound pre-started by the workspace on button press —
+          // it's already playing so the caller hears it with zero delay.
+          const prestarted = consumeOutgoingRingtone();
+          if (prestarted) {
+            outgoingRingtoneRef.current = prestarted;
+            return;
+          }
+          // Fallback: call screen opened without going through the workspace
+          // (e.g. deep link) — create the sound here.
+          await Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: true,
+            shouldDuckAndroid: false,
+            playThroughEarpieceAndroid: false,
+          });
           const { sound } = await Audio.Sound.createAsync(
             require("../../assets/sounds/outgoing_ringtone.mp3"),
             { shouldPlay: true, isLooping: true, volume: 1.0 },
@@ -644,6 +707,7 @@ export default function CallScreen() {
   const handleRetry = useCallback(() => {
     connectionBlockedRef.current = false;
     connectingRef.current = false;
+    tracksEnabledRef.current = false;
     setConnectionError(null);
     void connectToRoom();
   }, [connectToRoom]);
@@ -652,6 +716,9 @@ export default function CallScreen() {
   useEffect(() => {
     return () => {
       stopOutgoingRingtone();
+      // Also stop the singleton in case it was never consumed by the ringtone
+      // effect (e.g. screen exited before the effect fired).
+      void stopOutgoingRingtoneSingleton();
       if (roomId) endCallKeepCall(roomId);
       const room = roomRef.current;
       if (room) {
@@ -671,6 +738,16 @@ export default function CallScreen() {
         }
         prewarmedRoomRef.current = null;
       }
+      // Reset the audio session to neutral defaults so the rest of the app
+      // doesn't inherit staysActiveInBackground / shouldDuckAndroid / mic from
+      // the call. Matches the incoming-call overlay's cleanup.
+      Audio.setAudioModeAsync({
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        allowsRecordingIOS: false,
+        playThroughEarpieceAndroid: false,
+      }).catch(() => {});
     };
   }, [stopOutgoingRingtone, roomId]);
 

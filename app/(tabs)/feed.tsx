@@ -531,6 +531,12 @@ export default function FeedScreen() {
 
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Ref so renderHeader can always read the current searchInput without
+  // being in the useCallback dep array (changing deps causes FlatList to
+  // remount the header on every keystroke, dismissing the keyboard).
+  const searchInputRef = useRef(searchInput);
+  searchInputRef.current = searchInput;
   const [activeView, setActiveView] = useState<FeedView>("all");
   const [activeSort, setActiveSort] = useState<FeedSort>(defaultSort);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -1327,7 +1333,7 @@ export default function FeedScreen() {
               style={{ marginRight: 6 }}
             />
             <TextInput
-              value={searchInput}
+              value={searchInputRef.current}
               onChangeText={setSearchInput}
               placeholder="Search questions & courses..."
               placeholderTextColor={mutedIconColor}
@@ -1336,7 +1342,7 @@ export default function FeedScreen() {
               returnKeyType="search"
               className="flex-1 py-2.5 text-sm text-foreground"
             />
-            {searchInput ? (
+            {searchInputRef.current ? (
               <TouchableOpacity onPress={() => setSearchInput("")}>
                 <Ionicons name="close-circle" size={16} color={mutedIconColor} />
               </TouchableOpacity>
@@ -1558,7 +1564,10 @@ export default function FeedScreen() {
     ),
     [
       feedState.error,
-      searchInput,
+      // searchInput intentionally omitted — read via searchInputRef to prevent
+      // FlatList from remounting the header (and dismissing the keyboard) on
+      // every keystroke. The ref is always current so the TextInput still shows
+      // the live value.
       activeFilterCount,
       coursesState.isLoading,
       visibleCourses,
@@ -1615,20 +1624,37 @@ export default function FeedScreen() {
           <View className="px-4 py-4">
             {/* ── Author Row ─────────────────────────── */}
             <View className="flex-row items-center gap-3">
-              <View className="bg-primary/10 h-10 w-10 overflow-hidden rounded-full border border-border">
-                {item.askerImage ? (
-                  <Image
-                    source={{ uri: item.askerImage }}
-                    className="h-full w-full"
-                    resizeMode="cover"
+              <View style={{ width: 40, height: 40 }}>
+                <View className="bg-primary/10 h-10 w-10 overflow-hidden rounded-full border border-border">
+                  {item.askerImage ? (
+                    <Image
+                      source={{ uri: item.askerImage }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="flex-1 items-center justify-center">
+                      <Text className="text-sm font-bold text-primary">
+                        {item.askerName.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {item.askerIsOnline ? (
+                  <View
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      right: 0,
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: "#22c55e",
+                      borderWidth: 2,
+                      borderColor: cardColor,
+                    }}
                   />
-                ) : (
-                  <View className="flex-1 items-center justify-center">
-                    <Text className="text-sm font-bold text-primary">
-                      {item.askerName.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                )}
+                ) : null}
               </View>
               <View className="flex-1">
                 <Text

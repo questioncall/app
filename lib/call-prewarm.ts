@@ -217,6 +217,63 @@ export function clearCalleePrewarm(callSessionId?: string) {
   calleeSlot = null;
 }
 
+// ── Outgoing ringtone pre-start ───────────────────────────────────────────
+// Started the instant the call button is pressed (before navigation) so the
+// caller hears audio with zero perceived delay. The call screen consumes the
+// live Sound object via consumeOutgoingRingtone() instead of creating a new one.
+let outgoingRingtoneSound: import("expo-av").Audio.Sound | null = null;
+
+export async function startOutgoingRingtone() {
+  // Stop any leftover from a previous aborted call
+  await stopOutgoingRingtoneSingleton();
+  try {
+    const { Audio } = await import("expo-av");
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: true,
+      shouldDuckAndroid: false,
+      playThroughEarpieceAndroid: false,
+    });
+    const { sound } = await Audio.Sound.createAsync(
+      require("../assets/sounds/outgoing_ringtone.mp3"),
+      { shouldPlay: true, isLooping: true, volume: 1.0 },
+    );
+    outgoingRingtoneSound = sound;
+  } catch (err) {
+    console.warn(
+      "[call-prewarm] Failed to pre-start ringtone:",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+}
+
+export function consumeOutgoingRingtone(): import("expo-av").Audio.Sound | null {
+  const sound = outgoingRingtoneSound;
+  outgoingRingtoneSound = null;
+  return sound;
+}
+
+export async function stopOutgoingRingtoneSingleton() {
+  const sound = outgoingRingtoneSound;
+  outgoingRingtoneSound = null;
+  if (!sound) return;
+  try {
+    await sound.stopAsync();
+    await sound.unloadAsync();
+  } catch {}
+  // Reset audio session to neutral defaults so the ringtone's
+  // staysActiveInBackground / shouldDuckAndroid don't leak.
+  try {
+    const { Audio } = await import("expo-av");
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: false,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    });
+  } catch {}
+}
+
 // ── In-flight POST /calls/create (caller's optimistic-navigation buffer) ──
 export function setPendingCreate(
   channelId: string,
