@@ -238,6 +238,7 @@ export async function startOutgoingRingtone() {
       require("../assets/sounds/outgoing_ringtone.mp3"),
       { shouldPlay: true, isLooping: true, volume: 1.0 },
     );
+    await sound.setIsLoopingAsync(true);
     outgoingRingtoneSound = sound;
   } catch (err) {
     console.warn(

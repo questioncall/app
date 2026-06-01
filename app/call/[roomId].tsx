@@ -674,6 +674,8 @@ export default function CallScreen() {
           const prestarted = consumeOutgoingRingtone();
           if (prestarted) {
             outgoingRingtoneRef.current = prestarted;
+            // Re-assert looping — the flag can drop during the prewarm hand-off on Android.
+            await prestarted.setIsLoopingAsync(true);
             return;
           }
           // Fallback: call screen opened without going through the workspace
@@ -688,6 +690,7 @@ export default function CallScreen() {
             require("../../assets/sounds/outgoing_ringtone.mp3"),
             { shouldPlay: true, isLooping: true, volume: 1.0 },
           );
+          await sound.setIsLoopingAsync(true);
           outgoingRingtoneRef.current = sound;
         } catch (err) {
           console.warn("[call] Failed to play outgoing ringtone:", err);

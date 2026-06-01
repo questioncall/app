@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,8 +18,10 @@ import * as DocumentPicker from "expo-document-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
+import { startCourseVideoUpload } from "@/lib/upload-manager";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -56,7 +58,6 @@ type CourseDetail = {
   slug: string;
 };
 
-type UploadPhase = "IDLE" | "CREATING" | "UPLOADING" | "PROCESSING" | "READY" | "ERROR";
 type VideoMethod = "ZOOM_LINK" | "FILE_UPLOAD";
 type Tab = "curriculum" | "settings" | "analytics";
 
@@ -157,14 +158,40 @@ export default function ManageCourseScreen() {
   const [videoMethod, setVideoMethod] = useState<VideoMethod>("ZOOM_LINK");
   const [videoTitle, setVideoTitle] = useState("");
   const [zoomLink, setZoomLink] = useState("");
-  const [uploadPhase, setUploadPhase] = useState<UploadPhase>("IDLE");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState("");
   const [pickedFileName, setPickedFileName] = useState("");
   const pickedFileUriRef = useRef<string | null>(null);
   const pickedFileSizeRef = useRef<number>(0);
-  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isAddingVideo, setIsAddingVideo] = useState(false);
+
+  // File-upload videos run in the background via the global upload manager,
+  // which keeps polling even after this screen unmounts. We only want to
+  // auto-refresh the curriculum if the teacher is still here.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Live background uploads for THIS course, so the matching curriculum row can
+  // show "Uploading… X%" / "Processing…" instead of a bare "Processing…".
+  const allUploads = useAppSelector((s) => s.upload.uploads);
+  const activeCourseUploads = useMemo(
+    () =>
+      allUploads.filter(
+        (u) =>
+          u.courseId === courseId && (u.status === "pending" || u.status === "uploading"),
+      ),
+    [allUploads, courseId],
+  );
+  const findActiveUpload = useCallback(
+    (sectionId: string, title: string) =>
+      activeCourseUploads.find(
+        (u) => u.sectionId === sectionId && (u.videoTitle ?? "").trim() === title.trim(),
+      ),
+    [activeCourseUploads],
+  );
 
   // ── Settings form state ──
   const [settingsForm, setSettingsForm] = useState({
@@ -326,9 +353,6 @@ export default function ManageCourseScreen() {
     setVideoMethod("ZOOM_LINK");
     setVideoTitle("");
     setZoomLink("");
-    setUploadPhase("IDLE");
-    setUploadProgress(0);
-    setUploadStatus("");
     setPickedFileName("");
     pickedFileUriRef.current = null;
     setShowAddVideo(true);
@@ -348,95 +372,6 @@ export default function ManageCourseScreen() {
     setPickedFileName(asset.name);
   };
 
-  const pollVideoStatus = useCallback(
-    (vId: string, attempt = 0) => {
-      if (attempt > 120) {
-        setUploadPhase("ERROR");
-        setUploadStatus("Timed out waiting for processing.");
-        return;
-      }
-      pollingRef.current = setTimeout(async () => {
-        try {
-          const res = await api.get(`/courses/${courseId}/videos/${vId}/status`);
-          if (res.data.status === "READY") {
-            setUploadPhase("READY");
-            setUploadStatus("Video ready!");
-            void fetchData(true);
-          } else if (res.data.status === "ERRORED") {
-            setUploadPhase("ERROR");
-            setUploadStatus("Processing failed on server.");
-          } else {
-            pollVideoStatus(vId, attempt + 1);
-          }
-        } catch {
-          if (attempt < 10) pollVideoStatus(vId, attempt + 1);
-          else {
-            setUploadPhase("ERROR");
-            setUploadStatus("Connection lost during polling.");
-          }
-        }
-      }, 5000);
-    },
-    [courseId, fetchData],
-  );
-
-  const handleUploadFile = async () => {
-    const fileUri = pickedFileUriRef.current;
-    if (!fileUri) return;
-
-    setUploadPhase("CREATING");
-    setUploadStatus("Preparing upload…");
-    try {
-      const createRes = await api.post(`/courses/${courseId}/videos`, {
-        title: videoTitle.trim(),
-        sectionId: addVideoSectionId,
-      });
-      const { uploadUrl, video: serverVideo } = createRes.data;
-      const vId: string = serverVideo._id;
-
-      setUploadPhase("UPLOADING");
-      setUploadStatus("Uploading to server…");
-      setUploadProgress(0);
-
-      // Read file as blob and PUT to Mux upload URL
-      const fileResponse = await fetch(fileUri);
-      const blob = await fileResponse.blob();
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable) {
-            const pct = Math.round((evt.loaded / evt.total) * 100);
-            setUploadProgress(pct);
-            setUploadStatus(`Uploading… ${pct}%`);
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`Upload failed: HTTP ${xhr.status}`));
-        };
-        xhr.onerror = () => reject(new Error("Network error during upload"));
-        xhr.onabort = () => reject(new Error("Upload cancelled"));
-        xhr.open("PUT", uploadUrl);
-        xhr.send(blob);
-      });
-
-      setUploadPhase("PROCESSING");
-      setUploadProgress(100);
-      setUploadStatus("Processing on server…");
-      Toast.show({
-        type: "success",
-        text1: `"${videoTitle}" uploaded`,
-        text2: "Processing in background…",
-      });
-      pollVideoStatus(vId);
-    } catch (err: any) {
-      setUploadPhase("ERROR");
-      setUploadStatus(err?.message ?? "Upload failed");
-      Toast.show({ type: "error", text1: err?.message ?? "Upload failed" });
-    }
-  };
-
   const handleAddVideoSubmit = async () => {
     if (!videoTitle.trim()) {
       Toast.show({ type: "error", text1: "Enter a video title" });
@@ -452,7 +387,34 @@ export default function ManageCourseScreen() {
         Toast.show({ type: "error", text1: "Pick a video file first" });
         return;
       }
-      void handleUploadFile();
+      // Hand off to the background upload manager and close the sheet right
+      // away — the teacher can navigate anywhere and gets a push + in-app
+      // notification once Mux finishes processing.
+      startCourseVideoUpload({
+        courseId: courseId!,
+        sectionId: addVideoSectionId,
+        title: videoTitle.trim(),
+        file: {
+          uri: pickedFileUriRef.current,
+          name: pickedFileName || `${videoTitle.trim()}.mp4`,
+          mimeType: "video/mp4",
+          size: pickedFileSizeRef.current,
+        },
+        // Refresh so the PROCESSING placeholder row appears immediately.
+        onCreated: () => {
+          if (isMountedRef.current) void fetchData(true);
+        },
+        // Refresh once it's READY so the curriculum shows it as playable.
+        onReady: () => {
+          if (isMountedRef.current) void fetchData(true);
+        },
+      });
+      Toast.show({
+        type: "info",
+        text1: "Uploading in background",
+        text2: "Keep using the app — we'll notify you when it's ready.",
+      });
+      setShowAddVideo(false);
       return;
     }
 
@@ -799,91 +761,134 @@ export default function ManageCourseScreen() {
                       </View>
                     ) : (
                       <View>
-                        {section.videos.map((video, vIdx) => (
-                          <View
-                            key={video._id}
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              paddingHorizontal: 14,
-                              paddingVertical: 11,
-                              borderTopWidth: 1,
-                              borderTopColor: borderColor,
-                              gap: 10,
-                            }}
-                          >
-                            <View
+                        {section.videos.map((video, vIdx) => {
+                          // While a background upload for this video is still in
+                          // flight, surface its real phase on the row.
+                          const activeUp = findActiveUpload(section._id, video.title);
+                          const statusLabel = activeUp
+                            ? activeUp.progress >= 95
+                              ? "Processing…"
+                              : `Uploading… ${activeUp.progress}%`
+                            : video.status === "PROCESSING"
+                              ? "Processing…"
+                              : video.status === "ERRORED"
+                                ? "Processing failed"
+                                : `${formatDuration(video.durationMinutes)} · ${video.viewCount} view${video.viewCount !== 1 ? "s" : ""}`;
+                          const isBusyVideo = !!activeUp || video.status === "PROCESSING";
+                          return (
+                            <TouchableOpacity
+                              key={video._id}
+                              // Teachers can preview their own READY videos straight
+                              // from the curriculum, same player students use.
+                              disabled={video.status !== "READY"}
+                              activeOpacity={0.6}
+                              onPress={() =>
+                                router.push({
+                                  pathname: "/course/video" as any,
+                                  params: {
+                                    courseId: courseId!,
+                                    videoId: video._id,
+                                    title: video.title,
+                                  },
+                                })
+                              }
                               style={{
-                                width: 28,
-                                height: 28,
-                                borderRadius: 8,
-                                backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                                flexDirection: "row",
                                 alignItems: "center",
-                                justifyContent: "center",
+                                paddingHorizontal: 14,
+                                paddingVertical: 11,
+                                borderTopWidth: 1,
+                                borderTopColor: borderColor,
+                                gap: 10,
                               }}
                             >
-                              <Text
+                              <View
                                 style={{
-                                  fontSize: 11,
-                                  fontWeight: "700",
-                                  color: mutedIconColor,
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 8,
+                                  backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                                 }}
                               >
-                                {vIdx + 1}
-                              </Text>
-                            </View>
-                            <Ionicons
-                              name="play-circle-outline"
-                              size={18}
-                              color={
-                                video.status === "PROCESSING"
-                                  ? "#f59e0b"
-                                  : video.status === "ERRORED"
-                                    ? "#ef4444"
-                                    : "#22c55e"
-                              }
-                            />
-                            <View style={{ flex: 1 }}>
-                              <Text
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: "600",
-                                  color: isDark ? "#f1f5f9" : "#0f172a",
-                                }}
-                                numberOfLines={1}
-                              >
-                                {video.title}
-                              </Text>
-                              <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: mutedIconColor,
-                                  marginTop: 1,
-                                }}
-                              >
-                                {video.status === "PROCESSING"
-                                  ? "Processing…"
-                                  : video.status === "ERRORED"
-                                    ? "Processing failed"
-                                    : `${formatDuration(video.durationMinutes)} · ${video.viewCount} view${video.viewCount !== 1 ? "s" : ""}`}
-                              </Text>
-                            </View>
-                            {video.status === "PROCESSING" ? (
-                              <ActivityIndicator size="small" color="#f59e0b" />
-                            ) : (
-                              <TouchableOpacity
-                                onPress={() => handleDeleteVideo(video._id, video.title)}
-                                style={{ padding: 6 }}
-                              >
-                                <Ionicons
-                                  name="trash-outline"
-                                  size={15}
-                                  color="#ef4444"
-                                />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        ))}
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: "700",
+                                    color: mutedIconColor,
+                                  }}
+                                >
+                                  {vIdx + 1}
+                                </Text>
+                              </View>
+                              <Ionicons
+                                name="play-circle-outline"
+                                size={18}
+                                color={
+                                  isBusyVideo
+                                    ? "#f59e0b"
+                                    : video.status === "ERRORED"
+                                      ? "#ef4444"
+                                      : "#22c55e"
+                                }
+                              />
+                              <View style={{ flex: 1 }}>
+                                <Text
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: "600",
+                                    color: isDark ? "#f1f5f9" : "#0f172a",
+                                  }}
+                                  numberOfLines={1}
+                                >
+                                  {video.title}
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: activeUp ? "#f59e0b" : mutedIconColor,
+                                    marginTop: 1,
+                                    fontWeight: activeUp ? "600" : "400",
+                                  }}
+                                >
+                                  {statusLabel}
+                                </Text>
+                              </View>
+                              {isBusyVideo ? (
+                                <ActivityIndicator size="small" color="#f59e0b" />
+                              ) : (
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 2,
+                                  }}
+                                >
+                                  {video.status === "READY" ? (
+                                    <Ionicons
+                                      name="chevron-forward"
+                                      size={15}
+                                      color={mutedIconColor}
+                                    />
+                                  ) : null}
+                                  <TouchableOpacity
+                                    onPress={() =>
+                                      handleDeleteVideo(video._id, video.title)
+                                    }
+                                    style={{ padding: 6 }}
+                                  >
+                                    <Ionicons
+                                      name="trash-outline"
+                                      size={15}
+                                      color="#ef4444"
+                                    />
+                                  </TouchableOpacity>
+                                </View>
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     )}
 
@@ -1488,10 +1493,9 @@ export default function ManageCourseScreen() {
 
   // ── Add Video Modal ─────────────────────────────────────────────────────
 
-  const isBusy =
-    uploadPhase === "CREATING" ||
-    uploadPhase === "UPLOADING" ||
-    uploadPhase === "PROCESSING";
+  // File uploads hand off to the background manager and close the sheet
+  // instantly, so the only in-modal "busy" state left is saving a Zoom link.
+  const isBusy = isAddingVideo;
 
   const renderAddVideoModal = () => (
     <Modal
@@ -1777,77 +1781,23 @@ export default function ManageCourseScreen() {
               </View>
             )}
 
-            {/* Upload progress */}
-            {uploadPhase !== "IDLE" ? (
-              <View style={{ gap: 8 }}>
-                {uploadPhase === "UPLOADING" || uploadPhase === "CREATING" ? (
-                  <View
-                    style={{
-                      height: 4,
-                      backgroundColor: isDark ? "#334155" : "#e2e8f0",
-                      borderRadius: 2,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <View
-                      style={{
-                        height: "100%",
-                        width: `${uploadPhase === "CREATING" ? 10 : uploadProgress}%`,
-                        backgroundColor: primaryColor,
-                        borderRadius: 2,
-                      }}
-                    />
-                  </View>
-                ) : null}
-                {uploadPhase === "PROCESSING" ? (
-                  <View
-                    style={{
-                      height: 4,
-                      backgroundColor: isDark ? "#334155" : "#e2e8f0",
-                      borderRadius: 2,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <View
-                      style={{
-                        height: "100%",
-                        width: "60%",
-                        backgroundColor: "#f59e0b",
-                        borderRadius: 2,
-                      }}
-                    />
-                  </View>
-                ) : null}
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  {isBusy ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={uploadPhase === "PROCESSING" ? "#f59e0b" : primaryColor}
-                    />
-                  ) : null}
-                  {uploadPhase === "READY" ? (
-                    <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                  ) : null}
-                  {uploadPhase === "ERROR" ? (
-                    <Ionicons name="close-circle" size={16} color="#ef4444" />
-                  ) : null}
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: "600",
-                      color:
-                        uploadPhase === "READY"
-                          ? "#22c55e"
-                          : uploadPhase === "ERROR"
-                            ? "#ef4444"
-                            : uploadPhase === "PROCESSING"
-                              ? "#f59e0b"
-                              : primaryColor,
-                    }}
-                  >
-                    {uploadStatus}
-                  </Text>
-                </View>
+            {/* File-upload hint: uploads continue in the background */}
+            {videoMethod === "FILE_UPLOAD" && pickedFileName ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  backgroundColor: `${primaryColor}10`,
+                  borderRadius: 10,
+                  padding: 10,
+                }}
+              >
+                <Ionicons name="cloud-upload-outline" size={16} color={primaryColor} />
+                <Text style={{ flex: 1, fontSize: 12, color: mutedIconColor }}>
+                  Upload runs in the background — you can keep using the app and
+                  we&apos;ll notify you when it&apos;s ready.
+                </Text>
               </View>
             ) : null}
 
@@ -1867,44 +1817,30 @@ export default function ManageCourseScreen() {
                   borderColor,
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color:
-                      uploadPhase === "READY" || uploadPhase === "ERROR"
-                        ? primaryColor
-                        : mutedIconColor,
-                  }}
-                >
-                  {uploadPhase === "READY" || uploadPhase === "ERROR"
-                    ? "Close"
-                    : "Cancel"}
+                <Text style={{ fontSize: 14, fontWeight: "600", color: mutedIconColor }}>
+                  Cancel
                 </Text>
               </TouchableOpacity>
 
-              {uploadPhase !== "READY" ? (
-                <TouchableOpacity
-                  onPress={() => void handleAddVideoSubmit()}
-                  disabled={isBusy || isAddingVideo}
-                  style={{
-                    flex: 2,
-                    alignItems: "center",
-                    paddingVertical: 13,
-                    borderRadius: 12,
-                    backgroundColor:
-                      isBusy || isAddingVideo ? `${primaryColor}60` : primaryColor,
-                  }}
-                >
-                  {isBusy || isAddingVideo ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>
-                      {videoMethod === "ZOOM_LINK" ? "Save Link" : "Upload Video"}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              ) : null}
+              <TouchableOpacity
+                onPress={() => void handleAddVideoSubmit()}
+                disabled={isBusy}
+                style={{
+                  flex: 2,
+                  alignItems: "center",
+                  paddingVertical: 13,
+                  borderRadius: 12,
+                  backgroundColor: isBusy ? `${primaryColor}60` : primaryColor,
+                }}
+              >
+                {isBusy ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>
+                    {videoMethod === "ZOOM_LINK" ? "Save Link" : "Upload Video"}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>

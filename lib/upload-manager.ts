@@ -10,15 +10,19 @@
  *  - Docs   → R2 via presigned URL (/api/upload/presign → PUT to R2)
  */
 
+import * as FileSystem from "expo-file-system/legacy";
+import Toast from "react-native-toast-message";
+
 import { store } from "@/store";
 import {
   addUpload,
   updateUploadProgress,
+  setUploadLabel,
   completeUpload,
   failUpload,
   removeUpload,
 } from "@/store/slices/uploadSlice";
-import api, { API_BASE_URL } from "@/lib/api";
+import api from "@/lib/api";
 
 export type StartMobileUploadParams = {
   file: {
@@ -192,4 +196,169 @@ async function uploadDocViaR2(
   });
 
   return publicUrl;
+}
+
+// ── Course video → Mux (create → PUT → poll → notify) ─────────────────────
+//
+// Unlike the image/doc flows above, a course video has a multi-stage
+// lifecycle: a DB record is created, the file is PUT to a Mux upload URL,
+// then Mux transcodes it server-side. We surface the whole thing through
+// the global upload overlay so the teacher can navigate freely while it
+// runs, and fire a push + in-app notification the moment it's ready.
+
+export type StartCourseVideoUploadParams = {
+  courseId: string;
+  sectionId: string;
+  title: string;
+  file: {
+    uri: string;
+    name: string;
+    mimeType?: string;
+    size?: number;
+  };
+  /** Called once the video DB record exists (a PROCESSING row can be shown). */
+  onCreated?: () => void;
+  /** Called when the video finishes processing and is ready to use. */
+  onReady?: () => void;
+  /** Called if the upload or processing fails. */
+  onError?: (error: string) => void;
+};
+
+const PROCESSING_POLL_INTERVAL_MS = 5000;
+const PROCESSING_MAX_ATTEMPTS = 120; // ~10 minutes
+
+/**
+ * Start a background course-video upload. Returns immediately with the upload
+ * id; the caller (Add Video modal) can close right away. Progress and the
+ * final "ready" notification are handled globally.
+ */
+export function startCourseVideoUpload(params: StartCourseVideoUploadParams): string {
+  const id = `vid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const label = `📹 ${params.title}`;
+
+  store.dispatch(
+    addUpload({
+      id,
+      uri: params.file.uri,
+      type: "file",
+      label,
+      courseId: params.courseId,
+      sectionId: params.sectionId,
+      videoTitle: params.title,
+    }),
+  );
+
+  performCourseVideoUpload(id, params).catch((err) => {
+    console.error("[CourseVideoUpload] Unhandled error:", err);
+  });
+
+  return id;
+}
+
+async function performCourseVideoUpload(
+  id: string,
+  params: StartCourseVideoUploadParams,
+) {
+  const { courseId, sectionId, title, file } = params;
+  try {
+    store.dispatch(updateUploadProgress({ id, progress: 2 }));
+
+    // 1. Create the video record → returns a Mux direct-upload URL.
+    const createRes = await api.post(`/courses/${courseId}/videos`, {
+      title: title.trim(),
+      sectionId,
+    });
+    const uploadUrl: string = createRes.data?.uploadUrl;
+    const videoId: string | undefined = createRes.data?.video?._id;
+    if (!uploadUrl || !videoId) {
+      throw new Error("Server did not return an upload URL.");
+    }
+
+    // The record exists now — let the studio show a PROCESSING placeholder.
+    params.onCreated?.();
+
+    store.dispatch(updateUploadProgress({ id, progress: 5 }));
+
+    // 2. Stream the file straight from disk to Mux. expo-file-system uploads
+    //    natively on a background session — it never reads the whole video
+    //    into a JS Blob, so even large files can't spike memory or block the
+    //    UI thread, and the transfer survives the app being backgrounded.
+    //    Map upload bytes to 5-90% so the bar still moves before processing.
+    const uploadTask = FileSystem.createUploadTask(
+      uploadUrl,
+      file.uri,
+      {
+        httpMethod: "PUT",
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: { "Content-Type": file.mimeType || "video/mp4" },
+      },
+      (progress) => {
+        if (progress.totalBytesExpectedToSend > 0) {
+          const pct = Math.round(
+            5 + (progress.totalBytesSent / progress.totalBytesExpectedToSend) * 85,
+          );
+          store.dispatch(updateUploadProgress({ id, progress: pct }));
+        }
+      },
+    );
+
+    const result = await uploadTask.uploadAsync();
+    if (!result || result.status < 200 || result.status >= 300) {
+      throw new Error(`Upload failed (HTTP ${result?.status ?? "unknown"})`);
+    }
+
+    // 3. Uploaded — now Mux transcodes. Hold near-complete and switch the
+    //    overlay label to "Processing…" while we poll.
+    store.dispatch(updateUploadProgress({ id, progress: 95 }));
+    store.dispatch(setUploadLabel({ id, label: `📹 ${title} · Processing…` }));
+
+    await pollCourseVideoProcessing(id, params, videoId);
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : "Upload failed";
+    store.dispatch(failUpload({ id, error: errMsg }));
+    params.onError?.(errMsg);
+    Toast.show({ type: "error", text1: "Video upload failed", text2: errMsg });
+  }
+}
+
+async function pollCourseVideoProcessing(
+  id: string,
+  params: StartCourseVideoUploadParams,
+  videoId: string,
+) {
+  const { courseId } = params;
+
+  for (let attempt = 0; attempt < PROCESSING_MAX_ATTEMPTS; attempt++) {
+    await new Promise((r) => setTimeout(r, PROCESSING_POLL_INTERVAL_MS));
+    try {
+      // The status endpoint flips the video READY server-side and, on that
+      // transition, persists + pushes the "video ready" notification to the
+      // teacher (same path the Mux webhook uses). We just react to the result.
+      const res = await api.get(`/courses/${courseId}/videos/${videoId}/status`);
+      const status = res.data?.status;
+      if (status === "READY") {
+        store.dispatch(completeUpload({ id, url: videoId }));
+        setTimeout(() => store.dispatch(removeUpload(id)), 5000);
+        params.onReady?.();
+        return;
+      }
+      if (status === "ERRORED") {
+        throw new Error("Processing failed on the server.");
+      }
+      // Otherwise still processing — keep polling.
+    } catch (err) {
+      // Transient network blips shouldn't kill the job; only give up on an
+      // explicit server-side processing failure.
+      if (err instanceof Error && err.message.includes("Processing failed")) {
+        store.dispatch(failUpload({ id, error: err.message }));
+        params.onError?.(err.message);
+        Toast.show({ type: "error", text1: "Video processing failed" });
+        return;
+      }
+    }
+  }
+
+  const timeoutMsg = "Timed out waiting for the video to finish processing.";
+  store.dispatch(failUpload({ id, error: timeoutMsg }));
+  params.onError?.(timeoutMsg);
 }

@@ -110,6 +110,7 @@ export function IncomingCallOverlay() {
           require("../../assets/sounds/incoming_ringtone.mp3"),
           { shouldPlay: true, isLooping: true, volume: 1.0 },
         );
+        await sound.setIsLoopingAsync(true);
         ringtoneSoundRef.current = sound;
       } catch (err) {
         console.warn("[incoming-call] Failed to play ringtone:", err);

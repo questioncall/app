@@ -42,6 +42,8 @@ function iconForType(type: string): IconName {
       return "cash-outline";
     case "RATING_RECEIVED":
       return "star-outline";
+    case "COURSE_VIDEO_READY":
+      return "videocam-outline";
     case "SYSTEM":
       return "megaphone-outline";
     default:

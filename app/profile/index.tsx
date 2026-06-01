@@ -6,6 +6,14 @@ import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { PlanBadge } from "@/components/PlanBadge";
 
+// Point balances are stored as floats and accumulate rounding noise
+// (e.g. 3.179999999999997). Show at most 2 decimals and drop trailing
+// zeros so "3.18", "3.2", and "3" all read cleanly.
+function formatPoints(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  return String(Math.round(value * 100) / 100);
+}
+
 function StatCard({
   label,
   value,
@@ -194,7 +202,11 @@ export default function ProfileScreen() {
                 {user?.role ?? "USER"}
               </Text>
             </View>
-            {user?.planSlug ? <PlanBadge slug={user.planSlug} size="md" /> : null}
+            {/* Subscription plan badge is a student-only concept — teachers
+                don't subscribe, so never show free/pro tags on their profile. */}
+            {!isTeacher && user?.planSlug ? (
+              <PlanBadge slug={user.planSlug} size="md" />
+            ) : null}
             {isTeacher && user?.isMonetized ? (
               <View className="rounded-full bg-emerald-100 px-3 py-1 dark:bg-emerald-900">
                 <Text className="text-xs font-semibold text-emerald-700 dark:text-emerald-200">
@@ -223,7 +235,10 @@ export default function ProfileScreen() {
         <View className="mt-5 flex-row gap-3">
           {isTeacher ? (
             <>
-              <StatCard label="Point Balance" value={user?.pointBalance ?? 0} />
+              <StatCard
+                label="Point Balance"
+                value={formatPoints(user?.pointBalance ?? 0)}
+              />
               <StatCard label="Answers Today" value={user?.dailyAnswersCount ?? 0} />
               <StatCard
                 label="Targets Hit"
@@ -311,24 +326,29 @@ export default function ProfileScreen() {
         >
           <SectionLabel title="" />
           <InfoRow icon="mail-outline" label="Email" value={user?.email ?? "—"} />
-          <View className="h-px bg-border" />
-          <InfoRow
-            icon="diamond-outline"
-            label="Subscription"
-            value={`${(user?.planSlug ?? "free").toUpperCase()} · ${user?.subscriptionStatus ?? "inactive"}`}
-          />
-          {user?.subscriptionEnd ? (
+          {/* Subscription details are student-only — teachers don't subscribe. */}
+          {!isTeacher ? (
             <>
               <View className="h-px bg-border" />
               <InfoRow
-                icon="calendar-outline"
-                label="Renews"
-                value={new Date(user.subscriptionEnd).toLocaleDateString("en-US", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
+                icon="diamond-outline"
+                label="Subscription"
+                value={`${(user?.planSlug ?? "free").toUpperCase()} · ${user?.subscriptionStatus ?? "inactive"}`}
               />
+              {user?.subscriptionEnd ? (
+                <>
+                  <View className="h-px bg-border" />
+                  <InfoRow
+                    icon="calendar-outline"
+                    label="Renews"
+                    value={new Date(user.subscriptionEnd).toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  />
+                </>
+              ) : null}
             </>
           ) : null}
           {!isTeacher ? (

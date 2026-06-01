@@ -6,6 +6,14 @@ interface UploadItem {
   type: "image" | "file";
   /** Human-readable label shown in the upload overlay */
   label?: string;
+  /**
+   * Set for course-video uploads so the studio can show an accurate
+   * "Uploading… X%" status on the matching curriculum row (correlated by
+   * courseId + sectionId + videoTitle).
+   */
+  courseId?: string;
+  sectionId?: string;
+  videoTitle?: string;
   progress: number;
   url?: string;
   error?: string;
@@ -38,6 +46,12 @@ const uploadSlice = createSlice({
         upload.status = "uploading";
       }
     },
+    setUploadLabel(state, action: PayloadAction<{ id: string; label: string }>) {
+      const upload = state.uploads.find((u) => u.id === action.payload.id);
+      if (upload) {
+        upload.label = action.payload.label;
+      }
+    },
     completeUpload(state, action: PayloadAction<{ id: string; url: string }>) {
       const upload = state.uploads.find((u) => u.id === action.payload.id);
       if (upload) {
@@ -65,6 +79,7 @@ const uploadSlice = createSlice({
 export const {
   addUpload,
   updateUploadProgress,
+  setUploadLabel,
   completeUpload,
   failUpload,
   removeUpload,

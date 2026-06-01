@@ -139,7 +139,7 @@ export default function WorkspaceScreen() {
   const isLoadingOlderRef = useRef(false);
   // Declared here with null; assigned after fetchChannel useCallback below
   // to avoid Temporal Dead Zone errors (fetchChannel is a const).
-  const fetchChannelRef = useRef<(() => Promise<void>) | null>(null);
+  const fetchChannelRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
   // Set to true while a system permission dialog is in-flight (camera /
   // microphone). The dialog briefly triggers AppState → active, which would
   // cause a spurious full DB reload; we skip that refetch while this is set.

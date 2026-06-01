@@ -1,6 +1,26 @@
 import { createTransform } from "redux-persist";
 
 /**
+ * Excludes transient loading/refreshing states from persistence.
+ * Applied to all persisted slices to prevent stuck loading spinners.
+ */
+export const loadingStateExcluder = createTransform(
+  (inboundState: any) => {
+    if (typeof inboundState !== "object" || inboundState === null) return inboundState;
+    const { isLoading, isRefreshing, ...rest } = inboundState;
+    return rest;
+  },
+  (outboundState: any) => {
+    if (typeof outboundState !== "object" || outboundState === null) return outboundState;
+    return {
+      ...outboundState,
+      ...(outboundState.hasOwnProperty("isLoading") && { isLoading: false }),
+      ...(outboundState.hasOwnProperty("isRefreshing") && { isRefreshing: false }),
+    };
+  },
+);
+
+/**
  * Limits the channel message cache during persistence:
  * - Max 50 channels in the cache
  * - Max 200 messages per channel

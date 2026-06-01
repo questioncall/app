@@ -27,7 +27,7 @@ import quizReducer from "./slices/quizSlice";
 import incomingCallReducer from "./slices/incomingCallSlice";
 import notesReducer from "./slices/notesSlice";
 import notificationsReducer from "./slices/notificationsSlice";
-import { channelCacheLimiter } from "./transforms";
+import { channelCacheLimiter, loadingStateExcluder } from "./transforms";
 
 const persistConfig = {
   key: "root",
@@ -44,7 +44,7 @@ const persistConfig = {
     "notes",
     "notifications",
   ],
-  transforms: [channelCacheLimiter],
+  transforms: [loadingStateExcluder, channelCacheLimiter],
 };
 
 const rootReducer = combineReducers({

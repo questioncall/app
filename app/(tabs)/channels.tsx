@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
-  ScrollView,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -46,124 +45,6 @@ function formatChannelTime(iso?: string): string {
     day: "numeric",
     year: "2-digit",
   });
-}
-
-// ─── Active users bar ─────────────────────────────────────────
-interface Counterpart {
-  id: string;
-  name: string;
-  image?: string;
-  lastChannelId: string; // most-recent channel — used for tap navigation
-}
-
-function ActiveUsersBar({
-  counterparts,
-  onlineIds,
-  primaryColor,
-  primarySoftColor,
-  borderColor,
-  isDark,
-}: {
-  counterparts: Counterpart[];
-  onlineIds: Set<string>;
-  primaryColor: string;
-  primarySoftColor: string;
-  borderColor: string;
-  isDark: boolean;
-}) {
-  if (counterparts.length === 0) return null;
-
-  const bg = isDark ? "#0f172a" : "#ffffff";
-
-  return (
-    <View
-      style={{
-        backgroundColor: bg,
-        paddingTop: 14,
-        paddingBottom: 12,
-        borderBottomWidth: 0.5,
-        borderBottomColor: borderColor,
-      }}
-    >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-      >
-        {counterparts.map((user) => {
-          const online = onlineIds.has(user.id);
-          return (
-            <TouchableOpacity
-              key={user.id}
-              activeOpacity={0.7}
-              onPress={() => router.push(`/workspace/${user.lastChannelId}` as any)}
-              style={{ alignItems: "center", marginRight: 18, width: 56 }}
-            >
-              {/* Avatar */}
-              <View style={{ width: 52, height: 52 }}>
-                {user.image ? (
-                  <Image
-                    source={{ uri: user.image }}
-                    style={{ width: 52, height: 52, borderRadius: 26 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 26,
-                      backgroundColor: primarySoftColor,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{ fontSize: 19, fontWeight: "700", color: primaryColor }}
-                    >
-                      {(user.name ?? "?")[0].toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Green online dot — only if actually online */}
-                {online && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      bottom: 1,
-                      right: 1,
-                      width: 14,
-                      height: 14,
-                      borderRadius: 7,
-                      backgroundColor: "#22c55e",
-                      borderWidth: 2.5,
-                      borderColor: bg,
-                    }}
-                  />
-                )}
-              </View>
-
-              {/* First name */}
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontSize: 11,
-                  marginTop: 5,
-                  textAlign: "center",
-                  width: 56,
-                  color: isDark ? "#cbd5e1" : "#374151",
-                  fontWeight: "500",
-                }}
-              >
-                {user.name.split(" ")[0]}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
 }
 
 // ─── Channel row (messenger style) ───────────────────────────
@@ -378,7 +259,6 @@ export default function ChannelsScreen() {
     isDark,
   } = useAppTheme();
 
-  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
   const cacheMatchesUser = loadedForUserId === userId;
@@ -403,24 +283,14 @@ export default function ChannelsScreen() {
     [dispatch, isLoading, shouldUseCache, userId, list.length],
   );
 
-  const loadOnlineUsers = useCallback(async () => {
-    try {
-      const res = await api.get("/users/online");
-      if (Array.isArray(res.data)) setOnlineIds(new Set<string>(res.data));
-    } catch {
-      // silently ignore — dots just won't show
-    }
-  }, []);
-
   useEffect(() => {
     void loadChannels();
-    void loadOnlineUsers();
-  }, [loadChannels, loadOnlineUsers]);
+  }, [loadChannels]);
 
   const handleRefresh = useCallback(async () => {
     dispatch(setChannelsRefreshing(true));
-    await Promise.all([loadChannels(true), loadOnlineUsers()]);
-  }, [dispatch, loadChannels, loadOnlineUsers]);
+    await loadChannels(true);
+  }, [dispatch, loadChannels]);
 
   const activeCount = channels.filter((c) => c.status === "ACTIVE").length;
 
@@ -433,25 +303,6 @@ export default function ChannelsScreen() {
         c.questionTitle.toLowerCase().includes(q),
     );
   }, [channels, searchQuery]);
-
-  // Build unique counterparts from ALL channels (not just active).
-  // Keep track of their most-recent channel ID for tap navigation.
-  // Channels are sorted newest-first from the API, so first-seen = most recent.
-  const counterparts = useMemo<Counterpart[]>(() => {
-    const seen = new Map<string, Counterpart>();
-    for (const ch of channels) {
-      if (!ch.counterpartId) continue;
-      if (!seen.has(ch.counterpartId)) {
-        seen.set(ch.counterpartId, {
-          id: ch.counterpartId,
-          name: ch.counterpartName,
-          image: ch.counterpartImage,
-          lastChannelId: ch.id,
-        });
-      }
-    }
-    return Array.from(seen.values());
-  }, [channels]);
 
   return (
     <View style={{ flex: 1, backgroundColor }}>
@@ -562,16 +413,6 @@ export default function ChannelsScreen() {
           )}
         </View>
       </View>
-
-      {/* ── Active users bar ─────────────────────────────── */}
-      <ActiveUsersBar
-        counterparts={counterparts}
-        onlineIds={onlineIds}
-        primaryColor={primaryColor}
-        primarySoftColor={primarySoftColor}
-        borderColor={borderColor}
-        isDark={isDark}
-      />
 
       {/* ── Content ──────────────────────────────────────── */}
       {showInitialSpinner ? (

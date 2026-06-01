@@ -76,7 +76,8 @@ export default function CoursesScreen() {
             ? res.data
             : [];
         dispatch(setCourses(courses));
-      } catch {
+      } catch (error) {
+        console.error("[Courses] Load failed:", error);
         dispatch(setCoursesError("Unable to load courses right now."));
       }
     },
@@ -241,7 +242,7 @@ export default function CoursesScreen() {
                         style={{ fontSize: 10, fontWeight: "600", color: ENROLLED_GREEN }}
                       >
                         {progress > 0
-                          ? `${Math.round(progress)}% complete`
+                          ? `${Math.min(100, Math.round(progress))}% complete`
                           : "Not started"}
                       </Text>
                     </View>

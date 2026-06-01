@@ -396,7 +396,7 @@ export default function CourseDetailScreen() {
                     Progress
                   </Text>
                   <Text className="mt-1 text-sm font-semibold text-foreground">
-                    {Math.round(activeCourse.overallProgressPercent)}%
+                    {Math.min(100, Math.round(activeCourse.overallProgressPercent))}%
                   </Text>
                 </View>
               ) : null}
