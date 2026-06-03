@@ -9,7 +9,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +20,7 @@ import { AuthNotice } from "@/components/auth/auth-notice";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
+import { openWebCheckout } from "@/lib/web-checkout";
 import type { Course } from "@/store/slices/coursesSlice";
 
 type CourseVideo = {
@@ -45,6 +45,7 @@ type CourseDetail = Course & {
   overallProgressPercent?: number;
   totalDurationMinutes?: number | null;
   enrollmentCount?: number;
+  freePreviewCount?: number;
   instructorRole?: string;
   tags?: string[];
 };
@@ -60,11 +61,10 @@ function formatCurrency(course: CourseDetail) {
     return "Subscription";
   }
 
-  if (typeof course.price === "number" && Number.isFinite(course.price)) {
-    return `NPR ${course.price.toLocaleString()}`;
-  }
-
-  return "Paid";
+  // Play Store compliance: never show a price next to an in-app purchase CTA for
+  // digital goods. The actual price is shown on the web checkout. See
+  // HANDOFF-playstore-web-checkout.md §4.
+  return "Premium";
 }
 
 function formatDuration(minutes?: number | null) {
@@ -158,19 +158,9 @@ export default function CourseDetailScreen() {
         const msg = err?.response?.data?.error ?? "";
         const reason = err?.response?.data?.reason ?? "";
         if (msg.includes("PAID_COURSE_USE_PURCHASE_FLOW")) {
-          router.push({
-            pathname: "/payment/manual" as any,
-            params: { courseId },
-          });
+          await openWebCheckout("course", courseId, () => loadCourse(true));
         } else if (reason === "SUBSCRIPTION_REQUIRED") {
-          Alert.alert(
-            "Subscription Required",
-            "You need an active subscription to access this course.",
-            [
-              { text: "View Plans", onPress: () => router.push("/payment/plans" as any) },
-              { text: "Cancel", style: "cancel" },
-            ],
-          );
+          await openWebCheckout("subscription", undefined, () => loadCourse(true));
         } else {
           Toast.show({
             type: "error",
@@ -188,35 +178,9 @@ export default function CourseDetailScreen() {
   const handlePurchase = useCallback(() => {
     if (!courseId || !course) return;
     if (course.pricingModel === "PAID") {
-      Alert.alert(
-        "Choose Payment Method",
-        `${course.title} · NPR ${course.price?.toLocaleString() ?? "—"}`,
-        [
-          {
-            text: "eSewa",
-            onPress: () =>
-              router.push({
-                pathname: "/payment/gateway" as any,
-                params: { courseId, mode: "course" },
-              }),
-          },
-          {
-            text: "Manual Transfer",
-            onPress: () =>
-              router.push({
-                pathname: "/payment/manual" as any,
-                params: {
-                  courseId,
-                  courseName: course.title,
-                  coursePrice: String(course.price ?? 0),
-                },
-              }),
-          },
-          { text: "Cancel", style: "cancel" },
-        ],
-      );
+      void openWebCheckout("course", courseId, () => loadCourse(true));
     }
-  }, [courseId, course]);
+  }, [courseId, course, loadCourse]);
 
   const totalSections = course?.sections?.length ?? 0;
   const totalVideos = useMemo(
@@ -224,6 +188,18 @@ export default function CourseDetailScreen() {
       course?.sections?.reduce((count, section) => count + section.videos.length, 0) ?? 0,
     [course],
   );
+  const freePreviewVideoIds = useMemo(() => {
+    const previewCount = course?.freePreviewCount ?? 0;
+    if (!course || previewCount <= 0) return new Set<string>();
+
+    const orderedVideos = [...course.sections]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .flatMap((section) =>
+        [...section.videos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      );
+
+    return new Set(orderedVideos.slice(0, previewCount).map((video) => video._id));
+  }, [course]);
 
   if (isLoading && !course) {
     return (
@@ -425,7 +401,7 @@ export default function CourseDetailScreen() {
             {activeCourse.sections.length > 0 ? (
               activeCourse.sections.map((section, sectionIndex) => {
                 const isLocked = !isEnrolled && activeCourse.pricingModel !== "FREE";
-                const showVideos = !isLocked || sectionIndex === 0;
+                const showVideos = true;
 
                 return (
                   <View
@@ -441,7 +417,7 @@ export default function CourseDetailScreen() {
                           <Ionicons name="lock-closed" size={14} color={mutedIconColor} />
                         ) : null}
                       </View>
-                      {section.description && !isLocked ? (
+                      {section.description && (!isLocked || showVideos) ? (
                         <Text className="mt-1 text-sm leading-6 text-muted-foreground">
                           {section.description}
                         </Text>
@@ -463,10 +439,10 @@ export default function CourseDetailScreen() {
                     {showVideos ? (
                       <View className="divide-y divide-border">
                         {section.videos.length > 0 ? (
-                          section.videos.map((video, videoIndex) => {
-                            const videoLocked =
-                              isLocked && !(sectionIndex === 0 && videoIndex === 0);
-                            const canPlay = isEnrolled && !videoLocked;
+                          section.videos.map((video) => {
+                            const isPreviewVideo = freePreviewVideoIds.has(video._id);
+                            const videoLocked = isLocked && !isPreviewVideo;
+                            const canPlay = !videoLocked;
 
                             const videoRow = (
                               <View
@@ -505,6 +481,13 @@ export default function CourseDetailScreen() {
                                   <Text className="mt-1 text-xs text-muted-foreground">
                                     {formatDuration(video.durationMinutes)}
                                   </Text>
+                                  {isPreviewVideo && !isEnrolled ? (
+                                    <View className="mt-2 self-start rounded-full bg-emerald-500/10 px-2 py-0.5">
+                                      <Text className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                                        Free preview
+                                      </Text>
+                                    </View>
+                                  ) : null}
                                 </View>
 
                                 {videoLocked ? null : (
@@ -528,6 +511,7 @@ export default function CourseDetailScreen() {
                                       courseId: courseId!,
                                       videoId: video._id,
                                       title: video.title,
+                                      isPreview: isPreviewVideo ? "1" : "0",
                                     },
                                   })
                                 }
@@ -583,9 +567,7 @@ export default function CourseDetailScreen() {
                   className="items-center rounded-2xl py-4"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  <Text className="text-base font-bold text-white">
-                    Buy Course · {formatCurrency(activeCourse)}
-                  </Text>
+                  <Text className="text-base font-bold text-white">Continue on web</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity

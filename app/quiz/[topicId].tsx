@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
+import { openWebCheckout } from "@/lib/web-checkout";
 import {
   clearSession,
   incrementViolation,
@@ -89,6 +90,17 @@ export default function QuizSessionScreen() {
         dispatch(setSession(s));
       } catch (err: any) {
         if (cancelled) return;
+        // Premium quiz without an active plan → route to the compliant web
+        // membership page instead of surfacing a dead-end error.
+        if ((quizType ?? "FREE") === "PREMIUM" && err?.response?.status === 403) {
+          dispatch(
+            setSessionError(
+              "Premium quizzes are available with QuestionCall membership.",
+            ),
+          );
+          void openWebCheckout("subscription");
+          return;
+        }
         dispatch(
           setSessionError(
             err?.response?.data?.error ??

@@ -53,6 +53,7 @@ type CourseDetail = {
   status: CourseStatus;
   pricingModel: PricingModel;
   price: number | null;
+  freePreviewCount: number;
   enrollmentCount: number;
   totalDurationMinutes: number;
   slug: string;
@@ -202,6 +203,7 @@ export default function ManageCourseScreen() {
     status: "DRAFT" as CourseStatus,
     pricingModel: "FREE" as PricingModel,
     price: "",
+    freePreviewCount: "0",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -228,6 +230,7 @@ export default function ManageCourseScreen() {
             status: found.status,
             pricingModel: found.pricingModel,
             price: found.price != null ? String(found.price) : "",
+            freePreviewCount: String(found.freePreviewCount ?? 0),
           });
         }
 
@@ -457,6 +460,10 @@ export default function ManageCourseScreen() {
         status: settingsForm.status,
         pricingModel: settingsForm.pricingModel,
         price: settingsForm.pricingModel === "PAID" ? Number(settingsForm.price) : null,
+        freePreviewCount:
+          settingsForm.pricingModel === "FREE"
+            ? 0
+            : Number(settingsForm.freePreviewCount) || 0,
       });
       setCourse((prev) => (prev ? { ...prev, ...res.data } : prev));
       Toast.show({ type: "success", text1: "Course settings saved!" });
@@ -1262,6 +1269,99 @@ export default function ManageCourseScreen() {
                   ))}
                 </View>
               ) : null}
+            </View>
+          ) : null}
+        </View>
+
+        {/* Free preview */}
+        <View>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "600",
+              color: isDark ? "#cbd5e1" : "#475569",
+              marginBottom: 8,
+            }}
+          >
+            Free preview videos
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[
+              { label: "No", value: false },
+              { label: "Yes", value: true },
+            ].map((option) => {
+              const disabled = settingsForm.pricingModel === "FREE";
+              const selected = Number(settingsForm.freePreviewCount) > 0 === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.label}
+                  disabled={disabled}
+                  onPress={() =>
+                    setSettingsForm((f) => ({
+                      ...f,
+                      freePreviewCount: option.value
+                        ? Number(f.freePreviewCount) > 0
+                          ? f.freePreviewCount
+                          : "1"
+                        : "0",
+                    }))
+                  }
+                  style={{
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderColor: selected ? primaryColor : borderColor,
+                    backgroundColor: selected ? primarySoftColor : "transparent",
+                    opacity: disabled ? 0.45 : 1,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: selected ? primaryColor : mutedIconColor,
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {settingsForm.pricingModel === "FREE" ? (
+            <Text style={{ marginTop: 8, fontSize: 12, color: mutedIconColor }}>
+              Free courses are already fully open.
+            </Text>
+          ) : Number(settingsForm.freePreviewCount) > 0 ? (
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 12, color: mutedIconColor, marginBottom: 6 }}>
+                Number of first videos students can preview
+              </Text>
+              <TextInput
+                value={settingsForm.freePreviewCount}
+                onChangeText={(v) =>
+                  setSettingsForm((f) => ({
+                    ...f,
+                    freePreviewCount: v.replace(/[^0-9]/g, ""),
+                  }))
+                }
+                keyboardType="numeric"
+                placeholder="e.g. 2"
+                placeholderTextColor={mutedIconColor}
+                style={{
+                  borderWidth: 1,
+                  borderColor,
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  fontSize: 15,
+                  color: isDark ? "#f1f5f9" : "#0f172a",
+                  backgroundColor: cardColor,
+                }}
+              />
             </View>
           ) : null}
         </View>

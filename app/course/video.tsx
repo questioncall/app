@@ -9,14 +9,22 @@ import { api } from "@/lib/api";
 const PROGRESS_PING_INTERVAL_MS = 10_000;
 
 export default function CourseVideoScreen() {
-  const { courseId, videoId, title, videoUrl } = useLocalSearchParams<{
+  const {
+    courseId,
+    videoId,
+    title,
+    videoUrl,
+    isPreview: initialIsPreview,
+  } = useLocalSearchParams<{
     courseId: string;
     videoId: string;
     title?: string;
     videoUrl?: string;
+    isPreview?: string;
   }>();
 
   const [videoSrc, setVideoSrc] = useState<string | null>(videoUrl ?? null);
+  const [isPreview, setIsPreview] = useState(initialIsPreview === "1");
   const [error, setError] = useState<string | null>(null);
   const lastPingAt = useRef(0);
   const watchedSecondsRef = useRef(0);
@@ -38,6 +46,7 @@ export default function CourseVideoScreen() {
           return;
         }
         setVideoSrc(src);
+        setIsPreview(Boolean(d.isPreview));
       } catch (err) {
         console.error("[Video load error]", err);
         setError("Unable to load video. You may not have access.");
@@ -50,7 +59,7 @@ export default function CourseVideoScreen() {
   });
 
   const sendProgressPing = useCallback(async () => {
-    if (!courseId || !videoId) return;
+    if (!courseId || !videoId || isPreview) return;
     const now = Date.now();
     if (now - lastPingAt.current < PROGRESS_PING_INTERVAL_MS) return;
     lastPingAt.current = now;
@@ -61,7 +70,7 @@ export default function CourseVideoScreen() {
         watchedSeconds: watchedSecondsRef.current,
       });
     } catch {}
-  }, [courseId, videoId]);
+  }, [courseId, videoId, isPreview]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -76,7 +85,7 @@ export default function CourseVideoScreen() {
 
   useEffect(() => {
     return () => {
-      if (watchedSecondsRef.current > 0) {
+      if (watchedSecondsRef.current > 0 && !isPreview) {
         api
           .post(`/courses/${courseId}/progress`, {
             videoId,
@@ -85,7 +94,7 @@ export default function CourseVideoScreen() {
           .catch(() => {});
       }
     };
-  }, [courseId, videoId]);
+  }, [courseId, videoId, isPreview]);
 
   if (error) {
     return (
@@ -131,6 +140,26 @@ export default function CourseVideoScreen() {
           <Text className="text-base text-white/60">Loading video...</Text>
         )}
       </View>
+
+      {isPreview ? (
+        <View className="border-t border-white/10 bg-black px-4 pb-6 pt-4">
+          <Text className="text-sm font-semibold text-white">Free preview</Text>
+          <Text className="mt-1 text-xs leading-5 text-white/65">
+            Enroll or buy the course to unlock the full curriculum and save progress.
+          </Text>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/course/[id]" as any,
+                params: { id: courseId },
+              })
+            }
+            className="mt-3 items-center rounded-full bg-white px-4 py-2.5"
+          >
+            <Text className="text-sm font-semibold text-black">View course</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 }

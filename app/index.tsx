@@ -10,15 +10,16 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 export default function LandingScreen() {
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const isLoading = useAppSelector((s) => s.auth.isLoading);
-  const shouldShowOnboarding = useAppSelector((s) => s.onboarding.shouldShow);
   const insets = useSafeAreaInsets();
   const { statusBarStyle, backgroundColor, iconColor } = useAppTheme();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace(shouldShowOnboarding ? "/onboarding" : "/(tabs)/feed");
+      // Onboarding is shown as a global modal (GlobalOnboardingModal), so new
+      // users land on the feed and the video overlays on top.
+      router.replace("/(tabs)/feed");
     }
-  }, [isAuthenticated, isLoading, shouldShowOnboarding]);
+  }, [isAuthenticated, isLoading]);
 
   if (isLoading || isAuthenticated) return null;
 

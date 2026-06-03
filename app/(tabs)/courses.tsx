@@ -33,16 +33,21 @@ function getCourseKey(item: Course | null, index: number) {
   return `${item._id || item.slug || item.title || "course"}-${index}`;
 }
 
-function pricingLabel(model: Course["pricingModel"], price?: number | null) {
+function pricingLabel(model: Course["pricingModel"]) {
   if (model === "FREE") return { text: "Free", color: "#10b981" };
   if (model === "SUBSCRIPTION_INCLUDED")
     return { text: "Subscription", color: "#0ea5e9" };
-  return { text: `NPR ${price?.toLocaleString() ?? "—"}`, color: "#f59e0b" };
+  // Play Store compliance: neutral badge instead of a price for paid digital goods.
+  return { text: "Premium", color: "#f59e0b" };
 }
 
 type ViewMode = "list" | "grid";
 
 const ENROLLED_GREEN = "#10b981";
+
+type Chapter = Course & {
+  type?: "chapter";
+};
 
 export default function CoursesScreen() {
   const dispatch = useAppDispatch();
@@ -61,6 +66,7 @@ export default function CoursesScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [chapters, setChapters] = useState<Chapter[]>([]);
 
   const loadCourses = useCallback(
     async (force = false) => {
@@ -69,12 +75,19 @@ export default function CoursesScreen() {
       if (!force && (currentCoursesState.isLoading || shouldUseCache)) return;
       dispatch(setCoursesLoading(true));
       try {
-        const res = await api.get("/courses");
-        const courses = Array.isArray(res.data?.courses)
-          ? res.data.courses
-          : Array.isArray(res.data)
-            ? res.data
+        const [coursesRes, chaptersRes] = await Promise.all([
+          api.get("/courses"),
+          api.get("/chapters"),
+        ]);
+        const courses = Array.isArray(coursesRes.data?.courses)
+          ? coursesRes.data.courses
+          : Array.isArray(coursesRes.data)
+            ? coursesRes.data
             : [];
+        const chapterItems = Array.isArray(chaptersRes.data?.chapters)
+          ? chaptersRes.data.chapters
+          : [];
+        setChapters(chapterItems);
         dispatch(setCourses(courses));
       } catch (error) {
         console.error("[Courses] Load failed:", error);
@@ -103,6 +116,17 @@ export default function CoursesScreen() {
         (c.subject ?? "").toLowerCase().includes(q),
     );
   }, [list, searchQuery]);
+
+  const filteredChapters = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return chapters;
+    return chapters.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        (c.instructorName ?? "").toLowerCase().includes(q) ||
+        (c.subject ?? "").toLowerCase().includes(q),
+    );
+  }, [chapters, searchQuery]);
 
   const gridData = useMemo(() => {
     if (filtered.length % 2 !== 0) return [...filtered, null];
@@ -318,7 +342,7 @@ export default function CoursesScreen() {
   /* ── List item ─── */
   const renderListItem = useCallback(
     ({ item }: { item: Course }) => {
-      const label = pricingLabel(item.pricingModel, item.price);
+      const label = pricingLabel(item.pricingModel);
       const enrolled = isEnrolled(item);
       return (
         <Pressable
@@ -462,7 +486,7 @@ export default function CoursesScreen() {
   const renderGridItem = useCallback(
     ({ item }: { item: Course | null }) => {
       if (!item) return <View style={{ flex: 1, maxWidth: "50%" }} />;
-      const label = pricingLabel(item.pricingModel, item.price);
+      const label = pricingLabel(item.pricingModel);
       const enrolled = isEnrolled(item);
       return (
         <Pressable
@@ -576,6 +600,135 @@ export default function CoursesScreen() {
   );
 
   const listSeparator = useCallback(() => <View style={{ height: 10 }} />, []);
+
+  const chaptersHeader = useMemo(() => {
+    if (filteredChapters.length === 0) return enrolledHeader;
+
+    return (
+      <View>
+        {enrolledHeader}
+        <View style={{ marginBottom: 14 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingHorizontal: 16,
+              marginBottom: 10,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="albums-outline" size={18} color={primaryColor} />
+              <Text style={{ fontSize: 15, fontWeight: "700", color: textColor }}>
+                Chapters
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: mutedIconColor }}>
+              {filteredChapters.length}
+            </Text>
+          </View>
+          <View style={{ paddingHorizontal: 16, gap: 10 }}>
+            {filteredChapters.map((item) => {
+              const label = pricingLabel(item.pricingModel);
+              const enrolled = isEnrolled(item);
+              return (
+                <Pressable
+                  key={item._id}
+                  onPress={() => router.push(`/chapter/${item._id}` as any)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    borderWidth: 1,
+                    borderColor: enrolled ? `${ENROLLED_GREEN}40` : borderColor,
+                    borderRadius: 14,
+                    backgroundColor: subtleCardBg,
+                    padding: 12,
+                    opacity: pressed && Platform.OS === "ios" ? 0.85 : 1,
+                    ...subtleShadow,
+                  })}
+                >
+                  <View
+                    style={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: 14,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: primarySoftColor,
+                    }}
+                  >
+                    <Ionicons name="albums-outline" size={24} color={primaryColor} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      numberOfLines={2}
+                      style={{ color: textColor, fontWeight: "700" }}
+                    >
+                      {item.title}
+                    </Text>
+                    <Text style={{ marginTop: 3, color: mutedIconColor, fontSize: 11 }}>
+                      {item.instructorName ?? "Teacher"} · {item.subject ?? "Chapter"}
+                    </Text>
+                    <View style={{ flexDirection: "row", gap: 6, marginTop: 6 }}>
+                      <View
+                        style={{
+                          backgroundColor: `${label.color}15`,
+                          borderRadius: 6,
+                          paddingHorizontal: 7,
+                          paddingVertical: 2,
+                        }}
+                      >
+                        <Text
+                          style={{ color: label.color, fontSize: 10, fontWeight: "800" }}
+                        >
+                          {label.text}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          backgroundColor: primarySoftColor,
+                          borderRadius: 6,
+                          paddingHorizontal: 7,
+                          paddingVertical: 2,
+                        }}
+                      >
+                        <Text
+                          style={{ color: primaryColor, fontSize: 10, fontWeight: "800" }}
+                        >
+                          Chapter
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={mutedIconColor} />
+                </Pressable>
+              );
+            })}
+          </View>
+          {filtered.length > 0 ? (
+            <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: textColor }}>
+                Courses
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
+  }, [
+    borderColor,
+    enrolledHeader,
+    filtered.length,
+    filteredChapters,
+    isEnrolled,
+    mutedIconColor,
+    primaryColor,
+    primarySoftColor,
+    subtleCardBg,
+    subtleShadow,
+    textColor,
+  ]);
 
   return (
     <View style={{ flex: 1, backgroundColor }}>
@@ -703,7 +856,7 @@ export default function CoursesScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={primaryColor} size="large" />
         </View>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && filteredChapters.length === 0 ? (
         <View
           style={{
             flex: 1,
@@ -763,7 +916,7 @@ export default function CoursesScreen() {
             paddingTop: 12,
             paddingBottom: 24,
           }}
-          ListHeaderComponent={enrolledHeader}
+          ListHeaderComponent={chaptersHeader}
           ItemSeparatorComponent={listSeparator}
           showsVerticalScrollIndicator={false}
           renderItem={renderListItem}
@@ -782,7 +935,7 @@ export default function CoursesScreen() {
             paddingTop: 12,
             paddingBottom: 24,
           }}
-          ListHeaderComponent={enrolledHeader}
+          ListHeaderComponent={chaptersHeader}
           columnWrapperStyle={{ gap: 10, marginBottom: 10 }}
           showsVerticalScrollIndicator={false}
           renderItem={renderGridItem}

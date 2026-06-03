@@ -30,6 +30,7 @@ import {
 import { api, SECURE_STORE_KEYS } from "@/lib/api";
 import { Sprint2Bootstrap } from "@/components/sprint2/sprint2-bootstrap";
 import { GlobalNoticeModal } from "@/components/notices/global-notice-modal";
+import { GlobalOnboardingModal } from "@/components/onboarding/global-onboarding-modal";
 import { RealtimeBridge } from "@/components/realtime/realtime-bridge";
 import { ImageViewerProvider } from "@/components/image-viewer/image-viewer-context";
 import {
@@ -299,6 +300,7 @@ function RootLayout() {
                 <Sprint2Bootstrap />
                 <RealtimeBridge />
                 <GlobalNoticeModal />
+                <GlobalOnboardingModal />
                 <ImageViewerProvider>
                   <Stack
                     screenOptions={{
@@ -313,14 +315,15 @@ function RootLayout() {
                     <Stack.Screen name="call/[roomId]" />
                     <Stack.Screen name="course/[id]" />
                     <Stack.Screen name="course/video" />
+                    <Stack.Screen name="chapter/[id]" />
+                    <Stack.Screen name="chapter/content" />
                     <Stack.Screen name="quiz/index" />
                     <Stack.Screen name="quiz/[topicId]" />
                     <Stack.Screen name="quiz/results" />
                     <Stack.Screen name="wallet/index" />
                     <Stack.Screen name="wallet/withdraw" />
-                    <Stack.Screen name="payment/gateway" />
-                    <Stack.Screen name="payment/manual" />
                     <Stack.Screen name="payment/plans" />
+                    <Stack.Screen name="payment/return" />
                     <Stack.Screen name="notes" />
                     <Stack.Screen name="notifications" />
                     <Stack.Screen name="profile/index" />

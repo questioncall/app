@@ -17,6 +17,8 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { openWebCheckout } from "@/lib/web-checkout";
+
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import {
   addMyQuestion,
@@ -351,12 +353,12 @@ function StudentAskScreen() {
         </View>
         {quotaExhausted ? (
           <TouchableOpacity
-            onPress={() => router.push("/payment/plans" as any)}
+            onPress={() => void openWebCheckout("subscription")}
             className="rounded-full px-4 py-2"
             style={{ backgroundColor: primaryColor }}
             activeOpacity={0.85}
           >
-            <Text className="text-xs font-semibold text-white">Upgrade</Text>
+            <Text className="text-xs font-semibold text-white">Manage</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -641,14 +643,12 @@ function StudentAskScreen() {
       >
         {quotaExhausted ? (
           <TouchableOpacity
-            onPress={() => router.push("/payment/plans" as any)}
+            onPress={() => void openWebCheckout("subscription")}
             className="items-center justify-center rounded-2xl"
             style={{ backgroundColor: primaryColor, height: 52 }}
             activeOpacity={0.85}
           >
-            <Text className="text-base font-bold text-white">
-              Upgrade plan to ask more
-            </Text>
+            <Text className="text-base font-bold text-white">Manage membership</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity

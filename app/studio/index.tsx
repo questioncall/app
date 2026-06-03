@@ -36,6 +36,20 @@ export type Course = {
   expectedEndDate?: string | null;
 };
 
+type Chapter = {
+  _id: string;
+  title: string;
+  subject: string;
+  level: string;
+  status: CourseStatus;
+  pricingModel: PricingModel;
+  price: number | null;
+  enrollmentCount: number;
+  totalDurationMinutes: number;
+  slug: string;
+  description: string;
+};
+
 function StatusPill({ status }: { status: CourseStatus }) {
   const colors: Record<CourseStatus, { bg: string; text: string }> = {
     DRAFT: { bg: "rgba(148,163,184,0.15)", text: "#94a3b8" },
@@ -98,19 +112,25 @@ export default function StudioScreen() {
   } = useAppTheme();
 
   const [courses, setCourses] = useState<Course[]>([]);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchCourses = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await api.get("/courses", {
-        params: { limit: 50, page: 1, instructor: "me" },
-      });
-      const all: Course[] = res.data?.courses ?? [];
-      setCourses(all);
+      const [coursesRes, chaptersRes] = await Promise.all([
+        api.get("/courses", {
+          params: { limit: 50, page: 1, instructor: "me" },
+        }),
+        api.get("/chapters", {
+          params: { limit: 50, page: 1, instructor: "me" },
+        }),
+      ]);
+      setCourses(coursesRes.data?.courses ?? []);
+      setChapters(chaptersRes.data?.chapters ?? []);
     } catch {
-      Toast.show({ type: "error", text1: "Failed to load courses" });
+      Toast.show({ type: "error", text1: "Failed to load studio items" });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -213,6 +233,85 @@ export default function StudioScreen() {
     </TouchableOpacity>
   );
 
+  const renderChapter = (item: Chapter) => (
+    <TouchableOpacity
+      key={item._id}
+      activeOpacity={0.75}
+      onPress={() =>
+        router.push({
+          pathname: "/studio/chapter/[chapterId]" as any,
+          params: { chapterId: item._id },
+        })
+      }
+      style={{
+        backgroundColor: cardColor,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor,
+        marginBottom: 12,
+        padding: 16,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            backgroundColor: primarySoftColor,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="albums-outline" size={20} color={primaryColor} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+            <Text
+              style={{
+                flex: 1,
+                fontSize: 15,
+                fontWeight: "700",
+                color: isDark ? "#f1f5f9" : "#0f172a",
+              }}
+              numberOfLines={2}
+            >
+              {item.title}
+            </Text>
+            <StatusPill status={item.status} />
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <PricingBadge model={item.pricingModel} price={item.price} />
+            <Text style={{ fontSize: 12, color: mutedIconColor }}>Chapter</Text>
+            <Text style={{ fontSize: 12, color: mutedIconColor }}>·</Text>
+            <Text style={{ fontSize: 12, color: mutedIconColor }}>{item.subject}</Text>
+          </View>
+          <View
+            style={{ flexDirection: "row", alignItems: "center", gap: 16, marginTop: 10 }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="people-outline" size={14} color={mutedIconColor} />
+              <Text style={{ fontSize: 12, color: mutedIconColor }}>
+                {item.enrollmentCount} enrolled
+              </Text>
+            </View>
+            <View style={{ flex: 1, alignItems: "flex-end" }}>
+              <Ionicons name="chevron-forward" size={16} color={mutedIconColor} />
+            </View>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor }}>
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
@@ -238,7 +337,7 @@ export default function StudioScreen() {
             color: isDark ? "#f1f5f9" : "#0f172a",
           }}
         >
-          Course Studio
+          Studio
         </Text>
         <TouchableOpacity onPress={handleRefresh} style={{ marginRight: 8 }}>
           <Ionicons name="refresh-outline" size={22} color={mutedIconColor} />
@@ -260,8 +359,47 @@ export default function StudioScreen() {
         </TouchableOpacity>
       </View>
 
+      <View
+        style={{ flexDirection: "row", gap: 10, paddingHorizontal: 16, marginBottom: 8 }}
+      >
+        <TouchableOpacity
+          onPress={() => router.push("/studio/create" as any)}
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            borderWidth: 1,
+            borderColor,
+            borderRadius: 14,
+            paddingVertical: 10,
+          }}
+        >
+          <Ionicons name="book-outline" size={17} color={primaryColor} />
+          <Text style={{ color: primaryColor, fontWeight: "700" }}>Course</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push("/studio/create-chapter" as any)}
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            borderWidth: 1,
+            borderColor,
+            borderRadius: 14,
+            paddingVertical: 10,
+          }}
+        >
+          <Ionicons name="albums-outline" size={17} color={primaryColor} />
+          <Text style={{ color: primaryColor, fontWeight: "700" }}>Chapter</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Stats strip */}
-      {courses.length > 0 ? (
+      {courses.length + chapters.length > 0 ? (
         <View
           style={{
             flexDirection: "row",
@@ -271,13 +409,23 @@ export default function StudioScreen() {
           }}
         >
           {[
-            { label: "Total", value: courses.length, icon: "book-outline" as const },
+            {
+              label: "Total",
+              value: courses.length + chapters.length,
+              icon: "book-outline" as const,
+            },
             {
               label: "Active",
-              value: activeCourses,
+              value: activeCourses + chapters.filter((c) => c.status === "ACTIVE").length,
               icon: "checkmark-circle-outline" as const,
             },
-            { label: "Students", value: totalStudents, icon: "people-outline" as const },
+            {
+              label: "Students",
+              value:
+                totalStudents +
+                chapters.reduce((s, c) => s + (c.enrollmentCount ?? 0), 0),
+              icon: "people-outline" as const,
+            },
           ].map((stat) => (
             <View
               key={stat.label}
@@ -323,60 +471,77 @@ export default function StudioScreen() {
               tintColor={primaryColor}
             />
           }
-          ListEmptyComponent={
-            <View style={{ alignItems: "center", paddingTop: 80 }}>
-              <View
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: primarySoftColor,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 16,
-                }}
-              >
-                <Ionicons name="videocam-outline" size={36} color={primaryColor} />
-              </View>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "700",
-                  color: isDark ? "#f1f5f9" : "#0f172a",
-                  marginBottom: 8,
-                }}
-              >
-                No courses yet
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: mutedIconColor,
-                  textAlign: "center",
-                  marginBottom: 24,
-                  paddingHorizontal: 32,
-                }}
-              >
-                Create your first course to start sharing your knowledge with students.
-              </Text>
-              <TouchableOpacity
-                onPress={() => router.push("/studio/create" as any)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                  backgroundColor: primaryColor,
-                  borderRadius: 24,
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                }}
-              >
-                <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>
-                  Create Course
+          ListHeaderComponent={
+            chapters.length > 0 ? (
+              <View style={{ marginBottom: courses.length > 0 ? 12 : 0 }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "800",
+                    color: mutedIconColor,
+                    marginBottom: 10,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Chapters
                 </Text>
-              </TouchableOpacity>
-            </View>
+                {chapters.map(renderChapter)}
+                {courses.length > 0 ? (
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "800",
+                      color: mutedIconColor,
+                      marginTop: 8,
+                      marginBottom: 10,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Courses
+                  </Text>
+                ) : null}
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            chapters.length > 0 ? null : (
+              <View style={{ alignItems: "center", paddingTop: 80 }}>
+                <View
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: primarySoftColor,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 16,
+                  }}
+                >
+                  <Ionicons name="videocam-outline" size={36} color={primaryColor} />
+                </View>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    color: isDark ? "#f1f5f9" : "#0f172a",
+                    marginBottom: 8,
+                  }}
+                >
+                  No courses yet
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: mutedIconColor,
+                    textAlign: "center",
+                    marginBottom: 24,
+                    paddingHorizontal: 32,
+                  }}
+                >
+                  Create your first course or chapter to start sharing your knowledge.
+                </Text>
+              </View>
+            )
           }
         />
       )}

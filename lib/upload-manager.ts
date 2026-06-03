@@ -255,6 +255,133 @@ export function startCourseVideoUpload(params: StartCourseVideoUploadParams): st
   return id;
 }
 
+export type StartChapterVideoUploadParams = {
+  chapterId: string;
+  title: string;
+  file: {
+    uri: string;
+    name: string;
+    mimeType?: string;
+    size?: number;
+  };
+  onCreated?: () => void;
+  onReady?: () => void;
+  onError?: (error: string) => void;
+};
+
+export function startChapterVideoUpload(params: StartChapterVideoUploadParams): string {
+  const id = `chvid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const label = `📹 ${params.title}`;
+
+  store.dispatch(
+    addUpload({
+      id,
+      uri: params.file.uri,
+      type: "file",
+      label,
+      videoTitle: params.title,
+    }),
+  );
+
+  performChapterVideoUpload(id, params).catch((err) => {
+    console.error("[ChapterVideoUpload] Unhandled error:", err);
+  });
+
+  return id;
+}
+
+async function performChapterVideoUpload(
+  id: string,
+  params: StartChapterVideoUploadParams,
+) {
+  const { chapterId, title, file } = params;
+  try {
+    store.dispatch(updateUploadProgress({ id, progress: 2 }));
+
+    const createRes = await api.post(`/chapters/${chapterId}/contents`, {
+      type: "VIDEO",
+      title: title.trim(),
+    });
+    const uploadUrl: string = createRes.data?.uploadUrl;
+    const contentId: string | undefined = createRes.data?.content?._id;
+    if (!uploadUrl || !contentId) {
+      throw new Error("Server did not return an upload URL.");
+    }
+
+    params.onCreated?.();
+    store.dispatch(updateUploadProgress({ id, progress: 5 }));
+
+    const uploadTask = FileSystem.createUploadTask(
+      uploadUrl,
+      file.uri,
+      {
+        httpMethod: "PUT",
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: { "Content-Type": file.mimeType || "video/mp4" },
+      },
+      (progress) => {
+        if (progress.totalBytesExpectedToSend > 0) {
+          const pct = Math.round(
+            5 + (progress.totalBytesSent / progress.totalBytesExpectedToSend) * 85,
+          );
+          store.dispatch(updateUploadProgress({ id, progress: pct }));
+        }
+      },
+    );
+
+    const result = await uploadTask.uploadAsync();
+    if (!result || result.status < 200 || result.status >= 300) {
+      throw new Error(`Upload failed (HTTP ${result?.status ?? "unknown"})`);
+    }
+
+    store.dispatch(updateUploadProgress({ id, progress: 95 }));
+    store.dispatch(setUploadLabel({ id, label: `📹 ${title} · Processing…` }));
+
+    await pollChapterContentProcessing(id, params, contentId);
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : "Upload failed";
+    store.dispatch(failUpload({ id, error: errMsg }));
+    params.onError?.(errMsg);
+    Toast.show({ type: "error", text1: "Video upload failed", text2: errMsg });
+  }
+}
+
+async function pollChapterContentProcessing(
+  id: string,
+  params: StartChapterVideoUploadParams,
+  contentId: string,
+) {
+  const { chapterId } = params;
+
+  for (let attempt = 0; attempt < PROCESSING_MAX_ATTEMPTS; attempt++) {
+    await new Promise((r) => setTimeout(r, PROCESSING_POLL_INTERVAL_MS));
+    try {
+      const res = await api.get(`/chapters/${chapterId}/contents/${contentId}/status`);
+      const status = res.data?.status;
+      if (status === "READY") {
+        store.dispatch(completeUpload({ id, url: contentId }));
+        setTimeout(() => store.dispatch(removeUpload(id)), 5000);
+        params.onReady?.();
+        return;
+      }
+      if (status === "ERRORED") {
+        throw new Error("Processing failed on the server.");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Processing failed")) {
+        store.dispatch(failUpload({ id, error: err.message }));
+        params.onError?.(err.message);
+        Toast.show({ type: "error", text1: "Video processing failed" });
+        return;
+      }
+    }
+  }
+
+  const timeoutMsg = "Timed out waiting for the video to finish processing.";
+  store.dispatch(failUpload({ id, error: timeoutMsg }));
+  params.onError?.(timeoutMsg);
+}
+
 async function performCourseVideoUpload(
   id: string,
   params: StartCourseVideoUploadParams,

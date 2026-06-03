@@ -151,10 +151,8 @@ function formatTimeAgo(value: string) {
 function formatCoursePrice(course: Course) {
   if (course.pricingModel === "FREE") return "Free";
   if (course.pricingModel === "SUBSCRIPTION_INCLUDED") return "Sub";
-  if (typeof course.price === "number" && Number.isFinite(course.price)) {
-    return `NPR ${course.price.toLocaleString()}`;
-  }
-  return "Paid";
+  // Play Store compliance: neutral badge instead of a price for paid digital goods.
+  return "Premium";
 }
 
 function getQuestionKey(item: FeedQuestion, index: number) {

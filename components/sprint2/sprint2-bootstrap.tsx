@@ -1,7 +1,5 @@
 import { useCallback, useEffect } from "react";
 import { AppState } from "react-native";
-import { router, usePathname } from "expo-router";
-
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { api } from "@/lib/api";
 import {
@@ -17,12 +15,10 @@ import {
 
 export function Sprint2Bootstrap() {
   const dispatch = useAppDispatch();
-  const pathname = usePathname();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const user = useAppSelector((s) => s.user.data);
   const onboardingLoadedForUserId = useAppSelector((s) => s.onboarding.loadedForUserId);
   const noticesLoadedForUserId = useAppSelector((s) => s.notices.loadedForUserId);
-  const shouldShowOnboarding = useAppSelector((s) => s.onboarding.shouldShow);
 
   const fetchOnboarding = useCallback(async () => {
     if (!user?._id) return;
@@ -87,13 +83,6 @@ export function Sprint2Bootstrap() {
     onboardingLoadedForUserId,
     user?._id,
   ]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !shouldShowOnboarding) return;
-    if (pathname !== "/onboarding") {
-      router.replace("/onboarding");
-    }
-  }, [isAuthenticated, pathname, shouldShowOnboarding]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?._id) return;

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { WebView } from "react-native-webview";
+import { VideoView, useVideoPlayer } from "expo-video";
 import Toast from "react-native-toast-message";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
@@ -91,6 +91,12 @@ export default function OnboardingScreen() {
 
   const video = onboarding.video;
 
+  // Plays HLS/mp4/webm natively (Mux + Cloudinary/R2) — our own player, not YouTube.
+  const player = useVideoPlayer(video?.videoUrl ?? "", (p) => {
+    p.loop = false;
+    p.muted = false;
+  });
+
   return (
     <View className="flex-1 bg-background">
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
@@ -144,11 +150,12 @@ export default function OnboardingScreen() {
                   />
                 ) : null}
                 <View className="aspect-video bg-black">
-                  <WebView
-                    source={{ uri: video.videoUrl }}
-                    allowsFullscreenVideo
-                    mediaPlaybackRequiresUserAction={false}
-                    style={{ flex: 1, backgroundColor: "#000000" }}
+                  <VideoView
+                    player={player}
+                    style={{ width: "100%", height: "100%" }}
+                    contentFit="contain"
+                    fullscreenOptions={{ enable: true, orientation: "landscape" }}
+                    nativeControls
                   />
                 </View>
                 <View className="p-5">

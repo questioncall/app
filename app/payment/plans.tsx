@@ -14,6 +14,7 @@ import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
 import { api } from "@/lib/api";
+import { openWebCheckout } from "@/lib/web-checkout";
 import { PlanBadge } from "@/components/PlanBadge";
 
 interface SubscriptionInfo {
@@ -72,16 +73,6 @@ export default function PlansScreen() {
     if (slug === "pro") return "rocket-outline";
     if (slug === "max") return "diamond-outline";
     return "document-outline";
-  };
-
-  const handleSelectPlan = (planSlug: string) => {
-    if (subInfo?.pendingManualPayment) {
-      return;
-    }
-    router.push({
-      pathname: "/payment/manual" as any,
-      params: { planSlug },
-    });
   };
 
   return (
@@ -205,14 +196,6 @@ export default function PlansScreen() {
                         {plan.maxQuestions} questions
                       </Text>
                     </View>
-                    <View className="items-end">
-                      <Text
-                        className="text-2xl font-bold"
-                        style={{ color: primaryColor }}
-                      >
-                        NPR {plan.price}
-                      </Text>
-                    </View>
                   </View>
 
                   {/* Features */}
@@ -228,24 +211,6 @@ export default function PlansScreen() {
                       ))}
                     </View>
                   ) : null}
-
-                  {/* CTA */}
-                  {!isCurrent ? (
-                    <TouchableOpacity
-                      className="mt-4 items-center rounded-xl py-3"
-                      style={{
-                        backgroundColor: isPending ? `${primaryColor}40` : primaryColor,
-                      }}
-                      onPress={() => handleSelectPlan(plan.slug)}
-                      disabled={isPending}
-                    >
-                      <Text className="font-semibold text-white">
-                        {isPending
-                          ? "Payment Pending..."
-                          : `Upgrade to ${plan.name.toUpperCase()}`}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
                 </View>
               </View>
             );
@@ -258,7 +223,22 @@ export default function PlansScreen() {
                 No plans available
               </Text>
             </View>
-          ) : null}
+          ) : (
+            <View className="mt-2 gap-3">
+              <Text className="text-center text-xs text-muted-foreground">
+                Compare plans and manage your membership on the QuestionCall website.
+              </Text>
+              <TouchableOpacity
+                className="items-center rounded-xl py-3.5"
+                style={{ backgroundColor: primaryColor }}
+                onPress={() =>
+                  void openWebCheckout("subscription", undefined, fetchSubscription)
+                }
+              >
+                <Text className="font-semibold text-white">Open membership page</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       )}
     </View>
