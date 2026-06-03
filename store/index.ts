@@ -27,7 +27,11 @@ import quizReducer from "./slices/quizSlice";
 import incomingCallReducer from "./slices/incomingCallSlice";
 import notesReducer from "./slices/notesSlice";
 import notificationsReducer from "./slices/notificationsSlice";
-import { channelCacheLimiter, loadingStateExcluder } from "./transforms";
+import {
+  channelCacheLimiter,
+  courseDetailCacheLimiter,
+  loadingStateExcluder,
+} from "./transforms";
 
 const persistConfig = {
   key: "root",
@@ -44,10 +48,10 @@ const persistConfig = {
     "notes",
     "notifications",
   ],
-  transforms: [loadingStateExcluder, channelCacheLimiter],
+  transforms: [loadingStateExcluder, channelCacheLimiter, courseDetailCacheLimiter],
 };
 
-const rootReducer = combineReducers({
+const combinedReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   feed: feedReducer,
@@ -66,6 +70,22 @@ const rootReducer = combineReducers({
   notes: notesReducer,
   notifications: notificationsReducer,
 });
+
+// Dispatch on logout to wipe every slice back to its initial state. This clears
+// persisted, user-scoped data (chats, courses + favourite/follow flags, wallet,
+// quiz, notes…) so nothing leaks to the next account on a shared device. Pair it
+// with `persistor.purge()` to also clear what's already on disk.
+export const RESET_STORE = "store/reset" as const;
+export const resetStore = () => ({ type: RESET_STORE });
+
+const rootReducer: typeof combinedReducer = (state, action) => {
+  if (action.type === RESET_STORE) {
+    // `_persist` is re-attached by persistReducer; returning undefined state
+    // makes every reducer fall back to its initial state.
+    return combinedReducer(undefined, action);
+  }
+  return combinedReducer(state, action);
+};
 
 const persistedReducer = persistReducer(persistConfig as any, rootReducer);
 

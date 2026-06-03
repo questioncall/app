@@ -36,6 +36,7 @@ import {
   hideFullScreenCallNotification,
 } from "@/lib/full-screen-call-notification";
 import { prewarmCalleeRoom, clearCalleePrewarm } from "@/lib/call-prewarm";
+import { isCallActive } from "@/lib/active-call";
 
 // Dedupe window for repeat CALL_INCOMING_EVENT arrivals. Pusher can re-deliver
 // after reconnect, and the native FCM service (CallAwareMessagingService) also
@@ -197,6 +198,14 @@ export function RealtimeBridge() {
         channelId,
         callerName,
       });
+      // Never resurface an incoming call for a session we're already inside.
+      // A Pusher reconnect can re-deliver CALL_INCOMING after the 30s dedupe
+      // window has expired; without this guard the native call UI pops up on
+      // top of the live call and accept/decline just bounce back to the same
+      // active session (the "stuck duplicate overlay" bug).
+      if (isCallActive(callSessionId)) {
+        return;
+      }
       // Skip the visible dispatch if the same call was already surfaced (by
       // a prior Pusher delivery, Pusher reconnect re-fire, or the native FCM
       // service). The library's IncomingCallService restarts its ringtone on

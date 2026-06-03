@@ -22,6 +22,7 @@ import Toast from "react-native-toast-message";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { startChapterVideoUpload, startMobileUpload } from "@/lib/upload-manager";
+import { BottomSheetSurface } from "@/components/ui/bottom-sheet-surface";
 
 type PricingModel = "FREE" | "SUBSCRIPTION_INCLUDED" | "PAID";
 type ChapterStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
@@ -748,7 +749,8 @@ export default function ManageChapterScreen() {
           }}
         >
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View
+            <BottomSheetSurface
+              basePadding={20}
               style={{
                 backgroundColor: cardColor,
                 borderTopLeftRadius: 24,
@@ -915,7 +917,7 @@ export default function ManageChapterScreen() {
                   <Text style={{ color: "#fff", fontWeight: "700" }}>Add</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </BottomSheetSurface>
           </KeyboardAvoidingView>
         </View>
       </Modal>

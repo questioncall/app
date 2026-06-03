@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api, API_BASE_URL } from "@/lib/api";
+import { BottomSheetSurface } from "@/components/ui/bottom-sheet-surface";
 
 // ─── Ringtone definitions (mirrors web/lib/call-settings.ts) ───────────────
 const RINGTONE_OPTIONS = [
@@ -141,14 +142,13 @@ function RingtoneModal({
         }}
       >
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View
+        <BottomSheetSurface
           style={{
             backgroundColor: cardColor,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             maxHeight: "75%",
             paddingTop: 16,
-            paddingBottom: 32,
           }}
         >
           {/* Handle */}
@@ -283,7 +283,7 @@ function RingtoneModal({
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Done</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </BottomSheetSurface>
       </View>
     </Modal>
   );

@@ -49,6 +49,7 @@ import {
   stopOutgoingRingtoneSingleton,
 } from "@/lib/call-prewarm";
 import { hideFullScreenCallNotification } from "@/lib/full-screen-call-notification";
+import { markCallActive, clearActiveCall } from "@/lib/active-call";
 import {
   getPusherClient,
   getUserPusherName,
@@ -57,6 +58,7 @@ import {
   CALL_REJECTED_EVENT,
   CALL_ENDED_EVENT,
   CALL_CANCELLED_EVENT,
+  CALL_MISSED_EVENT,
   CHANNEL_TIMER_UPDATED_EVENT,
 } from "@/lib/realtime";
 
@@ -71,6 +73,9 @@ type CallSession = {
   status: CallStatus;
   mode: "AUDIO" | "VIDEO";
   roomName: string;
+  // Callee presence at create time — drives the caller's "Ringing…" vs
+  // "Calling…" outgoing label. Only meaningful on the caller side.
+  calleeIsOnline?: boolean;
   teacherName?: string | null;
   studentName?: string | null;
   teacherImage?: string | null;
@@ -126,6 +131,15 @@ export default function CallScreen() {
   // turning it into a recursive call).  We now always replace to avoid both
   // the recursion and stacking up stale call screens in the back stack.
   const goBack = () => router.replace("/(tabs)/channels" as any);
+
+  // Register this session as the active call so realtime-bridge / the native
+  // accept handler suppress any duplicate incoming-call surface (e.g. a Pusher
+  // re-delivery after the 30s dedupe window) for a call we're already inside.
+  useEffect(() => {
+    if (!roomId) return;
+    markCallActive(roomId);
+    return () => clearActiveCall(roomId);
+  }, [roomId]);
 
   const [session, setSession] = useState<CallSession | null>(null);
   // For the optimistic-pending path we render the RINGING UI immediately and
@@ -254,6 +268,14 @@ export default function CallScreen() {
     : null;
   const peerInitial = peerName ? peerName.charAt(0).toUpperCase() : null;
 
+  // Latest session + peer name held in refs so the Pusher lifecycle handlers
+  // (bound once per roomId) can read current values without stale closures —
+  // used to compose the "why wasn't the call answered" toast for the caller.
+  const sessionRef = useRef<CallSession | null>(null);
+  sessionRef.current = session;
+  const peerNameRef = useRef<string | null>(null);
+  peerNameRef.current = peerName;
+
   // Refs to break the infinite-retry loop and enforce single-flight connections
   const connectingRef = useRef(false);
   const connectionBlockedRef = useRef(false);
@@ -352,6 +374,7 @@ export default function CallScreen() {
           mode: (data.mode ?? pendingModeParam) as "AUDIO" | "VIDEO",
           status: "RINGING" as CallStatus,
           roomName: data.roomName ?? `channel_${pendingChannelId}`,
+          calleeIsOnline: data.calleeIsOnline === true,
         });
         setResolvedRoomId(realId);
       })
@@ -684,7 +707,10 @@ export default function CallScreen() {
             playsInSilentModeIOS: true,
             staysActiveInBackground: true,
             shouldDuckAndroid: false,
-            playThroughEarpieceAndroid: false,
+            // Route through the earpiece/voice-call stream so the live WebRTC
+            // room doesn't duck the ringback. See startOutgoingRingtone() in
+            // call-prewarm.ts for the full rationale. (Android-only flag.)
+            playThroughEarpieceAndroid: true,
           });
           const { sound } = await Audio.Sound.createAsync(
             require("../../assets/sounds/outgoing_ringtone.mp3"),
@@ -773,6 +799,39 @@ export default function CallScreen() {
 
     const userChannel = client.subscribe(getUserPusherName(userId));
 
+    // Caller-only: explain why the call wasn't answered, then bounce back to
+    // the channel list with the toast still visible. These events only reach
+    // the caller (the server emits reject/missed to the caller's channel), but
+    // we guard on callerId anyway. "declined" = they were reachable and said
+    // no; "missed" splits on presence at create time — online-but-no-pickup vs
+    // simply offline (only the push wake-up reached them).
+    const notifyUnanswered = (kind: "declined" | "missed") => {
+      const s = sessionRef.current;
+      if (!s || s.callerId !== userId || endingRef.current) return;
+      endingRef.current = true;
+      const peer = peerNameRef.current || "They";
+      if (kind === "declined") {
+        Toast.show({
+          type: "info",
+          text1: "Call declined",
+          text2: `${peer} declined your call.`,
+        });
+      } else if (s.calleeIsOnline) {
+        Toast.show({
+          type: "info",
+          text1: "No answer",
+          text2: `${peer} was online but didn't pick up.`,
+        });
+      } else {
+        Toast.show({
+          type: "info",
+          text1: "No answer",
+          text2: `${peer} isn't online right now — they'll get a missed-call notification.`,
+        });
+      }
+      goBack();
+    };
+
     const handleAccepted = (payload: any) => {
       if (payload?.callSessionId !== roomId) return;
       setSession((prev) => (prev ? { ...prev, status: "ACTIVE" } : prev));
@@ -780,6 +839,12 @@ export default function CallScreen() {
     const handleRejected = (payload: any) => {
       if (payload?.callSessionId !== roomId) return;
       setSession((prev) => (prev ? { ...prev, status: "REJECTED" } : prev));
+      notifyUnanswered("declined");
+    };
+    const handleMissed = (payload: any) => {
+      if (payload?.callSessionId !== roomId) return;
+      setSession((prev) => (prev ? { ...prev, status: "MISSED" } : prev));
+      notifyUnanswered("missed");
     };
     const handleCancelled = (payload: any) => {
       if (payload?.callSessionId !== roomId) return;
@@ -788,11 +853,13 @@ export default function CallScreen() {
 
     userChannel.bind(CALL_ACCEPTED_EVENT, handleAccepted);
     userChannel.bind(CALL_REJECTED_EVENT, handleRejected);
+    userChannel.bind(CALL_MISSED_EVENT, handleMissed);
     userChannel.bind(CALL_CANCELLED_EVENT, handleCancelled);
 
     return () => {
       userChannel.unbind(CALL_ACCEPTED_EVENT, handleAccepted);
       userChannel.unbind(CALL_REJECTED_EVENT, handleRejected);
+      userChannel.unbind(CALL_MISSED_EVENT, handleMissed);
       userChannel.unbind(CALL_CANCELLED_EVENT, handleCancelled);
     };
   }, [userId, roomId]);
@@ -1066,9 +1133,19 @@ export default function CallScreen() {
 
           {peerName ? <Text style={styles.peerNameText}>{peerName}</Text> : null}
           <Text style={styles.titleText}>
-            {isIncoming ? "Incoming call" : "Calling…"}
+            {isIncoming
+              ? "Incoming call"
+              : session.calleeIsOnline
+                ? "Ringing…"
+                : "Calling…"}
           </Text>
-          <Text style={styles.subtitleText}>{isVideo ? "Video call" : "Voice call"}</Text>
+          <Text style={styles.subtitleText}>
+            {!isIncoming && !session.calleeIsOnline
+              ? `${isVideo ? "Video call" : "Voice call"} · Reaching them…`
+              : isVideo
+                ? "Video call"
+                : "Voice call"}
+          </Text>
         </View>
 
         {isIncoming ? (

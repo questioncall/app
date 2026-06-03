@@ -369,25 +369,49 @@ export default function ChapterDetailScreen() {
         </View>
 
         {userRole === "STUDENT" && !hasAccess ? (
-          <TouchableOpacity
-            onPress={() => void enroll()}
-            disabled={enrolling}
-            style={{
-              marginTop: 8,
-              alignItems: "center",
-              borderRadius: 16,
-              paddingVertical: 15,
-              backgroundColor: primaryColor,
-            }}
-          >
-            {enrolling ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={{ color: "#fff", fontSize: 15, fontWeight: "800" }}>
-                {chapter.pricingModel === "PAID" ? "Continue on web" : "Unlock Chapter"}
+          <View style={{ marginTop: 8, gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => void enroll()}
+              disabled={enrolling}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                borderRadius: 16,
+                paddingVertical: 15,
+                backgroundColor: primaryColor,
+              }}
+            >
+              {enrolling ? (
+                <ActivityIndicator color="#fff" />
+              ) : chapter.pricingModel === "PAID" ? (
+                <>
+                  <Ionicons name="lock-open-outline" size={17} color="#fff" />
+                  <Text style={{ color: "#fff", fontSize: 15, fontWeight: "800" }}>
+                    Unlock in your browser
+                  </Text>
+                  <Ionicons name="open-outline" size={14} color="#ffffffcc" />
+                </>
+              ) : (
+                <Text style={{ color: "#fff", fontSize: 15, fontWeight: "800" }}>
+                  Unlock Chapter
+                </Text>
+              )}
+            </TouchableOpacity>
+            {chapter.pricingModel === "PAID" && !enrolling ? (
+              <Text
+                style={{
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: mutedIconColor,
+                }}
+              >
+                Opens our secure website to finish unlocking, then brings you right back
+                to the app.
               </Text>
-            )}
-          </TouchableOpacity>
+            ) : null}
+          </View>
         ) : null}
 
         <TouchableOpacity

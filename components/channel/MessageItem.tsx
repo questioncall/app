@@ -14,6 +14,7 @@ type Props = {
   cardColor: string;
   borderColor: string;
   mutedIconColor: string;
+  isDark: boolean;
   formatMessageTime: (iso: string) => string;
   onImageOpen: (url: string) => void;
   onRetry: (msg: ChatMessage) => void;
@@ -23,9 +24,21 @@ type Props = {
 // ── Waveform bars (static decorative) ────────────────────────
 const BARS = [4, 8, 14, 10, 18, 12, 20, 14, 10, 16, 8, 18, 12, 6, 14, 10, 18, 8, 12, 16];
 
-function WaveformBars({ progress, isOwn }: { progress: number; isOwn: boolean }) {
-  const activeColor = isOwn ? "#ffffff" : "#374151";
-  const inactiveColor = isOwn ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)";
+function WaveformBars({
+  progress,
+  isOwn,
+  isDark,
+}: {
+  progress: number;
+  isOwn: boolean;
+  isDark: boolean;
+}) {
+  const activeColor = isOwn ? "#ffffff" : isDark ? "#cbd5e1" : "#374151";
+  const inactiveColor = isOwn
+    ? "rgba(255,255,255,0.3)"
+    : isDark
+      ? "rgba(203,213,225,0.22)"
+      : "rgba(0,0,0,0.15)";
   const cutoff = Math.round(progress * BARS.length);
 
   return (
@@ -49,10 +62,12 @@ function WaveformBars({ progress, isOwn }: { progress: number; isOwn: boolean })
 function AudioMessagePlayer({
   mediaUrl,
   isOwn,
+  isDark,
   primaryColor,
 }: {
   mediaUrl: string;
   isOwn: boolean;
+  isDark: boolean;
   primaryColor: string;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -138,28 +153,39 @@ function AudioMessagePlayer({
           borderRadius: 19,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: isOwn ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.08)",
+          backgroundColor: isOwn
+            ? "rgba(255,255,255,0.2)"
+            : isDark
+              ? "rgba(255,255,255,0.12)"
+              : "rgba(0,0,0,0.08)",
         }}
       >
         {isLoading ? (
-          <ActivityIndicator size="small" color={isOwn ? "#fff" : "#374151"} />
+          <ActivityIndicator
+            size="small"
+            color={isOwn ? "#fff" : isDark ? "#e2e8f0" : "#374151"}
+          />
         ) : (
           <Ionicons
             name={isPlaying ? "pause" : "play"}
             size={18}
-            color={isOwn ? "#fff" : "#374151"}
+            color={isOwn ? "#fff" : isDark ? "#e2e8f0" : "#374151"}
           />
         )}
       </TouchableOpacity>
 
       {/* Waveform + duration */}
       <View style={{ flex: 1 }}>
-        <WaveformBars progress={progress} isOwn={isOwn} />
+        <WaveformBars progress={progress} isOwn={isOwn} isDark={isDark} />
         <Text
           style={{
             fontSize: 11,
             marginTop: 3,
-            color: isOwn ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.45)",
+            color: isOwn
+              ? "rgba(255,255,255,0.65)"
+              : isDark
+                ? "rgba(226,232,240,0.62)"
+                : "rgba(0,0,0,0.45)",
           }}
         >
           {timeLabel}
@@ -180,6 +206,7 @@ function MessageItemInner({
   cardColor,
   borderColor,
   mutedIconColor,
+  isDark,
   formatMessageTime,
   onImageOpen,
   onRetry,
@@ -191,7 +218,7 @@ function MessageItemInner({
       <View style={{ alignItems: "center", marginVertical: 14 }}>
         <View
           style={{
-            backgroundColor: "rgba(100,116,139,0.15)",
+            backgroundColor: isDark ? "rgba(32,44,39,0.9)" : "rgba(100,116,139,0.15)",
             borderRadius: 20,
             paddingHorizontal: 14,
             paddingVertical: 4,
@@ -216,7 +243,7 @@ function MessageItemInner({
             flexDirection: "row",
             alignItems: "center",
             gap: 6,
-            backgroundColor: "rgba(100,116,139,0.1)",
+            backgroundColor: isDark ? "rgba(32,44,39,0.9)" : "rgba(100,116,139,0.1)",
             borderRadius: 20,
             paddingHorizontal: 14,
             paddingVertical: 6,
@@ -260,12 +287,16 @@ function MessageItemInner({
   const isOwn = msg.isOwn || msg.senderId === userId;
   const showMark = isAcceptor && isActive && isOwn && !isAnswerSubmitted;
 
-  // Bubble colours — matches the screenshot: dark for sent, light grey for received
-  const sentBg = "#111827";
-  const receivedBg = cardColor;
+  // Bubble colours: WhatsApp-inspired dark mode, clean neutral light mode.
+  const sentBg = isDark ? "#0b5d45" : "#111827";
+  const receivedBg = isDark ? "#202c27" : cardColor;
   const bubbleBg = isOwn ? sentBg : receivedBg;
-  const textColor = isOwn ? "#ffffff" : "#111827";
-  const timeColor = isOwn ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.4)";
+  const textColor = isOwn ? "#ffffff" : isDark ? "#e9edef" : "#111827";
+  const timeColor = isOwn
+    ? "rgba(255,255,255,0.62)"
+    : isDark
+      ? "rgba(233,237,239,0.56)"
+      : "rgba(0,0,0,0.4)";
 
   // Answer-marked overlay
   const isMarked = !!msg.isMarkedAsAnswer;
@@ -310,6 +341,7 @@ function MessageItemInner({
           <AudioMessagePlayer
             mediaUrl={msg.mediaUrl}
             isOwn={isOwn}
+            isDark={isDark}
             primaryColor={primaryColor}
           />
         ) : null}
@@ -370,7 +402,9 @@ function MessageItemInner({
               width: 30,
               height: 30,
               borderRadius: 15,
-              backgroundColor: cardColor,
+              backgroundColor: isDark ? "#2a3942" : cardColor,
+              borderWidth: 1,
+              borderColor: isDark ? "rgba(255,255,255,0.08)" : borderColor,
               alignItems: "center",
               justifyContent: "center",
               shadowColor: "#000",

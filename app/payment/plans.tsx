@@ -211,6 +211,36 @@ export default function PlansScreen() {
                       ))}
                     </View>
                   ) : null}
+
+                  {/* Per-card link to the web membership page (Play-compliant:
+                      neutral "view on web", not an in-app purchase CTA). */}
+                  {!isCurrent ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        void openWebCheckout("subscription", plan.slug, fetchSubscription)
+                      }
+                      disabled={isPendingPlan}
+                      activeOpacity={0.85}
+                      className="mt-4 flex-row items-center justify-center gap-1.5 rounded-xl py-3"
+                      style={{
+                        backgroundColor: isPendingPlan ? primarySoftColor : primaryColor,
+                      }}
+                    >
+                      <Ionicons
+                        name={isPendingPlan ? "time-outline" : "open-outline"}
+                        size={15}
+                        color={isPendingPlan ? primaryColor : "#fff"}
+                      />
+                      <Text
+                        className="text-sm font-semibold"
+                        style={{ color: isPendingPlan ? primaryColor : "#fff" }}
+                      >
+                        {isPendingPlan
+                          ? "Awaiting verification"
+                          : "Choose in your browser"}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
             );
@@ -229,13 +259,16 @@ export default function PlansScreen() {
                 Compare plans and manage your membership on the QuestionCall website.
               </Text>
               <TouchableOpacity
-                className="items-center rounded-xl py-3.5"
+                className="flex-row items-center justify-center gap-2 rounded-xl py-3.5"
                 style={{ backgroundColor: primaryColor }}
                 onPress={() =>
                   void openWebCheckout("subscription", undefined, fetchSubscription)
                 }
               >
-                <Text className="font-semibold text-white">Open membership page</Text>
+                <Ionicons name="open-outline" size={16} color="#fff" />
+                <Text className="font-semibold text-white">
+                  Manage membership in your browser
+                </Text>
               </TouchableOpacity>
             </View>
           )}

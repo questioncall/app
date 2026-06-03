@@ -7,6 +7,8 @@ export interface AppNotice {
   _id: string;
   title: string;
   body: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
   type: NoticeType;
   targetAudience: NoticeAudience;
   expiresAt?: string | null;

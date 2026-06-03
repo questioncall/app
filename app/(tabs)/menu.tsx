@@ -13,13 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { clearAuth } from "@/store/slices/authSlice";
-import { clearUser } from "@/store/slices/userSlice";
-import { clearActivityCache } from "@/store/slices/activitySlice";
-import { clearNotices } from "@/store/slices/noticesSlice";
-import { clearOnboarding } from "@/store/slices/onboardingSlice";
-import { clearRealtime } from "@/store/slices/realtimeSlice";
-import { clearNotifications } from "@/store/slices/notificationsSlice";
+import { persistor, resetStore } from "@/store";
 import { SECURE_STORE_KEYS } from "@/lib/api";
 import { resetPusherClient } from "@/lib/realtime";
 import { unsubscribePushToken, getCurrentPushToken } from "@/lib/push-notifications";
@@ -127,13 +121,10 @@ export default function MenuScreen() {
 
           await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
           await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
-          dispatch(clearAuth());
-          dispatch(clearUser());
-          dispatch(clearActivityCache());
-          dispatch(clearNotices());
-          dispatch(clearOnboarding());
-          dispatch(clearRealtime());
-          dispatch(clearNotifications());
+          // Reset every slice to initial state, then clear what's on disk so no
+          // user-scoped data (chats, courses, wallet, notes…) survives logout.
+          dispatch(resetStore());
+          await persistor.purge();
           resetPusherClient();
           router.replace("/");
         },

@@ -118,6 +118,14 @@ export default function WorkspaceScreen() {
   const detail = cached?.detail ?? null;
   const messages = useMemo(() => cached?.messages ?? [], [cached?.messages]);
   const { openImageViewer } = useImageViewer();
+  const chatSurfaceColor = isDark ? "#0b1411" : backgroundColor;
+  const chatHeaderColor = isDark ? "#111b18" : backgroundColor;
+  const chatPanelColor = isDark ? "#17231f" : cardColor;
+  const chatInputColor = isDark ? "#202c27" : "#f1f5f9";
+  const chatPrimaryActionColor = isDark ? "#00a884" : "#111827";
+  const chatPrimaryActionTextColor = "#ffffff";
+  const chatTextColor = isDark ? "#e9edef" : "#111827";
+  const chatSubtleIconColor = isDark ? "#8696a0" : "#64748b";
 
   const isAsker = userId === detail?.askerId;
   const isAcceptor = userId === detail?.acceptorId;
@@ -979,6 +987,7 @@ export default function WorkspaceScreen() {
         cardColor={cardColor}
         borderColor={borderColor}
         mutedIconColor={mutedIconColor}
+        isDark={isDark}
         formatMessageTime={formatMessageTime}
         onImageOpen={openImageViewer}
         onRetry={handleRetry}
@@ -994,6 +1003,7 @@ export default function WorkspaceScreen() {
       cardColor,
       borderColor,
       mutedIconColor,
+      isDark,
       openImageViewer,
       handleRetry,
       handleToggleMark,
@@ -1105,16 +1115,17 @@ export default function WorkspaceScreen() {
     <KeyboardAvoidingView
       behavior="padding"
       className="flex-1 bg-background"
+      style={{ backgroundColor: chatSurfaceColor }}
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
-      <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+      <StatusBar barStyle={statusBarStyle} backgroundColor={chatHeaderColor} />
 
       {renderRatingModal()}
 
       {/* ── Header ──────────────────────────────────────────── */}
       <View
         style={{
-          backgroundColor,
+          backgroundColor: chatHeaderColor,
           borderBottomWidth: 0.5,
           borderBottomColor: borderColor,
           paddingTop:
@@ -1224,7 +1235,7 @@ export default function WorkspaceScreen() {
           ) : (
             <View
               style={{
-                backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                backgroundColor: chatPanelColor,
                 borderRadius: 8,
                 paddingHorizontal: 8,
                 paddingVertical: 3,
@@ -1326,9 +1337,9 @@ export default function WorkspaceScreen() {
       {detail.questionTitle ? (
         <View
           style={{
-            backgroundColor: isDark ? "#1e293b" : "#f0f9ff",
+            backgroundColor: isDark ? "#15231f" : "#f0f9ff",
             borderBottomWidth: 1,
-            borderBottomColor: isDark ? "#334155" : "#bae6fd",
+            borderBottomColor: isDark ? "rgba(255,255,255,0.08)" : "#bae6fd",
           }}
         >
           {/* Always-visible header row — tap to expand / collapse */}
@@ -1350,7 +1361,7 @@ export default function WorkspaceScreen() {
                 flex: 1,
                 fontSize: 12,
                 fontWeight: "600",
-                color: isDark ? "#e2e8f0" : "#0f172a",
+                color: chatTextColor,
               }}
             >
               {detail.questionTitle}
@@ -1400,7 +1411,8 @@ export default function WorkspaceScreen() {
             : item.id || item.localId || `msg-${i}`
         }
         renderItem={renderItem as any}
-        contentContainerStyle={{ paddingVertical: 8 }}
+        style={{ backgroundColor: chatSurfaceColor }}
+        contentContainerStyle={{ paddingVertical: 10 }}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => {
           if (!isLoadingOlderRef.current) {
@@ -1426,7 +1438,7 @@ export default function WorkspaceScreen() {
       {isActive ? (
         <View
           style={{
-            backgroundColor,
+            backgroundColor: chatHeaderColor,
             borderTopWidth: 0.5,
             borderTopColor: borderColor,
             paddingHorizontal: 12,
@@ -1485,7 +1497,7 @@ export default function WorkspaceScreen() {
                   width: 42,
                   height: 42,
                   borderRadius: 21,
-                  backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                  backgroundColor: chatInputColor,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -1493,7 +1505,7 @@ export default function WorkspaceScreen() {
                 <Ionicons
                   name={isPlayingPreview ? "pause" : "play"}
                   size={20}
-                  color={isDark ? "#f1f5f9" : "#111827"}
+                  color={chatTextColor}
                 />
               </TouchableOpacity>
               <View style={{ flex: 1 }}>
@@ -1501,7 +1513,7 @@ export default function WorkspaceScreen() {
                   style={{
                     fontSize: 13,
                     fontWeight: "500",
-                    color: isDark ? "#f1f5f9" : "#111827",
+                    color: chatTextColor,
                   }}
                 >
                   Voice message
@@ -1530,15 +1542,15 @@ export default function WorkspaceScreen() {
                   width: 42,
                   height: 42,
                   borderRadius: 21,
-                  backgroundColor: isDark ? "#f1f5f9" : "#111827",
+                  backgroundColor: chatPrimaryActionColor,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
                 {isSending ? (
-                  <ActivityIndicator color={isDark ? "#111827" : "#fff"} size="small" />
+                  <ActivityIndicator color={chatPrimaryActionTextColor} size="small" />
                 ) : (
-                  <Ionicons name="send" size={18} color={isDark ? "#111827" : "#fff"} />
+                  <Ionicons name="send" size={18} color={chatPrimaryActionTextColor} />
                 )}
               </TouchableOpacity>
             </View>
@@ -1558,14 +1570,14 @@ export default function WorkspaceScreen() {
                 }}
                 hitSlop={6}
               >
-                <Ionicons name="add" size={26} color={isDark ? "#94a3b8" : "#64748b"} />
+                <Ionicons name="add" size={26} color={chatSubtleIconColor} />
               </TouchableOpacity>
 
               {/* Text input pill */}
               <View
                 style={{
                   flex: 1,
-                  backgroundColor: isDark ? "#1e293b" : "#f1f5f9",
+                  backgroundColor: chatInputColor,
                   borderRadius: 22,
                   paddingHorizontal: 16,
                   paddingVertical: 10,
@@ -1580,7 +1592,7 @@ export default function WorkspaceScreen() {
                   multiline
                   style={{
                     fontSize: 15,
-                    color: isDark ? "#f1f5f9" : "#111827",
+                    color: chatTextColor,
                     textAlignVertical: "top",
                     maxHeight: 100,
                     padding: 0,
@@ -1596,21 +1608,21 @@ export default function WorkspaceScreen() {
                   width: 42,
                   height: 42,
                   borderRadius: 21,
-                  backgroundColor: isDark ? "#f1f5f9" : "#111827",
+                  backgroundColor: chatPrimaryActionColor,
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: 2,
                 }}
               >
                 {isSending ? (
-                  <ActivityIndicator color={isDark ? "#111827" : "#fff"} size="small" />
+                  <ActivityIndicator color={chatPrimaryActionTextColor} size="small" />
                 ) : inputText.trim() ? (
-                  <Ionicons name="send" size={18} color={isDark ? "#111827" : "#fff"} />
+                  <Ionicons name="send" size={18} color={chatPrimaryActionTextColor} />
                 ) : (
                   <Ionicons
                     name="mic-outline"
                     size={20}
-                    color={isDark ? "#111827" : "#fff"}
+                    color={chatPrimaryActionTextColor}
                   />
                 )}
               </TouchableOpacity>

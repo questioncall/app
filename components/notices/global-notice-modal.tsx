@@ -5,14 +5,18 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { api } from "@/lib/api";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { InlineVideo } from "@/components/media/inline-video";
+import { NoticeImage } from "@/components/notices/notice-media";
 import { dismissNoticeLocally, setActiveNotice } from "@/store/slices/noticesSlice";
 import { updateUser } from "@/store/slices/userSlice";
 
@@ -25,7 +29,11 @@ function stripHtml(value: string) {
 
 export function GlobalNoticeModal() {
   const dispatch = useAppDispatch();
-  const { primaryColor, primarySoftColor, mutedIconColor } = useAppTheme();
+  const { primaryColor, primarySoftColor, mutedIconColor, borderColor } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  // Modal sits inside px-4 backdrop (16) + px-5 ScrollView padding (20) per side.
+  const mediaWidth = Math.max(0, width - 72);
   const { list, activeNoticeId } = useAppSelector((s) => s.notices);
   const user = useAppSelector((s) => s.user.data);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -67,7 +75,10 @@ export function GlobalNoticeModal() {
       animationType="fade"
       onRequestClose={() => dispatch(setActiveNotice(null))}
     >
-      <View className="flex-1 justify-end bg-black/45 px-4 pb-6">
+      <View
+        className="flex-1 justify-end bg-black/45 px-4"
+        style={{ paddingBottom: insets.bottom + 24 }}
+      >
         <View className="max-h-[72%] overflow-hidden rounded-[28px] border border-border bg-card">
           <View className="flex-row items-center gap-3 border-b border-border px-5 py-4">
             <View
@@ -94,9 +105,34 @@ export function GlobalNoticeModal() {
           </View>
 
           <ScrollView className="px-5 py-4" showsVerticalScrollIndicator={false}>
-            <Text className="text-[15px] leading-7 text-card-foreground">
-              {notice ? stripHtml(notice.body) : ""}
-            </Text>
+            {notice?.imageUrl ? (
+              <View style={{ marginBottom: 14 }}>
+                <NoticeImage
+                  uri={notice.imageUrl}
+                  width={mediaWidth}
+                  borderColor={borderColor}
+                  borderRadius={16}
+                />
+              </View>
+            ) : null}
+
+            {notice?.videoUrl ? (
+              <View style={{ marginBottom: 14 }}>
+                <InlineVideo
+                  uri={notice.videoUrl}
+                  width={mediaWidth}
+                  height={mediaWidth * 0.5625}
+                  borderColor={borderColor}
+                  borderRadius={16}
+                />
+              </View>
+            ) : null}
+
+            {notice && stripHtml(notice.body) ? (
+              <Text className="text-[15px] leading-7 text-card-foreground">
+                {stripHtml(notice.body)}
+              </Text>
+            ) : null}
           </ScrollView>
 
           <View className="gap-3 border-t border-border p-5">

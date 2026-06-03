@@ -1,3 +1,4 @@
+import { Appearance } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import Toast from "react-native-toast-message";
 
@@ -37,6 +38,11 @@ export async function openWebCheckout(
     const { data } = await api.post("/mobile/checkout-session", { intent, ref });
     url = data?.url;
     if (!url) throw new Error("No checkout url");
+
+    // Pass the app's current theme so the web checkout matches the app
+    // (light/dark) instead of defaulting to the device/browser scheme.
+    const theme = Appearance.getColorScheme() === "dark" ? "dark" : "light";
+    url += `${url.includes("?") ? "&" : "?"}theme=${theme}`;
   } catch {
     Toast.show({
       type: "error",

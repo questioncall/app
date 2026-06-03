@@ -6,6 +6,8 @@ export interface ChannelListItem {
   counterpartId: string;
   counterpartName: string;
   counterpartImage?: string;
+  counterpartIsOnline?: boolean;
+  counterpartLastActiveAt?: string;
   status: "ACTIVE" | "CLOSED" | "EXPIRED";
   lastMessagePreview?: string;
   lastMessageAt?: string;

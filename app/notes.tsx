@@ -17,6 +17,7 @@ import * as Linking from "expo-linking";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { startMobileUpload } from "@/lib/upload-manager";
+import { BottomSheetSurface } from "@/components/ui/bottom-sheet-surface";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import {
   setNotes as setNotesAction,
@@ -294,9 +295,15 @@ function UploadModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View className="flex-1 justify-end" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <View
-          className="rounded-t-3xl px-5 pb-8 pt-5"
-          style={{ backgroundColor: cardColor, maxHeight: "90%" }}
+        <BottomSheetSurface
+          style={{
+            backgroundColor: cardColor,
+            maxHeight: "90%",
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingHorizontal: 20,
+            paddingTop: 20,
+          }}
         >
           {/* Handle bar */}
           <View className="mb-4 items-center">
@@ -472,7 +479,7 @@ function UploadModal({
               )}
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </BottomSheetSurface>
       </View>
     </Modal>
   );
@@ -728,9 +735,15 @@ export default function NotesScreen() {
           className="flex-1 justify-end"
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-          <View
-            className="rounded-t-3xl px-5 pb-8 pt-5"
-            style={{ backgroundColor: cardColor, maxHeight: "85%" }}
+          <BottomSheetSurface
+            style={{
+              backgroundColor: cardColor,
+              maxHeight: "85%",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: 20,
+              paddingTop: 20,
+            }}
           >
             {/* Handle */}
             <View className="mb-4 items-center">
@@ -994,7 +1007,7 @@ export default function NotesScreen() {
                 </View>
               ) : null}
             </ScrollView>
-          </View>
+          </BottomSheetSurface>
         </View>
       </Modal>
     </View>

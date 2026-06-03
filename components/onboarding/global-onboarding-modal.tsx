@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useEvent } from "expo";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
@@ -35,6 +37,7 @@ function OnboardingModalBody({ video }: { video: OnboardingVideo }) {
   const role = useAppSelector((s) => s.onboarding.role);
   const isDismissing = useAppSelector((s) => s.onboarding.isDismissing);
   const { primaryColor, mutedIconColor } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   // useVideoPlayer plays HLS (.m3u8) and mp4/webm/mov natively — covers Mux
   // playback URLs and Cloudinary/R2 hosted assets (our own player, not YouTube).
@@ -42,6 +45,15 @@ function OnboardingModalBody({ video }: { video: OnboardingVideo }) {
     p.loop = false;
     p.muted = false;
   });
+
+  // Drive a clean loading/error UI off the player status instead of showing a
+  // bare black box while the (HLS/mp4) source buffers. statusChange fires with
+  // "loading" → "readyToPlay", or "error" if the URL can't be played.
+  const { status, error } = useEvent(player, "statusChange", {
+    status: player.status,
+  });
+  const isLoading = status === "loading" || status === "idle";
+  const hasError = status === "error";
 
   // Dismissing the modal in any way marks the onboarding video as seen.
   async function handleDismiss() {
@@ -72,7 +84,10 @@ function OnboardingModalBody({ video }: { video: OnboardingVideo }) {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={handleDismiss}>
-      <View className="flex-1 justify-end bg-black/50 px-4 pb-6">
+      <View
+        className="flex-1 justify-end bg-black/50 px-4"
+        style={{ paddingBottom: insets.bottom + 24 }}
+      >
         <View className="max-h-[88%] overflow-hidden rounded-[28px] border border-border bg-card">
           <View className="flex-row items-center gap-3 border-b border-border px-5 py-4">
             <Image
@@ -107,6 +122,31 @@ function OnboardingModalBody({ video }: { video: OnboardingVideo }) {
                 fullscreenOptions={{ enable: true, orientation: "landscape" }}
                 nativeControls
               />
+
+              {/* Loading spinner while the source buffers */}
+              {isLoading ? (
+                <View className="absolute inset-0 items-center justify-center bg-black/60">
+                  <ActivityIndicator color="#FFFFFF" size="large" />
+                  <Text className="mt-3 text-xs text-white/70">Loading video…</Text>
+                </View>
+              ) : null}
+
+              {/* Error fallback with retry */}
+              {hasError ? (
+                <View className="absolute inset-0 items-center justify-center gap-3 bg-black/80 px-6">
+                  <Ionicons name="warning-outline" size={32} color="#f87171" />
+                  <Text className="text-center text-sm text-white/80">
+                    {error?.message ?? "Couldn't load this video."}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => player.replace(video.videoUrl)}
+                    className="rounded-full bg-white/15 px-5 py-2"
+                    activeOpacity={0.85}
+                  >
+                    <Text className="text-sm font-semibold text-white">Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
 
             <View className="p-5">

@@ -7,6 +7,7 @@ import {
   incomingCallMetadataMap,
 } from "@/lib/callkeep-setup";
 import { getPrewarmedCalleeRoom } from "@/lib/call-prewarm";
+import { isCallActive } from "@/lib/active-call";
 
 const CHANNEL_ID = "incoming_calls_fs";
 const CHANNEL_NAME = "Incoming Calls";
@@ -43,6 +44,16 @@ export function setupFullScreenCallListeners() {
 }
 
 async function acceptCall(callSessionId: string) {
+  // Guard: if we're already inside this call, the notification is a stale
+  // duplicate (e.g. native FCM re-dispatch). Just clear it instead of
+  // re-running /accept and re-navigating to the same live screen.
+  if (isCallActive(callSessionId)) {
+    incomingCallMetadataMap.delete(callSessionId);
+    hideFullScreenCallNotification();
+    endCallKeepCall(callSessionId);
+    return;
+  }
+
   // Pull cached metadata captured at incoming-call time.  Pusher/push payload
   // mode is authoritative — the server /accept response is a fallback for
   // cases where the user accepts before we cached anything (e.g. cold start).

@@ -47,6 +47,24 @@ function formatChannelTime(iso?: string): string {
   });
 }
 
+// ─── Last-active label (presence) ─────────────────────────────
+// Returns "Active now" for an online counterpart, otherwise a relative
+// "Active 5m ago" / "Active 2h ago" / "Active 3d ago" line.
+function formatLastActive(isOnline?: boolean, lastActiveAt?: string): string | null {
+  if (isOnline) return "Active now";
+  if (!lastActiveAt) return null;
+  const ts = new Date(lastActiveAt).getTime();
+  if (Number.isNaN(ts)) return null;
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return "Active now";
+  if (mins < 60) return `Active ${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Active ${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Active ${days}d ago`;
+  return null;
+}
+
 // ─── Channel row (messenger style) ───────────────────────────
 function ChannelRow({
   item,
@@ -66,6 +84,11 @@ function ChannelRow({
   const timeStr = formatChannelTime(item.lastMessageAt ?? item.timerDeadline);
   const hasUnread = item.unreadCount > 0;
   const isActive = item.status === "ACTIVE";
+  const isOnline = !!item.counterpartIsOnline;
+  const presenceLabel = formatLastActive(
+    item.counterpartIsOnline,
+    item.counterpartLastActiveAt,
+  );
 
   // Preview line: last message or fallback
   const preview = item.lastMessagePreview
@@ -111,8 +134,8 @@ function ChannelRow({
             </Text>
           </View>
         )}
-        {/* Active channel = green dot on list row too */}
-        {isActive && (
+        {/* Presence: green dot when the counterpart is currently online */}
+        {isOnline && (
           <View
             style={{
               position: "absolute",
@@ -156,18 +179,39 @@ function ChannelRow({
           </Text>
         </View>
 
-        {/* Row 2: question title */}
-        <Text
-          numberOfLines={1}
+        {/* Row 2: question title + presence */}
+        <View
           style={{
-            fontSize: 12,
-            fontWeight: "500",
-            color: isDark ? "#64748b" : "#64748b",
+            flexDirection: "row",
+            alignItems: "center",
             marginBottom: 2,
           }}
         >
-          {item.questionTitle}
-        </Text>
+          <Text
+            numberOfLines={1}
+            style={{
+              flex: 1,
+              fontSize: 12,
+              fontWeight: "500",
+              color: "#64748b",
+              marginRight: 8,
+            }}
+          >
+            {item.questionTitle}
+          </Text>
+          {presenceLabel ? (
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 11,
+                fontWeight: isOnline ? "600" : "400",
+                color: isOnline ? "#22c55e" : mutedIconColor,
+              }}
+            >
+              {presenceLabel}
+            </Text>
+          ) : null}
+        </View>
 
         {/* Row 3: preview + status badges */}
         <View style={{ flexDirection: "row", alignItems: "center" }}>

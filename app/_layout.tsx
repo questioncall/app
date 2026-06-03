@@ -187,41 +187,45 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initializeApp = useCallback(async () => {
+    let isAuthed = false;
     try {
-      const accessToken = await SecureStore.getItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
-      const refreshToken = await SecureStore.getItemAsync(
-        SECURE_STORE_KEYS.REFRESH_TOKEN,
-      );
+      // Read both tokens in parallel — this is all we need to decide routing.
+      const [accessToken, refreshToken] = await Promise.all([
+        SecureStore.getItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN),
+        SecureStore.getItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN),
+      ]);
 
       if (accessToken && refreshToken) {
         store.dispatch(setTokens({ accessToken, refreshToken }));
-
-        // Push registration starts immediately — don't wait for other fetches
-        const pushPromise = registerForPushNotifications().then((token) => {
-          if (token) {
-            console.log("[push] Token obtained, subscribing to server...");
-            subscribePushToken(token).then((ok) => {
-              console.log("[push] Subscribe result:", ok ? "SUCCESS" : "FAILED");
-            });
-          } else {
-            console.warn("[push] No token returned from registerForPushNotifications");
-          }
-        });
-
-        await Promise.all([fetchPlatformConfig(), fetchCurrentUser(), pushPromise]);
-        // Record DAU — server deduplicates via upsert
-        api.post("/daily-active", { platform: "app" }).catch(() => {});
-        // Prefetch channels + notes in background (no spinner)
-        void backgroundPrefetch();
+        isAuthed = true;
       } else {
         store.dispatch(clearAuth());
       }
     } catch {
       store.dispatch(clearAuth());
     } finally {
+      // Open the app NOW. Routing only needs the tokens above, and the screens
+      // hydrate from the persisted Redux cache — so we hide the splash here and
+      // load everything else (user, config, push, channels…) in the background
+      // while the UI is already visible and interactive.
       store.dispatch(setAuthLoading(false));
       SplashScreen.hideAsync();
     }
+
+    if (!isAuthed) return;
+
+    // ── Background warm-up: runs after first paint, never blocks the splash ──
+    registerForPushNotifications()
+      .then((token) => {
+        if (token) subscribePushToken(token).catch(() => {});
+      })
+      .catch(() => {});
+
+    void fetchCurrentUser(); // revalidates cached user + handles suspension
+    void fetchPlatformConfig();
+    void backgroundPrefetch(); // channels + notes + notifications
+    // Record DAU — server deduplicates via upsert
+    api.post("/daily-active", { platform: "app" }).catch(() => {});
   }, [fetchCurrentUser, fetchPlatformConfig, backgroundPrefetch]);
 
   const handleAppStateChange = useCallback(
@@ -255,6 +259,18 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void initializeApp();
 
+    // Presence heartbeat: keep `lastActiveAt` fresh while the user is actively
+    // using the app so their online green dot doesn't go stale within a single
+    // session. Cold-start + foreground already ping daily-active; this covers
+    // the gap during continuous foreground use. Online threshold is 5 min, so a
+    // 2-min beat leaves comfortable headroom. Skipped while backgrounded.
+    const HEARTBEAT_MS = 2 * 60 * 1000;
+    const heartbeat = setInterval(() => {
+      if (AppState.currentState !== "active") return;
+      if (!store.getState().auth.isAuthenticated) return;
+      api.post("/daily-active", { platform: "app" }).catch(() => {});
+    }, HEARTBEAT_MS);
+
     const subscription = AppState.addEventListener("change", handleAppStateChange);
     const receivedSub = addNotificationReceivedListener((notification) => {
       console.log(
@@ -278,6 +294,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       }
     });
     return () => {
+      clearInterval(heartbeat);
       subscription.remove();
       receivedSub.remove();
       notificationSub.remove();
@@ -326,6 +343,7 @@ function RootLayout() {
                     <Stack.Screen name="payment/return" />
                     <Stack.Screen name="notes" />
                     <Stack.Screen name="notifications" />
+                    <Stack.Screen name="user/[id]" />
                     <Stack.Screen name="profile/index" />
                     <Stack.Screen name="profile/edit" />
                     <Stack.Screen name="profile/activity" />

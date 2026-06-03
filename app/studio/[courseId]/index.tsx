@@ -22,6 +22,7 @@ import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { startCourseVideoUpload } from "@/lib/upload-manager";
+import { BottomSheetSurface } from "@/components/ui/bottom-sheet-surface";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -1614,7 +1615,8 @@ export default function ManageCourseScreen() {
         }}
       >
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View
+          <BottomSheetSurface
+            basePadding={20}
             style={{
               backgroundColor: cardColor,
               borderTopLeftRadius: 24,
@@ -1942,7 +1944,7 @@ export default function ManageCourseScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
+          </BottomSheetSurface>
         </KeyboardAvoidingView>
       </View>
     </Modal>

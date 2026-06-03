@@ -232,7 +232,13 @@ export async function startOutgoingRingtone() {
       playsInSilentModeIOS: true,
       staysActiveInBackground: true,
       shouldDuckAndroid: false,
-      playThroughEarpieceAndroid: false,
+      // Route the ringback through the earpiece/voice-call stream. The caller
+      // has a live LiveKit/WebRTC room (pre-warmed + pre-joined) during RINGING,
+      // which owns the Android communication audio stream and ducks anything on
+      // the media stream. Playing on the call route lets the tone coexist —
+      // this is how WhatsApp's outgoing ringback behaves. (Android-only flag;
+      // ignored on iOS, where the ringtone already plays during RINGING.)
+      playThroughEarpieceAndroid: true,
     });
     const { sound } = await Audio.Sound.createAsync(
       require("../assets/sounds/outgoing_ringtone.mp3"),

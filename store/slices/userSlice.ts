@@ -28,6 +28,8 @@ export interface AppUser {
   esewaNumber?: string;
   referralCode?: string;
   seenNotices?: string[];
+  favouriteCourses?: string[];
+  following?: string[];
   seenOnboardingRoles: string[];
   createdAt?: string | null;
   callSettings?: {

@@ -6,11 +6,14 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
+import { InlineVideo } from "@/components/media/inline-video";
+import { NoticeImage } from "@/components/notices/notice-media";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import type { RootState } from "@/store";
 import { api } from "@/lib/api";
@@ -36,8 +39,17 @@ export default function NoticesScreen() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s: RootState) => s.user.data);
   const notices = useAppSelector((s: RootState) => s.notices);
-  const { statusBarStyle, backgroundColor, iconColor, primaryColor, primarySoftColor } =
-    useAppTheme();
+  const {
+    statusBarStyle,
+    backgroundColor,
+    iconColor,
+    primaryColor,
+    primarySoftColor,
+    borderColor,
+  } = useAppTheme();
+  const { width } = useWindowDimensions();
+  // Card sits inside px-5 screen padding (20) + p-5 card padding (20) on each side.
+  const mediaWidth = Math.max(0, width - 80);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
 
   const loadNotices = useCallback(
@@ -196,9 +208,35 @@ export default function NoticesScreen() {
                       </Text>
                     </View>
                   </View>
-                  <Text className="text-sm leading-6 text-muted-foreground">
-                    {stripHtml(notice.body)}
-                  </Text>
+                  {stripHtml(notice.body) ? (
+                    <Text className="text-sm leading-6 text-muted-foreground">
+                      {stripHtml(notice.body)}
+                    </Text>
+                  ) : null}
+
+                  {notice.imageUrl ? (
+                    <View style={{ marginTop: 12 }}>
+                      <NoticeImage
+                        uri={notice.imageUrl}
+                        width={mediaWidth}
+                        borderColor={borderColor}
+                        borderRadius={16}
+                      />
+                    </View>
+                  ) : null}
+
+                  {notice.videoUrl ? (
+                    <View style={{ marginTop: 12 }}>
+                      <InlineVideo
+                        uri={notice.videoUrl}
+                        width={mediaWidth}
+                        height={mediaWidth * 0.5625}
+                        borderColor={borderColor}
+                        borderRadius={16}
+                      />
+                    </View>
+                  ) : null}
+
                   <TouchableOpacity
                     onPress={() => dismissNotice(notice)}
                     disabled={dismissingId === notice._id}

@@ -7,11 +7,13 @@ import {
   ActivityIndicator,
   StatusBar,
   Image,
+  ImageBackground,
   TextInput,
   Platform,
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -20,13 +22,18 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { store } from "@/store";
 import {
+  selectIsCourseDetailStale,
   selectIsCoursesStale,
+  setCourseDetail,
   setCourses,
   setCoursesError,
   setCoursesLoading,
   setCoursesRefreshing,
 } from "@/store/slices/coursesSlice";
 import type { Course } from "@/store/slices/coursesSlice";
+
+// How many top courses to warm into the detail cache so tapping them is instant.
+const PREFETCH_COUNT = 5;
 
 function getCourseKey(item: Course | null, index: number) {
   if (!item) return `filler-${index}`;
@@ -39,6 +46,24 @@ function pricingLabel(model: Course["pricingModel"]) {
     return { text: "Subscription", color: "#0ea5e9" };
   // Play Store compliance: neutral badge instead of a price for paid digital goods.
   return { text: "Premium", color: "#f59e0b" };
+}
+
+function formatDuration(minutes?: number | null) {
+  if (!minutes || minutes <= 0) return "Flexible";
+  if (minutes < 60) return `${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return remaining > 0 ? `${hours}h ${remaining}m` : `${hours}h`;
+}
+
+function formatCompactCount(value?: number | null) {
+  if (!value || value <= 0) return "0";
+  if (value >= 1000) {
+    const compact = value / 1000;
+    return `${compact % 1 === 0 ? compact.toFixed(0) : compact.toFixed(1)}k`;
+  }
+  return value.toLocaleString();
 }
 
 type ViewMode = "list" | "grid";
@@ -54,15 +79,7 @@ export default function CoursesScreen() {
   const insets = useSafeAreaInsets();
   const { list, isLoading, isRefreshing } = useAppSelector((s) => s.courses);
   const isLoggedIn = !!useAppSelector((s) => s.auth.accessToken);
-  const {
-    statusBarStyle,
-    backgroundColor,
-    borderColor,
-    primaryColor,
-    primarySoftColor,
-    mutedIconColor,
-    isDark,
-  } = useAppTheme();
+  const { statusBarStyle, isDark } = useAppTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -101,6 +118,40 @@ export default function CoursesScreen() {
     void loadCourses();
   }, [loadCourses]);
 
+  // Warm the detail cache for the top courses so opening one feels instant.
+  // Fire-and-forget; each id is skipped if a fresh copy is already cached.
+  const prefetchTopCourseDetails = useCallback(
+    async (courses: Course[]) => {
+      const targets = courses.slice(0, PREFETCH_COUNT).filter((course) => course?._id);
+      if (targets.length === 0) return;
+
+      const cache = store.getState().courses.details;
+
+      await Promise.allSettled(
+        targets.map(async (course) => {
+          const cached = cache[course._id];
+          if (cached && !selectIsCourseDetailStale(cached.fetchedAt)) return;
+
+          try {
+            const res = await api.get(`/courses/${course._id}`);
+            if (res.data?._id) {
+              dispatch(setCourseDetail({ id: course._id, data: res.data }));
+            }
+          } catch {
+            // Best-effort prefetch — ignore failures, the detail screen will
+            // load on demand.
+          }
+        }),
+      );
+    },
+    [dispatch],
+  );
+
+  useEffect(() => {
+    if (list.length === 0) return;
+    void prefetchTopCourseDetails(list);
+  }, [list, prefetchTopCourseDetails]);
+
   const enrolledCourses = useMemo(
     () => list.filter((c) => typeof c.overallProgressPercent === "number"),
     [list],
@@ -133,8 +184,46 @@ export default function CoursesScreen() {
     return filtered;
   }, [filtered]);
 
-  const textColor = isDark ? "#f1f5f9" : "#0f172a";
-  const subtleCardBg = isDark ? "#1e293b" : "#ffffff";
+  const palette = useMemo(
+    () =>
+      isDark
+        ? {
+            bg: "#0E1411",
+            sheet: "#141C18",
+            subtle: "#19211D",
+            subtle2: "#1F2A24",
+            text: "#ECF3EF",
+            muted: "#93A29B",
+            faint: "#6E7E77",
+            hair: "#23302A",
+            accent: "#2EC592",
+            accentSoft: "rgba(46,197,146,0.14)",
+            onAccent: "#06231A",
+            coverGradient: ["#1f6f57", "#0f5f6e", "#123b5e"] as const,
+          }
+        : {
+            bg: "#FFFFFF",
+            sheet: "#FFFFFF",
+            subtle: "#F4F7F5",
+            subtle2: "#EAF0EC",
+            text: "#0F1A16",
+            muted: "#6A7B73",
+            faint: "#97A8A0",
+            hair: "#E9EDEA",
+            accent: "#12936A",
+            accentSoft: "rgba(18,147,106,0.10)",
+            onAccent: "#FFFFFF",
+            coverGradient: ["#1f6f57", "#0f5f6e", "#123b5e"] as const,
+          },
+    [isDark],
+  );
+  const backgroundColor = palette.bg;
+  const borderColor = palette.hair;
+  const primaryColor = palette.accent;
+  const primarySoftColor = palette.accentSoft;
+  const mutedIconColor = palette.muted;
+  const textColor = palette.text;
+  const subtleCardBg = palette.sheet;
   const subtleShadow = useMemo(
     () =>
       isDark
@@ -316,29 +405,6 @@ export default function CoursesScreen() {
     subtleShadow,
   ]);
 
-  /* ── Enrolled badge helper ─── */
-  const enrolledBadge = useMemo(
-    () => (
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 3,
-          backgroundColor: `${ENROLLED_GREEN}15`,
-          borderRadius: 6,
-          paddingHorizontal: 6,
-          paddingVertical: 2,
-        }}
-      >
-        <Ionicons name="checkmark-circle" size={10} color={ENROLLED_GREEN} />
-        <Text style={{ fontSize: 10, fontWeight: "700", color: ENROLLED_GREEN }}>
-          Enrolled
-        </Text>
-      </View>
-    ),
-    [],
-  );
-
   /* ── List item ─── */
   const renderListItem = useCallback(
     ({ item }: { item: Course }) => {
@@ -349,7 +415,7 @@ export default function CoursesScreen() {
           onPress={() => router.push(`/course/${item._id}` as any)}
           android_ripple={{ color: "rgba(0,0,0,0.06)", borderless: false }}
           style={({ pressed }) => ({
-            borderRadius: 14,
+            borderRadius: 16,
             overflow: "hidden",
             backgroundColor: subtleCardBg,
             borderWidth: 1,
@@ -359,110 +425,236 @@ export default function CoursesScreen() {
             ...subtleShadow,
           })}
         >
-          <View style={{ flexDirection: "row" }}>
-            {/* Thumbnail */}
+          <View style={{ position: "relative", backgroundColor: palette.subtle2 }}>
             {item.thumbnailUrl ? (
-              <Image
+              <ImageBackground
                 source={{ uri: item.thumbnailUrl }}
-                style={{ width: 88, height: 88 }}
                 resizeMode="cover"
-              />
+                style={{ height: 148 }}
+              >
+                <LinearGradient
+                  colors={["rgba(7,18,14,0)", "rgba(7,18,14,0.58)"]}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: "60%",
+                  }}
+                />
+              </ImageBackground>
             ) : (
+              <LinearGradient
+                colors={palette.coverGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ height: 148, alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="book-outline" size={36} color="rgba(255,255,255,0.86)" />
+              </LinearGradient>
+            )}
+
+            <View
+              style={{
+                position: "absolute",
+                left: 12,
+                bottom: 11,
+                flexDirection: "row",
+                gap: 8,
+                alignItems: "center",
+              }}
+            >
               <View
                 style={{
-                  width: 88,
-                  height: 88,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(255,255,255,0.92)",
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                }}
+              >
+                <Text style={{ color: "#0F1A16", fontSize: 11, fontWeight: "800" }}>
+                  {item.subject || "Course"}
+                </Text>
+              </View>
+              <View
+                style={{
+                  borderRadius: 999,
+                  backgroundColor: "rgba(0,0,0,0.34)",
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>
+                  {item.level || "All levels"}
+                </Text>
+              </View>
+            </View>
+
+            {item.pricingModel === "PAID" ? (
+              <View
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  borderRadius: 999,
+                  backgroundColor: "#F4B23E",
+                  paddingHorizontal: 9,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#0F1A16",
+                    fontSize: 10,
+                    fontWeight: "900",
+                    letterSpacing: 0.4,
+                  }}
+                >
+                  PREMIUM
+                </Text>
+              </View>
+            ) : null}
+
+            {enrolled ? (
+              <View
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  left: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(16,185,129,0.92)",
+                  paddingHorizontal: 9,
+                  paddingVertical: 4,
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={11} color="#fff" />
+                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>
+                  Enrolled
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={{ padding: 12 }}>
+            <Text
+              numberOfLines={2}
+              style={{
+                color: textColor,
+                fontSize: 18,
+                lineHeight: 23,
+                fontWeight: "900",
+              }}
+            >
+              {item.title}
+            </Text>
+
+            {item.description ? (
+              <Text
+                numberOfLines={2}
+                style={{
+                  marginTop: 5,
+                  color: mutedIconColor,
+                  fontSize: 13,
+                  lineHeight: 18,
+                  fontWeight: "500",
+                }}
+              >
+                {item.description}
+              </Text>
+            ) : null}
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 12,
+                marginTop: 10,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Ionicons name="star" size={14} color="#E0A100" />
+                <Text style={{ color: textColor, fontSize: 12, fontWeight: "800" }}>
+                  4.8
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Ionicons name="people-outline" size={14} color={mutedIconColor} />
+                <Text style={{ color: mutedIconColor, fontSize: 12, fontWeight: "700" }}>
+                  {formatCompactCount(item.enrollmentCount)} learners
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Ionicons name="time-outline" size={14} color={mutedIconColor} />
+                <Text style={{ color: mutedIconColor, fontSize: 12, fontWeight: "700" }}>
+                  {formatDuration(item.totalDurationMinutes)}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}
+              >
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: primaryColor,
+                  }}
+                >
+                  <Text
+                    style={{ color: palette.onAccent, fontSize: 11, fontWeight: "900" }}
+                  >
+                    {(item.instructorName || "QC")
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part[0]?.toUpperCase())
+                      .join("") || "QC"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{ color: textColor, fontSize: 12.5, fontWeight: "800" }}
+                  >
+                    {item.instructorName || "QuestionCall"}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{ marginTop: 1, color: mutedIconColor, fontSize: 11 }}
+                  >
+                    {label.text}
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: primarySoftColor,
                 }}
               >
-                <Ionicons name="book-outline" size={26} color={primaryColor} />
+                <Ionicons name="arrow-forward" size={16} color={primaryColor} />
               </View>
-            )}
-
-            {/* Content */}
-            <View
-              style={{
-                flex: 1,
-                paddingLeft: 14,
-                paddingRight: 8,
-                paddingVertical: 10,
-                justifyContent: "center",
-              }}
-            >
-              <Text
-                numberOfLines={2}
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: textColor,
-                  lineHeight: 19,
-                }}
-              >
-                {item.title}
-              </Text>
-
-              {item.instructorName ? (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginTop: 3,
-                    gap: 4,
-                  }}
-                >
-                  <Ionicons name="person-outline" size={11} color={mutedIconColor} />
-                  <Text numberOfLines={1} style={{ fontSize: 11, color: mutedIconColor }}>
-                    {item.instructorName}
-                  </Text>
-                </View>
-              ) : null}
-
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginTop: 6,
-                  gap: 6,
-                  flexWrap: "wrap",
-                }}
-              >
-                {enrolled ? enrolledBadge : null}
-                <View
-                  style={{
-                    backgroundColor: `${label.color}15`,
-                    borderRadius: 6,
-                    paddingHorizontal: 7,
-                    paddingVertical: 2,
-                  }}
-                >
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: label.color }}>
-                    {label.text}
-                  </Text>
-                </View>
-                {item.subject ? (
-                  <View
-                    style={{
-                      backgroundColor: isDark ? "#334155" : "#f1f5f9",
-                      borderRadius: 6,
-                      paddingHorizontal: 7,
-                      paddingVertical: 2,
-                    }}
-                  >
-                    <Text
-                      style={{ fontSize: 10, fontWeight: "500", color: mutedIconColor }}
-                    >
-                      {item.subject}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-
-            {/* Chevron */}
-            <View style={{ justifyContent: "center", paddingRight: 14 }}>
-              <Ionicons name="chevron-forward" size={16} color={mutedIconColor} />
             </View>
           </View>
         </Pressable>
@@ -474,10 +666,9 @@ export default function CoursesScreen() {
       primaryColor,
       primarySoftColor,
       mutedIconColor,
-      isDark,
       subtleCardBg,
       isEnrolled,
-      enrolledBadge,
+      palette,
       subtleShadow,
     ],
   );
@@ -599,7 +790,27 @@ export default function CoursesScreen() {
     ],
   );
 
-  const listSeparator = useCallback(() => <View style={{ height: 10 }} />, []);
+  const listSeparator = useCallback(
+    () => (
+      <View
+        style={{
+          height: 18,
+          justifyContent: "center",
+          paddingHorizontal: 18,
+        }}
+      >
+        <View
+          style={{
+            height: 1,
+            borderRadius: 1,
+            backgroundColor: palette.hair,
+            opacity: isDark ? 0.7 : 0.9,
+          }}
+        />
+      </View>
+    ),
+    [isDark, palette.hair],
+  );
 
   const chaptersHeader = useMemo(() => {
     if (filteredChapters.length === 0) return enrolledHeader;

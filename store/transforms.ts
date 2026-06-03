@@ -59,3 +59,33 @@ export const channelCacheLimiter = createTransform(
   // Only apply this transform to the "channel" slice
   { whitelist: ["channel"] },
 );
+
+/**
+ * Bounds the prefetched course-detail cache during persistence so it can't grow
+ * forever in AsyncStorage:
+ * - Keeps the 25 most-recently-fetched course details
+ * - Older entries are dropped (they re-fetch on demand)
+ */
+const MAX_PERSISTED_COURSE_DETAILS = 25;
+
+export const courseDetailCacheLimiter = createTransform(
+  (inboundState: Record<string, unknown>, _key: string | number) => {
+    const state = inboundState as {
+      details?: Record<string, { fetchedAt?: number }>;
+    };
+
+    if (!state?.details) return inboundState;
+
+    const entries = Object.entries(state.details);
+    if (entries.length <= MAX_PERSISTED_COURSE_DETAILS) return inboundState;
+
+    const limited = entries
+      .sort(([, a], [, b]) => (b.fetchedAt ?? 0) - (a.fetchedAt ?? 0))
+      .slice(0, MAX_PERSISTED_COURSE_DETAILS);
+
+    return { ...state, details: Object.fromEntries(limited) };
+  },
+  (outboundState: Record<string, unknown>, _key: string | number) => outboundState,
+  // Only apply this transform to the "courses" slice
+  { whitelist: ["courses"] },
+);

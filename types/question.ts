@@ -73,6 +73,7 @@ export type FeedQuestion = QuestionRecordShape & {
     mediaUrls?: string[];
     answerFormat?: string;
     rating?: number | null;
+    acceptorId?: string;
     acceptorName?: string;
     submittedAt?: string;
   };

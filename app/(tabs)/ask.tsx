@@ -354,11 +354,12 @@ function StudentAskScreen() {
         {quotaExhausted ? (
           <TouchableOpacity
             onPress={() => void openWebCheckout("subscription")}
-            className="rounded-full px-4 py-2"
+            className="flex-row items-center gap-1 rounded-full px-4 py-2"
             style={{ backgroundColor: primaryColor }}
             activeOpacity={0.85}
           >
-            <Text className="text-xs font-semibold text-white">Manage</Text>
+            <Ionicons name="open-outline" size={12} color="#fff" />
+            <Text className="text-xs font-semibold text-white">Get more</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -644,11 +645,14 @@ function StudentAskScreen() {
         {quotaExhausted ? (
           <TouchableOpacity
             onPress={() => void openWebCheckout("subscription")}
-            className="items-center justify-center rounded-2xl"
+            className="flex-row items-center justify-center gap-2 rounded-2xl"
             style={{ backgroundColor: primaryColor, height: 52 }}
             activeOpacity={0.85}
           >
-            <Text className="text-base font-bold text-white">Manage membership</Text>
+            <Ionicons name="open-outline" size={17} color="#fff" />
+            <Text className="text-base font-bold text-white">
+              Continue in your browser
+            </Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
