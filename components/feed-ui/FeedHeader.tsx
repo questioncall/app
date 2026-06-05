@@ -58,6 +58,65 @@ function AppLogo() {
   );
 }
 
+/**
+ * The pinned top bar (logo + notification bell). Rendered as a sticky overlay
+ * by the feed screen — it is intentionally NOT part of the scrolling header so
+ * it can collapse-and-stick just below the status bar while the rest scrolls
+ * underneath it.
+ */
+export function FeedTopBar({ unreadCount }: { unreadCount: number }) {
+  const FEED_COLORS = useFeedColors();
+
+  return (
+    <View
+      style={{
+        paddingHorizontal: 18,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <AppLogo />
+      <TouchableOpacity
+        onPress={() => router.push("/notifications" as any)}
+        activeOpacity={0.75}
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          backgroundColor: FEED_COLORS.subtle,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons name="notifications-outline" size={21} color={FEED_COLORS.text} />
+        {unreadCount > 0 ? (
+          <View
+            style={{
+              position: "absolute",
+              top: 2,
+              right: 1,
+              minWidth: 18,
+              height: 18,
+              borderRadius: 9,
+              backgroundColor: FEED_COLORS.red,
+              borderWidth: 2,
+              borderColor: FEED_COLORS.page,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 4,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 10.5, fontWeight: "800" }}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Text>
+          </View>
+        ) : null}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function formatCoursePrice(course: Course) {
   if (course.pricingModel === "FREE") return "Free";
   if (course.pricingModel === "SUBSCRIPTION_INCLUDED") return "Sub";
@@ -189,10 +248,8 @@ export function FeedHeader({
   onFilterPress,
   onSearchChange,
   onViewChange,
-  questionCount,
   searchValue,
   showCourses,
-  unreadCount,
 }: {
   activeFilterCount: number;
   activeView: FeedView;
@@ -202,62 +259,14 @@ export function FeedHeader({
   onFilterPress: () => void;
   onSearchChange: (value: string) => void;
   onViewChange: (value: FeedView) => void;
-  questionCount: number;
   searchValue: string;
   showCourses: boolean;
-  unreadCount: number;
 }) {
   const FEED_COLORS = useFeedColors();
 
   return (
     <View style={{ backgroundColor: FEED_COLORS.page }}>
-      <View style={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 7 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <AppLogo />
-          <TouchableOpacity
-            onPress={() => router.push("/notifications" as any)}
-            activeOpacity={0.75}
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 21,
-              backgroundColor: FEED_COLORS.subtle,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="notifications-outline" size={21} color={FEED_COLORS.text} />
-            {unreadCount > 0 ? (
-              <View
-                style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 1,
-                  minWidth: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  backgroundColor: FEED_COLORS.red,
-                  borderWidth: 2,
-                  borderColor: FEED_COLORS.page,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingHorizontal: 4,
-                }}
-              >
-                <Text style={{ color: "#fff", fontSize: 10.5, fontWeight: "800" }}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-
+      <View style={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 7 }}>
         {error ? (
           <View style={{ marginTop: 12 }}>
             <AuthNotice tone="error" message={error} />
@@ -446,11 +455,6 @@ export function FeedHeader({
           }}
         >
           QUESTIONS
-        </Text>
-        <Text
-          style={{ color: FEED_COLORS.faintMuted, fontSize: 12.5, fontWeight: "700" }}
-        >
-          {questionCount} {questionCount === 1 ? "result" : "results"}
         </Text>
       </View>
     </View>

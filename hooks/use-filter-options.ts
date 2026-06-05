@@ -20,8 +20,8 @@ const FALLBACK: FilterOptions = {
     "English",
     "Accountancy",
   ],
-  streams: ["Science", "Management"],
-  levels: ["School level", "Plus 2", "Bachelor"],
+  streams: ["Science", "Management", "Law", "Humanities", "Education", "Others"],
+  levels: ["Below 10", "11/12", "Bachelor"],
 };
 
 const TTL_MS = 60 * 60 * 1000; // 1 hour, mirrors the server's `revalidate = 3600`

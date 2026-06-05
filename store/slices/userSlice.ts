@@ -23,6 +23,8 @@ export interface AppUser {
   isSuspended: boolean;
   isMonetized: boolean;
   teacherModeVerified: boolean;
+  /** True for email/password accounts; false for Google-only accounts. */
+  hasPassword?: boolean;
   dailyAnswersCount: number;
   dailyTargetsAchieved: number[];
   esewaNumber?: string;

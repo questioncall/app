@@ -5,9 +5,9 @@ import {
   Easing,
   FlatList,
   Modal,
-  Platform,
   RefreshControl,
   StatusBar,
+  StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -15,10 +15,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 import { FeedFilterModal } from "@/components/feed-ui/FeedFilterModal";
-import { FeedHeader } from "@/components/feed-ui/FeedHeader";
+import { FeedHeader, FeedTopBar } from "@/components/feed-ui/FeedHeader";
 import {
   FeedQuestionCard,
   type PeerCommentItem,
@@ -172,8 +173,16 @@ function normalizeQuestionCards(questions: FeedQuestion[]) {
   return [...questions];
 }
 
+// ─── Sticky top-bar geometry ──────────────────────────────────────────────
+// The logo + notification bar is pinned just below the status bar. On the
+// first few pixels of scroll it slides up by COLLAPSE_DISTANCE and then sticks;
+// everything else (search, chips, courses) scrolls underneath it.
+const TOP_BAR_HEIGHT = 56; // paddingTop(6) + 42px row + paddingBottom(8)
+const COLLAPSE_DISTANCE = 14;
+
 export default function FeedScreen() {
   const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
   const { openImageViewer } = useImageViewer();
   const feedColors = useFeedColors();
   const user = useAppSelector((state) => state.user.data);
@@ -216,6 +225,28 @@ export default function FeedScreen() {
 
   // Modal slide-up animation
   const modalSlide = useRef(new RNAnimated.Value(0)).current;
+
+  // ─── Sticky header: track scroll offset (native-driven for smoothness) ───
+  const scrollY = useRef(new RNAnimated.Value(0)).current;
+  const onScroll = useMemo(
+    () =>
+      RNAnimated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: true,
+      }),
+    [scrollY],
+  );
+  // Bar starts COLLAPSE_DISTANCE px lower, then rises and pins under the status bar.
+  const barTranslateY = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE],
+    outputRange: [COLLAPSE_DISTANCE, 0],
+    extrapolate: "clamp",
+  });
+  // Bottom hairline/shadow fades in once the bar is stuck, for separation.
+  const barBorderOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   // Debounce search: wait 300ms after user stops typing before filtering
   useEffect(() => {
@@ -800,40 +831,29 @@ export default function FeedScreen() {
   );
 
   // ─── Header ─────────────────────────────────────────────────────
-  const renderHeader = useCallback(
-    () => (
-      <FeedHeader
-        error={feedState.error}
-        unreadCount={unreadCount}
-        searchValue={searchInput}
-        onSearchChange={setSearchInput}
-        activeView={activeView}
-        onViewChange={setActiveView}
-        activeFilterCount={activeFilterCount}
-        onFilterPress={openFilterModal}
-        courses={visibleCourses}
-        coursesLoading={coursesState.isLoading}
-        showCourses={
-          activeView === "all" &&
-          normalizedSearch.length === 0 &&
-          !shouldHideCoursesForSearch
-        }
-        questionCount={visibleQuestions.length}
-      />
-    ),
-    [
-      activeFilterCount,
-      activeView,
-      coursesState.isLoading,
-      feedState.error,
-      normalizedSearch.length,
-      openFilterModal,
-      searchInput,
-      shouldHideCoursesForSearch,
-      unreadCount,
-      visibleCourses,
-      visibleQuestions.length,
-    ],
+  // Passed to the FlatList as a React *element* (stable type `FeedHeader`),
+  // NOT a function/component. A function whose identity changes per keystroke
+  // makes the list treat it as a new component type and remount the whole
+  // header — which unmounts the search TextInput, dropping focus and eating
+  // fast keystrokes. As an element, React reconciles in place and the input
+  // keeps focus while typing.
+  const feedHeader = (
+    <FeedHeader
+      error={feedState.error}
+      searchValue={searchInput}
+      onSearchChange={setSearchInput}
+      activeView={activeView}
+      onViewChange={setActiveView}
+      activeFilterCount={activeFilterCount}
+      onFilterPress={openFilterModal}
+      courses={visibleCourses}
+      coursesLoading={coursesState.isLoading}
+      showCourses={
+        activeView === "all" &&
+        normalizedSearch.length === 0 &&
+        !shouldHideCoursesForSearch
+      }
+    />
   );
 
   // ─── Question Card ───────────────────────────────────────────────
@@ -970,7 +990,7 @@ export default function FeedScreen() {
         <View className="mt-4 flex-row gap-2">
           {feedQuestions.length === 0 ? (
             <TouchableOpacity
-              onPress={() => router.push("/(tabs)/ask" as any)}
+              onPress={() => router.push("/ask" as any)}
               className="rounded-full px-4 py-2.5"
               style={{ backgroundColor: primaryColor }}
             >
@@ -1115,13 +1135,15 @@ export default function FeedScreen() {
 
       {renderFilterModal()}
 
-      <FlatList
+      <RNAnimated.FlatList
         ref={flatListRef}
         data={visibleQuestions}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         keyExtractor={getQuestionKey}
         renderItem={renderQuestionItem}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={feedHeader}
         ListEmptyComponent={renderEmptyState}
         ListFooterComponent={
           feedState.isLoadingMore ? (
@@ -1141,7 +1163,9 @@ export default function FeedScreen() {
         removeClippedSubviews
         contentContainerStyle={{
           paddingBottom: 20,
-          paddingTop: Platform.OS === "ios" ? 52 : (StatusBar.currentHeight ?? 24) + 8,
+          // Clear the pinned top bar in its initial (lowered) position so the
+          // first row of the scrolling header sits right beneath it.
+          paddingTop: insets.top + TOP_BAR_HEIGHT + COLLAPSE_DISTANCE,
         }}
         ItemSeparatorComponent={() => (
           <View
@@ -1157,12 +1181,40 @@ export default function FeedScreen() {
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={primaryColor}
+            progressViewOffset={insets.top + TOP_BAR_HEIGHT}
           />
         }
         keyboardDismissMode="none"
         keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Pinned top bar — scrolls up a touch, then sticks below the status bar */}
+      <RNAnimated.View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          backgroundColor: feedColors.page,
+          paddingTop: insets.top,
+          transform: [{ translateY: barTranslateY }],
+        }}
+      >
+        <View style={{ paddingTop: 6, paddingBottom: 8 }}>
+          <FeedTopBar unreadCount={unreadCount} />
+        </View>
+        <RNAnimated.View
+          pointerEvents="none"
+          style={{
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: feedColors.divider,
+            opacity: barBorderOpacity,
+          }}
+        />
+      </RNAnimated.View>
     </View>
   );
 }

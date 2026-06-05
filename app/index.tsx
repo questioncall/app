@@ -106,14 +106,14 @@ export default function LandingScreen() {
             By continuing, you agree to our{" "}
             <Text
               className="font-bold text-foreground underline"
-              onPress={() => router.push("/legal")}
+              onPress={() => router.push("/legal/terms")}
             >
               Terms of Use
             </Text>{" "}
             and{" "}
             <Text
               className="font-bold text-foreground underline"
-              onPress={() => router.push("/legal")}
+              onPress={() => router.push("/legal/privacy")}
             >
               Privacy Policy
             </Text>

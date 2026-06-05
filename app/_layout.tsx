@@ -328,7 +328,22 @@ function RootLayout() {
                     <Stack.Screen name="index" />
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="workspace/[channelId]" />
+                    <Stack.Screen
+                      name="ask"
+                      options={{
+                        animation: "fade_from_bottom",
+                        animationDuration: 160,
+                        gestureEnabled: true,
+                        gestureDirection: "vertical",
+                      }}
+                    />
+                    <Stack.Screen
+                      name="workspace/[channelId]"
+                      options={{
+                        animation: "slide_from_right",
+                        gestureEnabled: true,
+                      }}
+                    />
                     <Stack.Screen name="call/[roomId]" />
                     <Stack.Screen name="course/[id]" />
                     <Stack.Screen name="course/video" />

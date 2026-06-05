@@ -452,14 +452,8 @@ export default function MenuScreen() {
           <MenuItem
             icon="trash-outline"
             label="Delete Account"
-            subtitle="This action is irreversible"
-            onPress={() =>
-              Alert.alert(
-                "Delete Account",
-                "To delete your account, please contact support.",
-                [{ text: "OK" }],
-              )
-            }
+            subtitle="Recoverable within 30 days"
+            onPress={() => router.push("/settings/delete-account" as any)}
             danger
           />
         </View>

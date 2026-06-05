@@ -331,6 +331,14 @@ function StudentAskScreen() {
         className="flex-row items-center justify-between px-5 pb-3 pt-14"
         style={{ borderBottomWidth: 1, borderBottomColor: borderColor, backgroundColor }}
       >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={8}
+          className="mr-3 h-9 w-9 items-center justify-center"
+          activeOpacity={0.7}
+        >
+          <Ionicons name="close" size={24} color={mutedIconColor} />
+        </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-[22px] font-bold tracking-tight text-foreground">
             Ask a question
@@ -879,11 +887,19 @@ function ChipGroup<T extends string>({
 // ─── Teacher Actions ───────────────────────────────────────────────────
 
 function TeacherActionsScreen() {
-  const { statusBarStyle, backgroundColor } = useAppTheme();
+  const { statusBarStyle, backgroundColor, mutedIconColor } = useAppTheme();
 
   return (
     <View className="flex-1 bg-background px-6 pt-14">
       <StatusBar barStyle={statusBarStyle} backgroundColor={backgroundColor} />
+      <TouchableOpacity
+        onPress={() => router.back()}
+        hitSlop={8}
+        className="mb-3 h-9 w-9 items-center justify-center"
+        activeOpacity={0.7}
+      >
+        <Ionicons name="close" size={24} color={mutedIconColor} />
+      </TouchableOpacity>
       <Text className="mb-1 text-[28px] font-bold tracking-tight text-foreground">
         Actions
       </Text>

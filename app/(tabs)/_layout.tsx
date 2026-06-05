@@ -15,7 +15,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { ComponentProps } from "react";
 
-const TABS = ["feed", "channels", "ask", "courses", "menu"] as const;
+const TABS = ["feed", "channels", "courses", "menu"] as const;
 type TabName = (typeof TABS)[number];
 const SWIPE_DIST = 50;
 const SWIPE_VEL = 400;
@@ -174,25 +174,49 @@ function CustomTabBar({
         paddingTop: 8,
       }}
     >
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
+      {(() => {
+        const renderTab = (route: (typeof state.routes)[number], index: number) => {
+          const focused = state.index === index;
+          const meta = TAB_META[route.name];
+          if (!meta) return null;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: "tabPress",
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
-          }
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name, route.params);
+            }
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              activeOpacity={0.7}
+              style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+            >
+              <TabIcon
+                name={focused ? meta.iconFocused : meta.icon}
+                label={meta.label}
+                focused={focused}
+                activeColor={primaryColor}
+                inactiveColor={inactiveColor}
+                badge={route.name === "channels" ? totalUnread : undefined}
+              />
+            </TouchableOpacity>
+          );
         };
 
-        if (route.name === "ask") {
-          return (
-            <View key={route.key} style={{ flex: 1, alignItems: "center" }}>
+        // feed + channels | center FAB (pushes the Ask modal) | courses + menu
+        return (
+          <>
+            {state.routes.slice(0, 2).map((route, i) => renderTab(route, i))}
+            <View style={{ flex: 1, alignItems: "center" }}>
               <CenterTabButton
-                onPress={onPress}
+                onPress={() => router.push("/ask")}
                 backgroundColor={primaryColor}
                 borderColor={borderColor}
               >
@@ -204,30 +228,10 @@ function CustomTabBar({
                 </View>
               </CenterTabButton>
             </View>
-          );
-        }
-
-        const meta = TAB_META[route.name];
-        if (!meta) return null;
-
-        return (
-          <TouchableOpacity
-            key={route.key}
-            onPress={onPress}
-            activeOpacity={0.7}
-            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-          >
-            <TabIcon
-              name={focused ? meta.iconFocused : meta.icon}
-              label={meta.label}
-              focused={focused}
-              activeColor={primaryColor}
-              inactiveColor={inactiveColor}
-              badge={route.name === "channels" ? totalUnread : undefined}
-            />
-          </TouchableOpacity>
+            {state.routes.slice(2).map((route, i) => renderTab(route, i + 2))}
+          </>
         );
-      })}
+      })()}
     </View>
   );
 }
@@ -332,7 +336,6 @@ export default function TabsLayout() {
         >
           <Tabs.Screen name="feed" />
           <Tabs.Screen name="channels" />
-          <Tabs.Screen name="ask" />
           <Tabs.Screen name="courses" />
           <Tabs.Screen name="menu" />
         </Tabs>

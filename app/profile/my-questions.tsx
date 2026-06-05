@@ -693,7 +693,7 @@ export default function MyQuestionsScreen() {
                   received.
                 </Text>
                 <TouchableOpacity
-                  onPress={() => router.push("/(tabs)/ask" as any)}
+                  onPress={() => router.push("/ask" as any)}
                   className="mt-6 rounded-full px-8 py-3"
                   style={{ backgroundColor: primaryColor }}
                   activeOpacity={0.85}
