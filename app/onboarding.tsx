@@ -135,35 +135,29 @@ export default function OnboardingScreen() {
             </View>
           ) : video ? (
             <>
-              <View className="overflow-hidden rounded-[28px] border border-border bg-card">
-                {video.thumbnailUrl ? (
-                  <Image
-                    source={{ uri: video.thumbnailUrl }}
-                    className="h-40 w-full"
-                    resizeMode="cover"
-                  />
-                ) : null}
-                <View className="aspect-video bg-black">
-                  <OnboardingVideoPlayer videoUrl={video.videoUrl} />
-                </View>
-                <View className="p-5">
-                  <View
-                    className="mb-3 self-start rounded-full px-3 py-1"
-                    style={{ backgroundColor: primarySoftColor }}
-                  >
-                    <Text className="text-xs font-bold" style={{ color: primaryColor }}>
-                      {video.role}
-                    </Text>
-                  </View>
-                  <Text className="text-xl font-bold text-card-foreground">
-                    {video.title}
+              {/* Full-bleed player: break out of the screen's horizontal
+                  padding so the video is as wide (and, at 16:9, as tall) as
+                  possible. */}
+              <View className="-mx-5 mb-5 aspect-video bg-black">
+                <OnboardingVideoPlayer videoUrl={video.videoUrl} />
+              </View>
+              <View className="overflow-hidden rounded-[28px] border border-border bg-card p-5">
+                <View
+                  className="mb-3 self-start rounded-full px-3 py-1"
+                  style={{ backgroundColor: primarySoftColor }}
+                >
+                  <Text className="text-xs font-bold" style={{ color: primaryColor }}>
+                    {video.role}
                   </Text>
-                  {video.description ? (
-                    <Text className="mt-3 text-sm leading-6 text-muted-foreground">
-                      {video.description}
-                    </Text>
-                  ) : null}
                 </View>
+                <Text className="text-xl font-bold text-card-foreground">
+                  {video.title}
+                </Text>
+                {video.description ? (
+                  <Text className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {video.description}
+                  </Text>
+                ) : null}
               </View>
 
               <TouchableOpacity

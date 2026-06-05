@@ -8,7 +8,16 @@
 // direct media file. Everything else is routed to an embed/WebView, which can
 // render provider players and arbitrary pages without crashing.
 
-export type VideoSourceKind = "youtube" | "vimeo" | "loom" | "drive" | "file" | "webpage";
+export type VideoSourceKind =
+  | "youtube"
+  | "vimeo"
+  | "loom"
+  | "drive"
+  | "file"
+  | "webpage"
+  // A link we recognise but cannot turn into a single video player (e.g. a
+  // YouTube channel/@handle/playlist URL instead of a video URL).
+  | "unsupported";
 
 export interface ParsedVideoSource {
   kind: VideoSourceKind;
@@ -116,6 +125,13 @@ export function parseVideoSource(rawUrl: string | null | undefined): ParsedVideo
       original,
       isEmbed: true,
     };
+  }
+
+  // A YouTube link that didn't yield a video id is a channel/@handle/playlist/
+  // search URL. Loading it would show the full YouTube site, not a video, so
+  // flag it as unsupported rather than embedding the whole app.
+  if (/(?:^|\/\/|\.)(youtube\.com|youtu\.be)\b/i.test(original)) {
+    return { kind: "unsupported", url: original, original, isEmbed: false };
   }
 
   const dropbox = toDropboxDirect(original);
