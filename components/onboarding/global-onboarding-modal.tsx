@@ -8,11 +8,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { VideoView, useVideoPlayer } from "expo-video";
-import { useEvent } from "expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
+import { OnboardingVideoPlayer } from "@/components/onboarding/onboarding-video-player";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { api } from "@/lib/api";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -38,22 +37,6 @@ function OnboardingModalBody({ video }: { video: OnboardingVideo }) {
   const isDismissing = useAppSelector((s) => s.onboarding.isDismissing);
   const { primaryColor, mutedIconColor } = useAppTheme();
   const insets = useSafeAreaInsets();
-
-  // useVideoPlayer plays HLS (.m3u8) and mp4/webm/mov natively — covers Mux
-  // playback URLs and Cloudinary/R2 hosted assets (our own player, not YouTube).
-  const player = useVideoPlayer(video.videoUrl, (p) => {
-    p.loop = false;
-    p.muted = false;
-  });
-
-  // Drive a clean loading/error UI off the player status instead of showing a
-  // bare black box while the (HLS/mp4) source buffers. statusChange fires with
-  // "loading" → "readyToPlay", or "error" if the URL can't be played.
-  const { status, error } = useEvent(player, "statusChange", {
-    status: player.status,
-  });
-  const isLoading = status === "loading" || status === "idle";
-  const hasError = status === "error";
 
   // Dismissing the modal in any way marks the onboarding video as seen.
   async function handleDismiss() {
@@ -115,38 +98,7 @@ function OnboardingModalBody({ video }: { video: OnboardingVideo }) {
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <View className="aspect-video bg-black">
-              <VideoView
-                player={player}
-                style={{ width: "100%", height: "100%" }}
-                contentFit="contain"
-                fullscreenOptions={{ enable: true, orientation: "landscape" }}
-                nativeControls
-              />
-
-              {/* Loading spinner while the source buffers */}
-              {isLoading ? (
-                <View className="absolute inset-0 items-center justify-center bg-black/60">
-                  <ActivityIndicator color="#FFFFFF" size="large" />
-                  <Text className="mt-3 text-xs text-white/70">Loading video…</Text>
-                </View>
-              ) : null}
-
-              {/* Error fallback with retry */}
-              {hasError ? (
-                <View className="absolute inset-0 items-center justify-center gap-3 bg-black/80 px-6">
-                  <Ionicons name="warning-outline" size={32} color="#f87171" />
-                  <Text className="text-center text-sm text-white/80">
-                    {error?.message ?? "Couldn't load this video."}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => player.replace(video.videoUrl)}
-                    className="rounded-full bg-white/15 px-5 py-2"
-                    activeOpacity={0.85}
-                  >
-                    <Text className="text-sm font-semibold text-white">Retry</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
+              <OnboardingVideoPlayer videoUrl={video.videoUrl} />
             </View>
 
             <View className="p-5">
