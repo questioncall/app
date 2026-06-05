@@ -15,7 +15,7 @@ import { parseVideoSource } from "@/lib/video-source";
  */
 export function OnboardingVideoPlayer({ videoUrl }: { videoUrl: string }) {
   const parsed = parseVideoSource(videoUrl);
-  const isEmbed = parsed.kind !== "file";
+  const isEmbed = parsed.isEmbed;
 
   // The hook must run unconditionally, so feed it an empty source for embeds —
   // that keeps the native player from trying (and failing) to load a page URL.
