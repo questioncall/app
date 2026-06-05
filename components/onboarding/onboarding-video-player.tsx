@@ -4,7 +4,21 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { useEvent } from "expo";
 import { WebView } from "react-native-webview";
 
-import { parseVideoSource } from "@/lib/video-source";
+import { parseVideoSource, type VideoSourceKind } from "@/lib/video-source";
+
+// YouTube/Vimeo/Loom embeds refuse to play inside a bare WebView because the
+// document has no real web origin ("Error 153 / configuration error"). Loading
+// the iframe via an HTML string with a matching https baseUrl gives the embed a
+// valid origin so it plays.
+const EMBED_ORIGIN: Partial<Record<VideoSourceKind, string>> = {
+  youtube: "https://www.youtube.com",
+  vimeo: "https://player.vimeo.com",
+  loom: "https://www.loom.com",
+};
+
+function buildEmbedHtml(src: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"><style>*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%;background:#000;overflow:hidden}.wrap{position:fixed;inset:0}iframe{width:100%;height:100%;border:0;display:block}</style></head><body><div class="wrap"><iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></body></html>`;
+}
 
 /**
  * Plays an onboarding video that may be a direct media file (mp4/webm/HLS —
@@ -56,13 +70,21 @@ export function OnboardingVideoPlayer({ videoUrl }: { videoUrl: string }) {
   }
 
   if (parsed.isEmbed) {
+    const origin = EMBED_ORIGIN[parsed.kind];
+    // Provider iframes (YouTube/Vimeo/Loom) need a real origin via baseUrl;
+    // Drive/other pages load fine straight from the URL.
+    const source = origin
+      ? { html: buildEmbedHtml(parsed.url), baseUrl: origin }
+      : { uri: parsed.url };
+
     return (
       <WebView
-        source={{ uri: parsed.url }}
+        source={source}
+        originWhitelist={["*"]}
         style={{ flex: 1, backgroundColor: "#000" }}
         allowsInlineMediaPlayback
         allowsFullscreenVideo
-        mediaPlaybackRequiresUserAction
+        mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled
         domStorageEnabled
         startInLoadingState
