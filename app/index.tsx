@@ -10,16 +10,18 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 export default function LandingScreen() {
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const isLoading = useAppSelector((s) => s.auth.isLoading);
+  const role = useAppSelector((s) => s.user.data?.role);
   const insets = useSafeAreaInsets();
   const { statusBarStyle, backgroundColor, iconColor } = useAppTheme();
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
+      // Admins go to the admin console; everyone else lands on the feed.
       // Onboarding is shown as a global modal (GlobalOnboardingModal), so new
       // users land on the feed and the video overlays on top.
-      router.replace("/(tabs)/feed");
+      router.replace(role === "ADMIN" ? "/admin" : "/(tabs)/feed");
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, role]);
 
   if (isLoading || isAuthenticated) return null;
 

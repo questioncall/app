@@ -290,6 +290,117 @@ export function startChapterVideoUpload(params: StartChapterVideoUploadParams): 
   return id;
 }
 
+// ── Notice video → Mux (admin) ────────────────────────────────────────────
+//
+// Notice videos aren't tied to a course/chapter content record. We create a
+// Mux direct upload, PUT the file, poll for the playback URL, then hand that
+// URL back so the notice create call can persist it as `videoUrl`.
+
+export type StartNoticeVideoUploadParams = {
+  title: string;
+  file: {
+    uri: string;
+    name: string;
+    mimeType?: string;
+    size?: number;
+  };
+  /** Called with the HLS playback URL once the asset is ready. */
+  onReady?: (playbackUrl: string) => void;
+  onError?: (error: string) => void;
+};
+
+export function startNoticeVideoUpload(params: StartNoticeVideoUploadParams): string {
+  const id = `ntvid_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  store.dispatch(
+    addUpload({ id, uri: params.file.uri, type: "file", label: `📹 ${params.title}` }),
+  );
+  performNoticeVideoUpload(id, params).catch((err) => {
+    console.error("[NoticeVideoUpload] Unhandled error:", err);
+  });
+  return id;
+}
+
+async function performNoticeVideoUpload(
+  id: string,
+  params: StartNoticeVideoUploadParams,
+) {
+  const { title, file } = params;
+  try {
+    store.dispatch(updateUploadProgress({ id, progress: 2 }));
+
+    const createRes = await api.post("/mobile/admin/notices/upload-video");
+    const uploadUrl: string = createRes.data?.uploadUrl;
+    const uploadId: string | undefined = createRes.data?.uploadId;
+    if (!uploadUrl || !uploadId) {
+      throw new Error("Server did not return an upload URL.");
+    }
+
+    store.dispatch(updateUploadProgress({ id, progress: 5 }));
+
+    const uploadTask = FileSystem.createUploadTask(
+      uploadUrl,
+      file.uri,
+      {
+        httpMethod: "PUT",
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: { "Content-Type": file.mimeType || "video/mp4" },
+      },
+      (progress) => {
+        if (progress.totalBytesExpectedToSend > 0) {
+          const pct = Math.round(
+            5 + (progress.totalBytesSent / progress.totalBytesExpectedToSend) * 85,
+          );
+          store.dispatch(updateUploadProgress({ id, progress: pct }));
+        }
+      },
+    );
+
+    const result = await uploadTask.uploadAsync();
+    if (!result || result.status < 200 || result.status >= 300) {
+      throw new Error(`Upload failed (HTTP ${result?.status ?? "unknown"})`);
+    }
+
+    store.dispatch(updateUploadProgress({ id, progress: 95 }));
+    store.dispatch(setUploadLabel({ id, label: `📹 ${title} · Processing…` }));
+
+    for (let attempt = 0; attempt < PROCESSING_MAX_ATTEMPTS; attempt++) {
+      await new Promise((r) => setTimeout(r, PROCESSING_POLL_INTERVAL_MS));
+      try {
+        const res = await api.get(
+          `/mobile/admin/notices/upload-video/${uploadId}/status`,
+        );
+        const status = res.data?.status;
+        const playbackUrl = res.data?.playbackUrl;
+        if (status === "ready" && playbackUrl) {
+          store.dispatch(completeUpload({ id, url: playbackUrl }));
+          setTimeout(() => store.dispatch(removeUpload(id)), 5000);
+          params.onReady?.(playbackUrl);
+          return;
+        }
+        if (status === "errored") {
+          throw new Error("Processing failed on the server.");
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("Processing failed")) {
+          store.dispatch(failUpload({ id, error: err.message }));
+          params.onError?.(err.message);
+          Toast.show({ type: "error", text1: "Video processing failed" });
+          return;
+        }
+      }
+    }
+
+    const timeoutMsg = "Timed out waiting for the video to finish processing.";
+    store.dispatch(failUpload({ id, error: timeoutMsg }));
+    params.onError?.(timeoutMsg);
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : "Upload failed";
+    store.dispatch(failUpload({ id, error: errMsg }));
+    params.onError?.(errMsg);
+    Toast.show({ type: "error", text1: "Video upload failed", text2: errMsg });
+  }
+}
+
 async function performChapterVideoUpload(
   id: string,
   params: StartChapterVideoUploadParams,

@@ -136,7 +136,13 @@ export default function LoginScreen() {
       assertOkResponse(res, "Login failed. Please try again.");
 
       const session = await persistMobileAuthSession(dispatch, res.data);
-      router.replace(session.isSuspended ? "/suspended" : "/(tabs)/feed");
+      if (session.isSuspended) {
+        router.replace("/suspended");
+      } else if (res.data?.user?.role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/(tabs)/feed");
+      }
     } catch (err: any) {
       setFormError(getRequestErrorMessage(err, "Login failed. Please try again."));
     } finally {

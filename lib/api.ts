@@ -99,6 +99,9 @@ api.interceptors.response.use(
       // no user-scoped data leaks to the next account on this device.
       store.dispatch(resetStore());
       await persistor.purge();
+      // Module-level admin prefetch cache lives outside Redux, so clear it too.
+      const { clearAdminCache } = require("@/lib/admin-cache");
+      clearAdminCache();
       // 403 on refresh = account suspended
       if (refreshError?.response?.status === 403) {
         const { router } = require("expo-router");
