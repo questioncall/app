@@ -11,12 +11,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { persistor, resetStore } from "@/store";
-import { SECURE_STORE_KEYS } from "@/lib/api";
-import { resetPusherClient } from "@/lib/realtime";
-import { unsubscribePushToken, getCurrentPushToken } from "@/lib/push-notifications";
+import { useAppSelector } from "@/hooks/redux";
+import { purgeLocalSession } from "@/lib/session";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { PlanBadge } from "@/components/PlanBadge";
 import type { ComponentProps } from "react";
@@ -100,7 +96,6 @@ function Divider() {
 }
 
 export default function MenuScreen() {
-  const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.user.data);
   const config = useAppSelector((s) => s.config.data);
   const unreadNotificationCount = useAppSelector((s) => s.notifications.unreadCount);
@@ -115,17 +110,9 @@ export default function MenuScreen() {
         text: "Sign Out",
         style: "destructive",
         onPress: async () => {
-          // Unsubscribe push token before clearing auth
-          const pushToken = getCurrentPushToken();
-          if (pushToken) await unsubscribePushToken(pushToken);
-
-          await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
-          await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
-          // Reset every slice to initial state, then clear what's on disk so no
-          // user-scoped data (chats, courses, wallet, notes…) survives logout.
-          dispatch(resetStore());
-          await persistor.purge();
-          resetPusherClient();
+          // Fast, non-blocking teardown — navigates immediately; the push
+          // unsubscribe runs best-effort in the background.
+          await purgeLocalSession();
           router.replace("/");
         },
       },

@@ -9,17 +9,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { persistor, resetStore } from "@/store";
-import { SECURE_STORE_KEYS } from "@/lib/api";
-import { resetPusherClient } from "@/lib/realtime";
-import { clearAdminCache } from "@/lib/admin-cache";
-import { getCurrentPushToken, unsubscribePushToken } from "@/lib/push-notifications";
+import { purgeLocalSession } from "@/lib/session";
 import {
   ADMIN_SECTION_GROUPS,
   ADMIN_SECTION_COUNT,
@@ -67,11 +62,9 @@ function SectionCard({ section }: { section: AdminSection }) {
 }
 
 export default function AdminDashboardScreen() {
-  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const user = useAppSelector((s) => s.user.data);
-  const { statusBarStyle, backgroundColor, iconColor, primaryColor, primarySoftColor } =
-    useAppTheme();
+  const { statusBarStyle, backgroundColor, iconColor, primarySoftColor } = useAppTheme();
 
   async function handleSignOut() {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -80,17 +73,9 @@ export default function AdminDashboardScreen() {
         text: "Sign Out",
         style: "destructive",
         onPress: async () => {
-          const pushToken = getCurrentPushToken();
-          if (pushToken) await unsubscribePushToken(pushToken);
-
-          await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
-          await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
-          // Reset every slice to initial state, then clear what's on disk so no
-          // user-scoped data survives logout.
-          dispatch(resetStore());
-          await persistor.purge();
-          clearAdminCache();
-          resetPusherClient();
+          // Fast, non-blocking teardown — navigates immediately; the push
+          // unsubscribe runs best-effort in the background.
+          await purgeLocalSession();
           router.replace("/");
         },
       },

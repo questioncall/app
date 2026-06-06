@@ -259,7 +259,10 @@ export async function unsubscribePushToken(token: string): Promise<boolean> {
     await api.post("/push/unsubscribe", { endpoint: token });
     return true;
   } catch (error) {
-    console.error(
+    // Best-effort cleanup — never surface this. In dev, console.error is
+    // elevated to a red error overlay, and an unsubscribe failure during
+    // sign-out / account deletion (token already gone → 401) is harmless.
+    console.warn(
       "[push] Failed to unsubscribe push token:",
       error instanceof Error ? error.message : String(error),
     );

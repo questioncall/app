@@ -12,14 +12,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import Toast from "react-native-toast-message";
 
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { persistor, resetStore } from "@/store";
-import { api, SECURE_STORE_KEYS } from "@/lib/api";
-import { resetPusherClient } from "@/lib/realtime";
-import { getCurrentPushToken, unsubscribePushToken } from "@/lib/push-notifications";
+import { useAppSelector } from "@/hooks/redux";
+import { api } from "@/lib/api";
+import { purgeLocalSession } from "@/lib/session";
 import { useAppTheme } from "@/hooks/use-app-theme";
 
 type ComponentIcon = React.ComponentProps<typeof Ionicons>["name"];
@@ -60,7 +57,6 @@ const RECOVERY_STEPS: { icon: ComponentIcon; text: string }[] = [
 ];
 
 export default function DeleteAccountScreen() {
-  const dispatch = useAppDispatch();
   const { statusBarStyle, backgroundColor, iconColor, mutedIconColor, primaryColor } =
     useAppTheme();
 
@@ -86,17 +82,6 @@ export default function DeleteAccountScreen() {
     }
   }
 
-  async function purgeLocalSession() {
-    const pushToken = getCurrentPushToken();
-    if (pushToken) await unsubscribePushToken(pushToken);
-
-    await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.ACCESS_TOKEN);
-    await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
-    dispatch(resetStore());
-    await persistor.purge();
-    resetPusherClient();
-  }
-
   async function handleDelete() {
     if (submitting) return;
 
@@ -112,7 +97,9 @@ export default function DeleteAccountScreen() {
         },
       });
 
-      await purgeLocalSession();
+      // Account is already gone server-side — skip the push unsubscribe (it
+      // would just 401 with the now-dead token and stall the sign-out).
+      await purgeLocalSession({ unsubscribePush: false });
       router.replace("/");
       Toast.show({
         type: "success",
