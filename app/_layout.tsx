@@ -212,6 +212,8 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       SplashScreen.hideAsync();
     }
 
+    void fetchPlatformConfig();
+
     if (!isAuthed) return;
 
     // ── Background warm-up: runs after first paint, never blocks the splash ──
@@ -222,7 +224,6 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
       .catch(() => {});
 
     void fetchCurrentUser(); // revalidates cached user + handles suspension
-    void fetchPlatformConfig();
     void backgroundPrefetch(); // channels + notes + notifications
     // Record DAU — server deduplicates via upsert
     api.post("/daily-active", { platform: "app" }).catch(() => {});

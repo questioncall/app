@@ -38,6 +38,11 @@ export interface PlatformConfig {
   // Question limits
   maxQuestionsPerPlan: Record<string, number>;
 
+  // Landing
+  landingUserCount?: number;
+  landingUserCountOffset?: number;
+  landingDisplayUserCount?: number;
+
   // Subscription
   plans: {
     slug: string;

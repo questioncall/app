@@ -92,6 +92,22 @@ function getInitials(name?: string | null) {
   return parts.map((part) => part[0]?.toUpperCase()).join("") || "QC";
 }
 
+function normalizeCourseDetail(
+  data: CourseDetail | Course | null | undefined,
+): CourseDetail | null {
+  if (!data) return null;
+
+  const rawSections = Array.isArray((data as CourseDetail).sections)
+    ? (data as CourseDetail).sections
+    : [];
+  const sections = rawSections.map((section) => ({
+    ...section,
+    videos: Array.isArray(section?.videos) ? section.videos : [],
+  }));
+
+  return { ...data, sections } as CourseDetail;
+}
+
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string | string[] }>();
   const courseId = Array.isArray(id) ? id[0] : id;
@@ -148,10 +164,10 @@ export default function CourseDetailScreen() {
 
   // Seed from the prefetched full detail (instant render with sections) when
   // available, otherwise from the list summary, otherwise nothing.
-  const initialDetail = cachedDetail?.data as CourseDetail | undefined;
-  const [course, setCourse] = useState<CourseDetail | null>(
-    initialDetail ?? (cachedCourse ? { ...cachedCourse, sections: [] } : null),
+  const initialDetail = normalizeCourseDetail(
+    (cachedDetail?.data as CourseDetail | undefined) ?? cachedCourse,
   );
+  const [course, setCourse] = useState<CourseDetail | null>(initialDetail);
   // Whether we already have the full detail (with sections) on screen — used to
   // suppress the full-screen loader during background revalidation.
   const hasDetailRef = useRef<boolean>(Boolean(initialDetail));
@@ -188,10 +204,11 @@ export default function CourseDetailScreen() {
 
       try {
         const res = await api.get(`/courses/${courseId}`);
-        setCourse(res.data as CourseDetail);
+        const nextCourse = normalizeCourseDetail(res.data as CourseDetail);
+        setCourse(nextCourse);
         hasDetailRef.current = true;
-        if (res.data?._id) {
-          dispatch(setCourseDetail({ id: courseId, data: res.data }));
+        if (nextCourse?._id) {
+          dispatch(setCourseDetail({ id: courseId, data: nextCourse }));
         }
       } catch (err: any) {
         setError(
@@ -373,7 +390,11 @@ export default function CourseDetailScreen() {
 
   const totalVideos = useMemo(
     () =>
-      course?.sections?.reduce((count, section) => count + section.videos.length, 0) ?? 0,
+      course?.sections?.reduce(
+        (count, section) =>
+          count + (Array.isArray(section.videos) ? section.videos.length : 0),
+        0,
+      ) ?? 0,
     [course],
   );
 
@@ -381,10 +402,10 @@ export default function CourseDetailScreen() {
     const previewCount = course?.freePreviewCount ?? 0;
     if (!course || previewCount <= 0) return new Set<string>();
 
-    const orderedVideos = [...course.sections]
+    const orderedVideos = [...(course.sections ?? [])]
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .flatMap((section) =>
-        [...section.videos].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+        [...(section.videos ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
       );
 
     return new Set(orderedVideos.slice(0, previewCount).map((video) => video._id));
@@ -441,8 +462,9 @@ export default function CourseDetailScreen() {
   const reviews = activeCourse.reviewCount ?? activeCourse.reviews ?? 0;
   const instructorName = activeCourse.instructorName || "QuestionCall";
   const instructorRole = activeCourse.instructorRole || "Course instructor";
-  const totalSections = activeCourse.sections?.length ?? 0;
-  const firstVideo = activeCourse.sections?.[0]?.videos?.[0];
+  const courseSections = activeCourse.sections ?? [];
+  const totalSections = courseSections.length;
+  const firstVideo = courseSections[0]?.videos?.[0];
   // Only teachers can be followed, and never yourself.
   const canFollowInstructor =
     Boolean(activeCourse.instructorId) &&
@@ -883,8 +905,8 @@ export default function CourseDetailScreen() {
           </View>
 
           <View style={{ gap: 10 }}>
-            {activeCourse.sections.length > 0 ? (
-              activeCourse.sections.map((section, sectionIndex) => {
+            {courseSections.length > 0 ? (
+              courseSections.map((section, sectionIndex) => {
                 const isLocked = !isEnrolled && activeCourse.pricingModel !== "FREE";
                 const isOpen = openSections[section._id] ?? sectionIndex === 0;
 

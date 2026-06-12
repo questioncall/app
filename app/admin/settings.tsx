@@ -20,6 +20,10 @@ import {
  */
 const GROUPS: { title: string; fields: [string, string][] }[] = [
   {
+    title: "Landing",
+    fields: [["landingUserCountOffset", "User count offset"]],
+  },
+  {
     title: "Teacher & ratings",
     fields: [
       ["commissionPercent", "Commission %"],

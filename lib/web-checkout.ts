@@ -1,5 +1,4 @@
-import { Appearance } from "react-native";
-import * as WebBrowser from "expo-web-browser";
+import { Appearance, Linking } from "react-native";
 import Toast from "react-native-toast-message";
 
 import { api } from "@/lib/api";
@@ -52,8 +51,26 @@ export async function openWebCheckout(
     return;
   }
 
-  // System browser. The return deep link is auto-caught and closes the tab.
-  const result = await WebBrowser.openAuthSessionAsync(url, RETURN_URL);
+  // System browser. Keep expo-web-browser lazy so older OTA-compatible APKs do
+  // not crash when merely importing screens that can eventually open checkout.
+  let result: { type: string; url?: string | null } | null = null;
+  try {
+    const WebBrowser = await import("expo-web-browser");
+    result = await WebBrowser.openAuthSessionAsync(url, RETURN_URL);
+  } catch (error) {
+    console.warn("[checkout] Falling back to Linking.openURL:", error);
+    try {
+      await Linking.openURL(url);
+      return;
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Couldn't open the membership page",
+        text2: "Please check your browser settings and try again.",
+      });
+      return;
+    }
+  }
 
   if (result.type === "success" && result.url) {
     // The web success/cancel surface tells us what actually happened.
