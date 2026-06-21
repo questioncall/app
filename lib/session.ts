@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { store, persistor, resetStore } from "@/store";
 import { SECURE_STORE_KEYS } from "@/lib/api";
+import { clearAuth } from "@/store/slices/authSlice";
 import { resetPusherClient } from "@/lib/realtime";
 import { clearAdminCache } from "@/lib/admin-cache";
 import { getCurrentPushToken, unsubscribePushToken } from "@/lib/push-notifications";
@@ -41,6 +42,7 @@ export async function purgeLocalSession(opts?: {
 
   // Wipe in-memory + persisted state and disconnect realtime.
   store.dispatch(resetStore());
+  store.dispatch(clearAuth());
   clearAdminCache();
   resetPusherClient();
   await persistor.purge();

@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { store, persistor, resetStore } from "@/store";
-import { setAccessToken } from "@/store/slices/authSlice";
+import { clearAuth, setAccessToken } from "@/store/slices/authSlice";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://questioncall.com/api";
 export const API_BASE_URL = API_URL.replace(/\/api\/?$/, "");
@@ -98,6 +98,7 @@ api.interceptors.response.use(
       // Session is truly over — wipe every slice and clear persisted storage so
       // no user-scoped data leaks to the next account on this device.
       store.dispatch(resetStore());
+      store.dispatch(clearAuth());
       await persistor.purge();
       // Module-level admin prefetch cache lives outside Redux, so clear it too.
       const { clearAdminCache } = require("@/lib/admin-cache");

@@ -30,6 +30,12 @@ import {
 } from "@/store/slices/feedSlice";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useFilterOptions } from "@/hooks/use-filter-options";
+import {
+  LEVEL_OPTIONS,
+  STREAM_OPTIONS,
+  SUBJECT_OPTIONS,
+  mergeAcademicOptions,
+} from "@/constants/academic-options";
 import { api } from "@/lib/api";
 import {
   buildAnswerFormatFromSelection,
@@ -123,6 +129,9 @@ function StudentAskScreen() {
   const bodyLen = body.trim().length;
   const isTitleValid = titleLen >= TITLE_MIN_CHARS && titleLen <= TITLE_MAX;
   const canSubmit = isTitleValid && !isPosting && !quotaExhausted;
+  const subjectOptions = mergeAcademicOptions(filterOptions.subjects, SUBJECT_OPTIONS);
+  const streamOptions = mergeAcademicOptions(filterOptions.streams, STREAM_OPTIONS);
+  const levelOptions = mergeAcademicOptions(filterOptions.levels, LEVEL_OPTIONS);
 
   function toggleFormat(next: SelectableAnswerFormat) {
     setSelectedFormats((prev) => toggleSelectableAnswerFormat(prev, next));
@@ -240,6 +249,9 @@ function StudentAskScreen() {
     const tempId = `temp_${Date.now()}`;
     const now = new Date().toISOString();
     const answerFormat = buildAnswerFormatFromSelection(selectedFormats);
+    const trimmedSubject = subject.trim();
+    const trimmedStream = stream.trim();
+    const trimmedLevel = level.trim();
 
     const optimistic = normalizeFeedQuestion({
       id: tempId,
@@ -247,9 +259,9 @@ function StudentAskScreen() {
       body: body.trim(),
       answerFormat,
       answerVisibility: visibility,
-      subject: subject || undefined,
-      stream: stream || undefined,
-      level: level || undefined,
+      subject: trimmedSubject || undefined,
+      stream: trimmedStream || undefined,
+      level: trimmedLevel || undefined,
       status: "OPEN",
       resetCount: 0,
       askerId: user?._id ?? "",
@@ -280,9 +292,9 @@ function StudentAskScreen() {
         body: body.trim() || undefined,
         answerFormat,
         answerVisibility: visibility,
-        subject: subject || undefined,
-        stream: stream || undefined,
-        level: level || undefined,
+        subject: trimmedSubject || undefined,
+        stream: trimmedStream || undefined,
+        level: trimmedLevel || undefined,
         images: imageUrls.length > 0 ? imageUrls : undefined,
       });
 
@@ -589,7 +601,7 @@ function StudentAskScreen() {
               {/* Subject / Stream / Level */}
               <ChipGroup
                 label="Subject (optional)"
-                options={filterOptions.subjects}
+                options={subjectOptions}
                 value={subject}
                 onChange={setSubject}
                 primaryColor={primaryColor}
@@ -600,7 +612,7 @@ function StudentAskScreen() {
               />
               <ChipGroup
                 label="Stream"
-                options={filterOptions.streams}
+                options={streamOptions}
                 value={stream}
                 onChange={setStream}
                 primaryColor={primaryColor}
@@ -611,7 +623,7 @@ function StudentAskScreen() {
               />
               <ChipGroup
                 label="Level"
-                options={filterOptions.levels}
+                options={levelOptions}
                 value={level}
                 onChange={setLevel}
                 primaryColor={primaryColor}
@@ -832,7 +844,7 @@ function VisibilityButton({
   );
 }
 
-function ChipGroup<T extends string>({
+function ChipGroup({
   label,
   options,
   value,
@@ -844,7 +856,7 @@ function ChipGroup<T extends string>({
   mutedIconColor,
 }: {
   label: string;
-  options: readonly T[];
+  options: readonly string[];
   value: string;
   onChange: (next: string) => void;
   primaryColor: string;
@@ -856,13 +868,22 @@ function ChipGroup<T extends string>({
   return (
     <View>
       <Text className="mb-2 text-[13px] font-semibold text-foreground">{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={`Type ${label.toLowerCase().replace(" (optional)", "")}`}
+        placeholderTextColor={mutedIconColor}
+        autoCapitalize="words"
+        className="mb-2 rounded-2xl border px-3 py-2.5 text-[13px] text-foreground"
+        style={{ borderColor, backgroundColor: cardColor }}
+      />
       <View className="flex-row flex-wrap gap-2">
         {options.map((opt) => {
-          const active = value === opt;
+          const active = value.trim().toLowerCase() === opt.toLowerCase();
           return (
             <TouchableOpacity
               key={opt}
-              onPress={() => onChange(active ? "" : opt)}
+              onPress={() => onChange(opt)}
               activeOpacity={0.85}
               className="rounded-full border px-3 py-1.5"
               style={{

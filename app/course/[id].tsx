@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Component,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Image,
@@ -92,23 +101,112 @@ function getInitials(name?: string | null) {
   return parts.map((part) => part[0]?.toUpperCase()).join("") || "QC";
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function normalizeCourseDetail(
   data: CourseDetail | Course | null | undefined,
 ): CourseDetail | null {
-  if (!data) return null;
+  if (!isRecord(data)) return null;
 
-  const rawSections = Array.isArray((data as CourseDetail).sections)
-    ? (data as CourseDetail).sections
-    : [];
-  const sections = rawSections.map((section) => ({
-    ...section,
-    videos: Array.isArray(section?.videos) ? section.videos : [],
-  }));
+  const rawSections = Array.isArray(data.sections) ? data.sections : [];
+  const sections = rawSections.map((rawSection, index) => {
+    const section = isRecord(rawSection) ? rawSection : {};
+    const rawVideos = Array.isArray(section.videos) ? section.videos : [];
+    const videos = rawVideos.map((rawVideo, videoIndex) => {
+      const video = isRecord(rawVideo) ? rawVideo : {};
+
+      return {
+        ...(video as object),
+        _id: String(video._id ?? `video-${index}-${videoIndex}`),
+        title: String(video.title ?? "Untitled lesson"),
+      } as CourseVideo;
+    });
+
+    return {
+      ...(section as object),
+      _id: String(section._id ?? `section-${index}`),
+      title: String(section.title ?? "Untitled section"),
+      videos,
+    } as CourseSection;
+  });
 
   return { ...data, sections } as CourseDetail;
 }
 
-export default function CourseDetailScreen() {
+class CourseDetailErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: string | null }
+> {
+  state = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error: error.message || "Unable to open this course." };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[CourseDetail] render crash", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#ffffff",
+            padding: 24,
+          }}
+        >
+          <Ionicons name="alert-circle-outline" size={42} color="#ef4444" />
+          <Text
+            style={{
+              marginTop: 12,
+              color: "#111827",
+              fontSize: 16,
+              fontWeight: "800",
+              textAlign: "center",
+            }}
+          >
+            Unable to open this course
+          </Text>
+          <Text
+            style={{
+              marginTop: 8,
+              color: "#6b7280",
+              fontSize: 13,
+              lineHeight: 19,
+              textAlign: "center",
+            }}
+          >
+            Please go back and try again after refreshing the course list.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              marginTop: 18,
+              borderRadius: 999,
+              backgroundColor: "#12936A",
+              paddingHorizontal: 18,
+              paddingVertical: 11,
+            }}
+          >
+            <Text style={{ color: "#ffffff", fontSize: 14, fontWeight: "800" }}>
+              Go back
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function CourseDetailScreenContent() {
   const { id } = useLocalSearchParams<{ id: string | string[] }>();
   const courseId = Array.isArray(id) ? id[0] : id;
   const cachedCourse = useAppSelector((state) =>
@@ -304,11 +402,12 @@ export default function CourseDetailScreen() {
         await api.delete(`/courses/${courseId}/favourite`);
       }
       const existing = user?.favouriteCourses ?? [];
+      const favouriteCourses = Array.isArray(existing) ? existing : [];
       dispatch(
         updateUser({
           favouriteCourses: next
-            ? Array.from(new Set([...existing, courseId]))
-            : existing.filter((favId) => favId !== courseId),
+            ? Array.from(new Set(favouriteCourses.concat(courseId)))
+            : favouriteCourses.filter((favId) => favId !== courseId),
         }),
       );
       dispatch(patchCourseDetailFavourite({ id: courseId, isFavourite: next }));
@@ -353,11 +452,12 @@ export default function CourseDetailScreen() {
           : Math.max(0, followerCount + (next ? 1 : -1));
       setFollowerCount(resolvedCount);
       const existing = user?.following ?? [];
+      const following = Array.isArray(existing) ? existing : [];
       dispatch(
         updateUser({
           following: next
-            ? Array.from(new Set([...existing, instructorId]))
-            : existing.filter((teacherId) => teacherId !== instructorId),
+            ? Array.from(new Set(following.concat(instructorId)))
+            : following.filter((teacherId) => teacherId !== instructorId),
         }),
       );
       dispatch(
@@ -402,11 +502,13 @@ export default function CourseDetailScreen() {
     const previewCount = course?.freePreviewCount ?? 0;
     if (!course || previewCount <= 0) return new Set<string>();
 
-    const orderedVideos = [...(course.sections ?? [])]
+    const sections = Array.isArray(course.sections) ? course.sections.slice() : [];
+    const orderedVideos = sections
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      .flatMap((section) =>
-        [...(section.videos ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-      );
+      .flatMap((section) => {
+        const videos = Array.isArray(section.videos) ? section.videos.slice() : [];
+        return videos.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      });
 
     return new Set(orderedVideos.slice(0, previewCount).map((video) => video._id));
   }, [course]);
@@ -462,7 +564,9 @@ export default function CourseDetailScreen() {
   const reviews = activeCourse.reviewCount ?? activeCourse.reviews ?? 0;
   const instructorName = activeCourse.instructorName || "QuestionCall";
   const instructorRole = activeCourse.instructorRole || "Course instructor";
-  const courseSections = activeCourse.sections ?? [];
+  const courseSections = Array.isArray(activeCourse.sections)
+    ? activeCourse.sections
+    : [];
   const totalSections = courseSections.length;
   const firstVideo = courseSections[0]?.videos?.[0];
   // Only teachers can be followed, and never yourself.
@@ -925,7 +1029,7 @@ export default function CourseDetailScreen() {
                       activeOpacity={0.72}
                       onPress={() =>
                         setOpenSections((current) => ({
-                          ...current,
+                          ...(isRecord(current) ? current : {}),
                           [section._id]: !isOpen,
                         }))
                       }
@@ -1277,5 +1381,13 @@ export default function CourseDetailScreen() {
         </LinearGradient>
       ) : null}
     </View>
+  );
+}
+
+export default function CourseDetailScreen() {
+  return (
+    <CourseDetailErrorBoundary>
+      <CourseDetailScreenContent />
+    </CourseDetailErrorBoundary>
   );
 }

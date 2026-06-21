@@ -18,6 +18,8 @@ import * as DocumentPicker from "expo-document-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { AcademicSuggestionInput } from "@/components/ui/academic-suggestion-input";
+import { LEVEL_OPTIONS, SUBJECT_OPTIONS } from "@/constants/academic-options";
 import { useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
@@ -63,28 +65,6 @@ type CourseDetail = {
 type VideoMethod = "ZOOM_LINK" | "FILE_UPLOAD";
 type Tab = "curriculum" | "settings" | "analytics";
 
-const SUBJECTS = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "English",
-  "Nepali",
-  "Computer Science",
-  "History",
-  "Geography",
-  "Economics",
-  "Accountancy",
-  "Business Studies",
-  "Information Technology",
-  "Data Science",
-  "Web Development",
-  "Mobile Development",
-  "Statistics",
-  "Management",
-  "Others",
-];
-const LEVELS = ["Below 10", "11/12", "Bachelor"];
 const STATUSES: CourseStatus[] = ["DRAFT", "ACTIVE", "COMPLETED", "ARCHIVED"];
 
 function StatusPill({ status }: { status: CourseStatus }) {
@@ -449,8 +429,8 @@ export default function ManageCourseScreen() {
       const res = await api.patch(`/courses/${courseId}`, {
         title: settingsForm.title.trim(),
         description: settingsForm.description.trim(),
-        subject: settingsForm.subject,
-        level: settingsForm.level,
+        subject: settingsForm.subject.trim(),
+        level: settingsForm.level.trim(),
         status: settingsForm.status,
         pricingModel: settingsForm.pricingModel,
         price: settingsForm.pricingModel === "PAID" ? Number(settingsForm.price) : null,
@@ -1009,35 +989,12 @@ export default function ManageCourseScreen() {
           >
             Subject
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {SUBJECTS.map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  onPress={() => setSettingsForm((f) => ({ ...f, subject: s }))}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: settingsForm.subject === s ? primaryColor : borderColor,
-                    backgroundColor:
-                      settingsForm.subject === s ? primaryColor : "transparent",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "600",
-                      color: settingsForm.subject === s ? "#fff" : mutedIconColor,
-                    }}
-                  >
-                    {s}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+          <AcademicSuggestionInput
+            value={settingsForm.subject}
+            onChangeText={(value) => setSettingsForm((f) => ({ ...f, subject: value }))}
+            options={SUBJECT_OPTIONS}
+            placeholder="Type or choose subject"
+          />
         </View>
 
         {/* Level */}
@@ -1052,33 +1009,12 @@ export default function ManageCourseScreen() {
           >
             Level
           </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {LEVELS.map((l) => (
-              <TouchableOpacity
-                key={l}
-                onPress={() => setSettingsForm((f) => ({ ...f, level: l }))}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: settingsForm.level === l ? primaryColor : borderColor,
-                  backgroundColor:
-                    settingsForm.level === l ? primaryColor : "transparent",
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: settingsForm.level === l ? "#fff" : mutedIconColor,
-                  }}
-                >
-                  {l}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <AcademicSuggestionInput
+            value={settingsForm.level}
+            onChangeText={(value) => setSettingsForm((f) => ({ ...f, level: value }))}
+            options={LEVEL_OPTIONS}
+            placeholder="Type or choose level"
+          />
         </View>
 
         {/* Status */}

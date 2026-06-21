@@ -14,6 +14,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as Linking from "expo-linking";
+import { AcademicSuggestionInput } from "@/components/ui/academic-suggestion-input";
+import { NOTE_GRADE_OPTIONS, SUBJECT_OPTIONS } from "@/constants/academic-options";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { startMobileUpload } from "@/lib/upload-manager";
@@ -37,26 +39,8 @@ const FILE_TYPE_CONFIG: Record<FileType, { color: string; icon: string }> = {
   Image: { color: "#8B5CF6", icon: "image" },
 };
 
-const SUBJECTS = [
-  "Physics",
-  "Biology",
-  "Chemistry",
-  "Mathematics",
-  "English",
-  "Computer Science",
-  "Social Studies",
-  "Accountancy",
-  "Other",
-];
-const GRADES = [
-  "Grade 8",
-  "Grade 9",
-  "Grade 10",
-  "Grade 11",
-  "Grade 12",
-  "Bachelor's",
-  "Other",
-];
+const SUBJECTS = [...SUBJECT_OPTIONS];
+const GRADES = [...NOTE_GRADE_OPTIONS];
 const FILE_TYPES: FileType[] = ["PDF", "DOCX", "PPT", "Image"];
 
 function NoteCard({ note, onPress }: { note: Note; onPress: (note: Note) => void }) {
@@ -161,51 +145,6 @@ function NoteCard({ note, onPress }: { note: Note; onPress: (note: Note) => void
   );
 }
 
-function ChipSelector<T extends string>({
-  options,
-  selected,
-  onSelect,
-  primaryColor,
-  cardColor,
-  borderColor,
-}: {
-  options: T[];
-  selected: T;
-  onSelect: (v: T) => void;
-  primaryColor: string;
-  cardColor: string;
-  borderColor: string;
-}) {
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-      <View className="flex-row gap-2 pb-1">
-        {options.map((opt) => {
-          const active = opt === selected;
-          return (
-            <TouchableOpacity
-              key={opt}
-              onPress={() => onSelect(opt)}
-              className="rounded-full border px-3 py-1.5"
-              style={{
-                backgroundColor: active ? primaryColor : cardColor,
-                borderColor: active ? primaryColor : borderColor,
-              }}
-              activeOpacity={0.7}
-            >
-              <Text
-                className="text-xs font-medium"
-                style={{ color: active ? "#FFFFFF" : undefined }}
-              >
-                {opt}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </ScrollView>
-  );
-}
-
 function UploadModal({
   visible,
   onClose,
@@ -273,12 +212,12 @@ function UploadModal({
   };
 
   function onFormSubmit() {
-    if (!title.trim()) return;
+    if (!title.trim() || !subject.trim() || !grade.trim()) return;
     onSubmit({
       title: title.trim(),
       description: description.trim(),
-      subject,
-      grade,
+      subject: subject.trim(),
+      grade: grade.trim(),
       fileType,
       pickedFile,
     });
@@ -355,13 +294,12 @@ function UploadModal({
               Subject
             </Text>
             <View className="mb-4">
-              <ChipSelector
+              <AcademicSuggestionInput
+                value={subject}
+                onChangeText={setSubject}
                 options={SUBJECTS}
-                selected={subject}
-                onSelect={setSubject}
-                primaryColor={primaryColor}
-                cardColor={backgroundColor}
-                borderColor={borderColor}
+                placeholder="Type or choose subject"
+                inputBackgroundColor={backgroundColor}
               />
             </View>
 
@@ -369,13 +307,12 @@ function UploadModal({
               Grade / Class
             </Text>
             <View className="mb-4">
-              <ChipSelector
+              <AcademicSuggestionInput
+                value={grade}
+                onChangeText={setGrade}
                 options={GRADES}
-                selected={grade}
-                onSelect={setGrade}
-                primaryColor={primaryColor}
-                cardColor={backgroundColor}
-                borderColor={borderColor}
+                placeholder="Type or choose grade, class, or level"
+                inputBackgroundColor={backgroundColor}
               />
             </View>
 
@@ -616,14 +553,16 @@ export default function NotesScreen() {
   };
 
   const handleSaveEdit = async () => {
-    if (!selectedNote || !editTitle.trim()) return;
+    if (!selectedNote || !editTitle.trim() || !editSubject.trim() || !editGrade.trim()) {
+      return;
+    }
     setIsSavingEdit(true);
     try {
       const res = await api.patch(`/notes/${selectedNote.id}`, {
         title: editTitle.trim(),
         description: editDescription.trim(),
-        subject: editSubject,
-        grade: editGrade,
+        subject: editSubject.trim(),
+        grade: editGrade.trim(),
         fileType: editFileType,
       });
       const updated = res.data as Note;
@@ -916,13 +855,12 @@ export default function NotesScreen() {
                     Subject
                   </Text>
                   <View className="mb-4">
-                    <ChipSelector
+                    <AcademicSuggestionInput
+                      value={editSubject}
+                      onChangeText={setEditSubject}
                       options={SUBJECTS}
-                      selected={editSubject}
-                      onSelect={setEditSubject}
-                      primaryColor={primaryColor}
-                      cardColor={backgroundColor}
-                      borderColor={borderColor}
+                      placeholder="Type or choose subject"
+                      inputBackgroundColor={backgroundColor}
                     />
                   </View>
 
@@ -930,13 +868,12 @@ export default function NotesScreen() {
                     Grade
                   </Text>
                   <View className="mb-4">
-                    <ChipSelector
+                    <AcademicSuggestionInput
+                      value={editGrade}
+                      onChangeText={setEditGrade}
                       options={GRADES}
-                      selected={editGrade}
-                      onSelect={setEditGrade}
-                      primaryColor={primaryColor}
-                      cardColor={backgroundColor}
-                      borderColor={borderColor}
+                      placeholder="Type or choose grade, class, or level"
+                      inputBackgroundColor={backgroundColor}
                     />
                   </View>
 

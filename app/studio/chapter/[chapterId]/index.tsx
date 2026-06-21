@@ -19,6 +19,8 @@ import * as DocumentPicker from "expo-document-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { AcademicSuggestionInput } from "@/components/ui/academic-suggestion-input";
+import { LEVEL_OPTIONS, SUBJECT_OPTIONS } from "@/constants/academic-options";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 import { startChapterVideoUpload, startMobileUpload } from "@/lib/upload-manager";
@@ -554,24 +556,44 @@ export default function ManageChapterScreen() {
                 >
                   {field.label}
                 </Text>
-                <TextInput
-                  value={(settingsForm as any)[field.key]}
-                  onChangeText={(value) =>
-                    setSettingsForm((f) => ({ ...f, [field.key]: value }))
-                  }
-                  multiline={field.multiline}
-                  textAlignVertical={field.multiline ? "top" : "center"}
-                  style={{
-                    minHeight: field.multiline ? 110 : undefined,
-                    borderWidth: 1,
-                    borderColor,
-                    borderRadius: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    color: textColor,
-                    backgroundColor: cardColor,
-                  }}
-                />
+                {field.key === "subject" ? (
+                  <AcademicSuggestionInput
+                    value={settingsForm.subject}
+                    onChangeText={(value) =>
+                      setSettingsForm((f) => ({ ...f, subject: value }))
+                    }
+                    options={SUBJECT_OPTIONS}
+                    placeholder="Type or choose subject"
+                  />
+                ) : field.key === "level" ? (
+                  <AcademicSuggestionInput
+                    value={settingsForm.level}
+                    onChangeText={(value) =>
+                      setSettingsForm((f) => ({ ...f, level: value }))
+                    }
+                    options={LEVEL_OPTIONS}
+                    placeholder="Type or choose level"
+                  />
+                ) : (
+                  <TextInput
+                    value={(settingsForm as any)[field.key]}
+                    onChangeText={(value) =>
+                      setSettingsForm((f) => ({ ...f, [field.key]: value }))
+                    }
+                    multiline={field.multiline}
+                    textAlignVertical={field.multiline ? "top" : "center"}
+                    style={{
+                      minHeight: field.multiline ? 110 : undefined,
+                      borderWidth: 1,
+                      borderColor,
+                      borderRadius: 12,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      color: textColor,
+                      backgroundColor: cardColor,
+                    }}
+                  />
+                )}
               </View>
             ))}
 

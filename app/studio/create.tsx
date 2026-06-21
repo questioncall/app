@@ -17,6 +17,8 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { AcademicSuggestionInput } from "@/components/ui/academic-suggestion-input";
+import { LEVEL_OPTIONS, SUBJECT_OPTIONS } from "@/constants/academic-options";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 
@@ -29,32 +31,6 @@ const STEPS = [
   { id: 4, title: "Schedule", icon: "calendar-outline" as const },
   { id: 5, title: "Review", icon: "checkmark-circle-outline" as const },
 ];
-
-const SUBJECTS = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "English",
-  "Nepali",
-  "Computer Science",
-  "History",
-  "Geography",
-  "Economics",
-  "Accountancy",
-  "Business Studies",
-  "Information Technology",
-  "Data Science",
-  "Web Development",
-  "Mobile Development",
-  "UI/UX Design",
-  "Statistics",
-  "Management",
-  "Finance",
-  "Others",
-];
-
-const LEVELS = ["Below 10", "11/12", "Bachelor"];
 
 export default function CreateCourseScreen() {
   const {
@@ -90,8 +66,8 @@ export default function CreateCourseScreen() {
       return (
         title.trim().length > 0 &&
         description.trim().length > 0 &&
-        subject.length > 0 &&
-        level.length > 0
+        subject.trim().length > 0 &&
+        level.trim().length > 0
       );
     if (step === 3) return !isUploadingThumb;
     return true;
@@ -152,8 +128,8 @@ export default function CreateCourseScreen() {
       const res = await api.post("/courses", {
         title: title.trim(),
         description: description.trim(),
-        subject,
-        level,
+        subject: subject.trim(),
+        level: level.trim(),
         pricingModel,
         price: pricingModel === "PAID" ? Number(price) : null,
         thumbnailUrl: thumbnailUrl ?? null,
@@ -426,34 +402,12 @@ export default function CreateCourseScreen() {
         >
           Subject *
         </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {SUBJECTS.map((s) => (
-              <TouchableOpacity
-                key={s}
-                onPress={() => setSubject(s)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: subject === s ? primaryColor : borderColor,
-                  backgroundColor: subject === s ? primaryColor : "transparent",
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: subject === s ? "#fff" : mutedIconColor,
-                  }}
-                >
-                  {s}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        <AcademicSuggestionInput
+          value={subject}
+          onChangeText={setSubject}
+          options={SUBJECT_OPTIONS}
+          placeholder="Type or choose subject"
+        />
       </View>
 
       <View>
@@ -467,32 +421,12 @@ export default function CreateCourseScreen() {
         >
           Level *
         </Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {LEVELS.map((l) => (
-            <TouchableOpacity
-              key={l}
-              onPress={() => setLevel(l)}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: level === l ? primaryColor : borderColor,
-                backgroundColor: level === l ? primaryColor : "transparent",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: "600",
-                  color: level === l ? "#fff" : mutedIconColor,
-                }}
-              >
-                {l}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <AcademicSuggestionInput
+          value={level}
+          onChangeText={setLevel}
+          options={LEVEL_OPTIONS}
+          placeholder="Type or choose level"
+        />
       </View>
     </View>
   );
@@ -729,8 +663,8 @@ export default function CreateCourseScreen() {
     const rows = [
       { label: "Pricing", value: pricingLabel },
       { label: "Title", value: title.trim() || "—" },
-      { label: "Subject", value: subject || "—" },
-      { label: "Level", value: level || "—" },
+      { label: "Subject", value: subject.trim() || "—" },
+      { label: "Level", value: level.trim() || "—" },
       { label: "Thumbnail", value: thumbnailUrl ? "✓ Uploaded" : "None (optional)" },
       { label: "Start Date", value: startDate.trim() || "Not set" },
       { label: "End Date", value: expectedEndDate.trim() || "Not set" },

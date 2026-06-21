@@ -17,26 +17,12 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { AcademicSuggestionInput } from "@/components/ui/academic-suggestion-input";
+import { LEVEL_OPTIONS, SUBJECT_OPTIONS } from "@/constants/academic-options";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api } from "@/lib/api";
 
 type PricingModel = "FREE" | "SUBSCRIPTION_INCLUDED" | "PAID";
-
-const SUBJECTS = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "English",
-  "Nepali",
-  "Computer Science",
-  "Economics",
-  "Web Development",
-  "Mobile Development",
-  "Management",
-  "Others",
-];
-const LEVELS = ["Below 10", "11/12", "Bachelor"];
 
 export default function CreateChapterScreen() {
   const {
@@ -65,7 +51,7 @@ export default function CreateChapterScreen() {
   const canProceed = () => {
     if (step === 1) return pricingModel !== "PAID" || Number(price) > 0;
     if (step === 2) {
-      return title.trim() && description.trim() && subject && level;
+      return title.trim() && description.trim() && subject.trim() && level.trim();
     }
     return !isUploadingThumb;
   };
@@ -120,8 +106,8 @@ export default function CreateChapterScreen() {
       const res = await api.post("/chapters", {
         title: title.trim(),
         description: description.trim(),
-        subject,
-        level,
+        subject: subject.trim(),
+        level: level.trim(),
         pricingModel,
         price: pricingModel === "PAID" ? Number(price) : null,
         thumbnailUrl,
@@ -331,61 +317,21 @@ export default function CreateChapterScreen() {
               <Text style={{ fontSize: 13, fontWeight: "700", color: textColor }}>
                 Subject
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {SUBJECTS.map((item) => (
-                    <TouchableOpacity
-                      key={item}
-                      onPress={() => setSubject(item)}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: subject === item ? primaryColor : borderColor,
-                        backgroundColor: subject === item ? primaryColor : "transparent",
-                        borderRadius: 20,
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: subject === item ? "#fff" : mutedIconColor,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {item}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+              <AcademicSuggestionInput
+                value={subject}
+                onChangeText={setSubject}
+                options={SUBJECT_OPTIONS}
+                placeholder="Type or choose subject"
+              />
               <Text style={{ fontSize: 13, fontWeight: "700", color: textColor }}>
                 Level
               </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {LEVELS.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    onPress={() => setLevel(item)}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: level === item ? primaryColor : borderColor,
-                      backgroundColor: level === item ? primaryColor : "transparent",
-                      borderRadius: 20,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: level === item ? "#fff" : mutedIconColor,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <AcademicSuggestionInput
+                value={level}
+                onChangeText={setLevel}
+                options={LEVEL_OPTIONS}
+                placeholder="Type or choose level"
+              />
             </>
           ) : null}
 
@@ -451,8 +397,8 @@ export default function CreateChapterScreen() {
                     ? `NPR ${Number(price).toLocaleString()}`
                     : pricingModel,
                 ],
-                ["Subject", subject || "-"],
-                ["Level", level || "-"],
+                ["Subject", subject.trim() || "-"],
+                ["Level", level.trim() || "-"],
                 ["Thumbnail", thumbnailUrl ? "Uploaded" : "None"],
               ].map(([label, value]) => (
                 <View
