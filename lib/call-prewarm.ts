@@ -92,7 +92,7 @@ export async function prewarmCallerRoom(channelId: string) {
   }
 
   const { Room, RoomEvent } = await import("livekit-client");
-  const room = new Room({ adaptiveStream: true, dynacast: true });
+  const room = new Room({ adaptiveStream: false, dynacast: false });
   const slot: CallerSlot = {
     channelId,
     room,
@@ -168,7 +168,7 @@ export async function prewarmCalleeRoom(args: {
   }
 
   const { Room, RoomEvent } = await import("livekit-client");
-  const room = new Room({ adaptiveStream: true, dynacast: true });
+  const room = new Room({ adaptiveStream: false, dynacast: false });
   const slot: CalleeSlot = {
     callSessionId: args.callSessionId,
     channelId: args.channelId,

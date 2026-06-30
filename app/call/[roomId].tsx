@@ -155,15 +155,6 @@ export default function CallScreen() {
     return () => clearActiveCall(roomId);
   }, [roomId]);
 
-  useEffect(() => {
-    if (!connected || session?.status !== "ACTIVE") return;
-
-    startOngoingCallService(session.mode);
-    return () => {
-      stopOngoingCallService();
-    };
-  }, [connected, session?.status, session?.mode]);
-
   const [session, setSession] = useState<CallSession | null>(null);
   // For the optimistic-pending path we render the RINGING UI immediately and
   // never block on a "loading" spinner, so default to false there.
@@ -183,26 +174,53 @@ export default function CallScreen() {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(true);
+
+  useEffect(() => {
+    if (!connected || session?.status !== "ACTIVE") return;
+
+    startOngoingCallService(session.mode);
+    return () => {
+      stopOngoingCallService();
+    };
+  }, [connected, session?.status, session?.mode]);
   // Whether the local PiP is the fullscreen view (and remote sits in the corner)
   const [pipSwapped, setPipSwapped] = useState(false);
   const remoteVideoTrack = remoteScreenTrack ?? remoteCameraTrack;
   const isViewingRemoteScreen = Boolean(remoteScreenTrack);
 
-  const setRemoteVideoTrackForSource = useCallback((track: LKVideoTrack) => {
-    if (track.source === Track.Source.ScreenShare) {
-      setRemoteScreenTrack(track);
-      return;
+  const syncRemoteVideoTracks = useCallback((room: Room) => {
+    let nextCameraTrack: LKVideoTrack | null = null;
+    let nextScreenTrack: LKVideoTrack | null = null;
+
+    for (const participant of room.remoteParticipants.values()) {
+      for (const publication of participant.videoTrackPublications.values()) {
+        const track = publication.track;
+        if (!track || publication.isMuted || track.kind !== Track.Kind.Video) {
+          continue;
+        }
+
+        const videoTrack = track as LKVideoTrack;
+        const isScreenShare =
+          publication.source === Track.Source.ScreenShare ||
+          videoTrack.source === Track.Source.ScreenShare;
+
+        if (isScreenShare) {
+          nextScreenTrack = videoTrack;
+        } else if (publication.source === Track.Source.Camera || !nextCameraTrack) {
+          nextCameraTrack = videoTrack;
+        }
+      }
     }
-    setRemoteCameraTrack(track);
+
+    setRemoteCameraTrack(nextCameraTrack);
+    setRemoteScreenTrack(nextScreenTrack);
   }, []);
 
-  const clearRemoteVideoTrackForSource = useCallback((track: LKVideoTrack) => {
-    if (track.source === Track.Source.ScreenShare) {
-      setRemoteScreenTrack(null);
-      return;
+  useEffect(() => {
+    if (remoteScreenTrack) {
+      setPipSwapped(false);
     }
-    setRemoteCameraTrack(null);
-  }, []);
+  }, [remoteScreenTrack]);
 
   // ── PiP drag ──────────────────────────────────────────────────────────────
   // The PiP is absolutely positioned anchored at bottom-right; the user can
@@ -554,19 +572,21 @@ export default function CallScreen() {
         // — we just attach our event listeners and skip straight to publishing.
         const prewarmed = prewarmedRoomRef.current;
         prewarmedRoomRef.current = null;
-        const room = prewarmed ?? new Room({ adaptiveStream: true, dynacast: true });
+        const room = prewarmed ?? new Room({ adaptiveStream: false, dynacast: false });
         roomRef.current = room;
 
-        room.on(RoomEvent.TrackSubscribed, (track) => {
-          if (track.kind === Track.Kind.Video) {
-            setRemoteVideoTrackForSource(track as LKVideoTrack);
+        const syncRoomVideoTracks = () => {
+          if (roomRef.current === room) {
+            syncRemoteVideoTracks(room);
           }
-        });
-        room.on(RoomEvent.TrackUnsubscribed, (track) => {
-          if (track.kind === Track.Kind.Video) {
-            clearRemoteVideoTrackForSource(track as LKVideoTrack);
-          }
-        });
+        };
+
+        room.on(RoomEvent.TrackPublished, syncRoomVideoTracks);
+        room.on(RoomEvent.TrackSubscribed, syncRoomVideoTracks);
+        room.on(RoomEvent.TrackMuted, syncRoomVideoTracks);
+        room.on(RoomEvent.TrackUnmuted, syncRoomVideoTracks);
+        room.on(RoomEvent.TrackUnpublished, syncRoomVideoTracks);
+        room.on(RoomEvent.TrackUnsubscribed, syncRoomVideoTracks);
         room.on(RoomEvent.Disconnected, () => {
           // Immediately null out the ref so no further operations touch this room
           roomRef.current = null;
@@ -621,13 +641,7 @@ export default function CallScreen() {
         // Pick up any remote tracks the pre-warmed room subscribed to before we
         // attached the listener above (race: caller publishes between callee
         // pre-warm-connect and callee accept).
-        for (const participant of room.remoteParticipants.values()) {
-          for (const pub of participant.trackPublications.values()) {
-            if (pub.track && pub.track.kind === Track.Kind.Video) {
-              setRemoteVideoTrackForSource(pub.track as LKVideoTrack);
-            }
-          }
-        }
+        syncRemoteVideoTracks(room);
 
         // Only publish tracks immediately when the call is already ACTIVE.
         // During RINGING pre-join (caller side), defer publishing so the
@@ -676,14 +690,7 @@ export default function CallScreen() {
         }
       }
     },
-    [
-      roomId,
-      connected,
-      session?.mode,
-      speakerOn,
-      clearRemoteVideoTrackForSource,
-      setRemoteVideoTrackForSource,
-    ],
+    [roomId, connected, session?.mode, speakerOn, syncRemoteVideoTracks],
   );
 
   // OPT-3: Caller can connect during RINGING; callee auto-accepts on RINGING
@@ -1311,10 +1318,12 @@ export default function CallScreen() {
     // local feed fills the screen and the remote feed becomes the overlay.
     const localAvailable = !!localVideoTrack && camEnabled;
     const remoteAvailable = !!remoteVideoTrack;
-    const effectiveSwap = pipSwapped && localAvailable;
+    const effectiveSwap = !isViewingRemoteScreen && pipSwapped && localAvailable;
     const mainIsLocal = effectiveSwap;
+    const mainIsRemoteScreen = !mainIsLocal && isViewingRemoteScreen;
     const mainTrack = mainIsLocal ? localVideoTrack : remoteVideoTrack;
     const pipIsLocal = !mainIsLocal;
+    const pipIsRemoteScreen = !pipIsLocal && isViewingRemoteScreen;
     const pipTrackAvailable = pipIsLocal ? localAvailable : remoteAvailable;
     const pipTrack = pipIsLocal ? localVideoTrack : remoteVideoTrack;
     const showPip = isVideo && (localAvailable || remoteAvailable);
@@ -1323,12 +1332,23 @@ export default function CallScreen() {
       <View style={styles.activeContainer}>
         {/* Main video (fullscreen) */}
         {mainTrack ? (
-          <VideoView
-            videoTrack={mainTrack}
-            style={StyleSheet.absoluteFillObject}
-            objectFit={isViewingRemoteScreen && !mainIsLocal ? "contain" : "cover"}
-            mirror={mainIsLocal}
-          />
+          mainIsRemoteScreen ? (
+            <View style={styles.screenShareStage}>
+              <VideoView
+                videoTrack={mainTrack}
+                style={styles.screenShareVideo}
+                objectFit="contain"
+                mirror={false}
+              />
+            </View>
+          ) : (
+            <VideoView
+              videoTrack={mainTrack}
+              style={StyleSheet.absoluteFillObject}
+              objectFit="cover"
+              mirror={mainIsLocal}
+            />
+          )
         ) : (
           <LinearGradient
             colors={["#0d1b2a", "#1a1a2e", "#0f0c29"]}
@@ -1356,14 +1376,17 @@ export default function CallScreen() {
             <Animated.View style={[styles.pipContainer, pipAnimatedStyle]}>
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={togglePipSwapped}
+                disabled={isViewingRemoteScreen}
+                onPress={isViewingRemoteScreen ? undefined : togglePipSwapped}
                 style={styles.pipTouchInner}
               >
                 {pipTrackAvailable && pipTrack ? (
                   <VideoView
                     videoTrack={pipTrack}
-                    style={styles.pipVideo}
-                    objectFit={!pipIsLocal && isViewingRemoteScreen ? "contain" : "cover"}
+                    style={
+                      pipIsRemoteScreen ? styles.pipScreenShareVideo : styles.pipVideo
+                    }
+                    objectFit={pipIsRemoteScreen ? "contain" : "cover"}
                     mirror={pipIsLocal}
                   />
                 ) : (
@@ -1606,6 +1629,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000",
   },
+  screenShareStage: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    paddingTop: Platform.OS === "ios" ? 72 : 64,
+    paddingBottom: Platform.OS === "ios" ? 144 : 128,
+  },
+  screenShareVideo: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#000",
+  },
   noVideoPlaceholder: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
@@ -1658,6 +1694,10 @@ const styles = StyleSheet.create({
   },
   pipVideo: {
     flex: 1,
+  },
+  pipScreenShareVideo: {
+    flex: 1,
+    backgroundColor: "#000",
   },
   pipPlaceholder: {
     alignItems: "center",
