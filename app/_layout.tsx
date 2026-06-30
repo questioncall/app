@@ -346,7 +346,12 @@ function RootLayout() {
                         gestureEnabled: true,
                       }}
                     />
-                    <Stack.Screen name="call/[roomId]" />
+                    <Stack.Screen
+                      name="call/[roomId]"
+                      options={{
+                        gestureEnabled: false,
+                      }}
+                    />
                     <Stack.Screen name="course/[id]" />
                     <Stack.Screen name="course/video" />
                     <Stack.Screen name="chapter/[id]" />

@@ -14,7 +14,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "QuestionCall needs camera access for video calls.",
-        "NSMicrophoneUsageDescription": "QuestionCall needs microphone access for voice and video calls."
+        "NSMicrophoneUsageDescription": "QuestionCall needs microphone access for voice and video calls.",
+        "UIBackgroundModes": ["audio", "voip"]
       }
     },
     "android": {
@@ -30,6 +31,8 @@
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
         "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_CAMERA",
+        "FOREGROUND_SERVICE_MICROPHONE",
         "FOREGROUND_SERVICE_PHONE_CALL",
         "FOREGROUND_SERVICE_MEDIA_PROJECTION",
         "MANAGE_OWN_CALLS",

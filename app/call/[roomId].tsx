@@ -48,6 +48,10 @@ import {
   consumeOutgoingRingtone,
   stopOutgoingRingtoneSingleton,
 } from "@/lib/call-prewarm";
+import {
+  startOngoingCallService,
+  stopOngoingCallService,
+} from "@/lib/ongoing-call-service";
 import { hideFullScreenCallNotification } from "@/lib/full-screen-call-notification";
 import { markCallActive, clearActiveCall } from "@/lib/active-call";
 import {
@@ -95,6 +99,16 @@ const MAX_EXTENSIONS = 3;
 const WARNING_THRESHOLD_MS = 5 * 60 * 1000;
 const CONNECTION_TIMEOUT_MS = 20_000;
 
+async function configureActiveCallAudio(speakerOn: boolean) {
+  await Audio.setAudioModeAsync({
+    playsInSilentModeIOS: true,
+    staysActiveInBackground: true,
+    shouldDuckAndroid: false,
+    allowsRecordingIOS: true,
+    playThroughEarpieceAndroid: !speakerOn,
+  });
+}
+
 function formatCountdown(ms: number) {
   if (ms <= 0) return "0:00";
   const totalSeconds = Math.floor(ms / 1000);
@@ -140,6 +154,15 @@ export default function CallScreen() {
     markCallActive(roomId);
     return () => clearActiveCall(roomId);
   }, [roomId]);
+
+  useEffect(() => {
+    if (!connected || session?.status !== "ACTIVE") return;
+
+    startOngoingCallService(session.mode);
+    return () => {
+      stopOngoingCallService();
+    };
+  }, [connected, session?.status, session?.mode]);
 
   const [session, setSession] = useState<CallSession | null>(null);
   // For the optimistic-pending path we render the RINGING UI immediately and
@@ -552,8 +575,12 @@ export default function CallScreen() {
           setRemoteCameraTrack(null);
           setRemoteScreenTrack(null);
           if (!endingRef.current) {
-            endingRef.current = true;
-            goBack();
+            connectingRef.current = false;
+            connectionBlockedRef.current = false;
+            tracksEnabledRef.current = false;
+            setConnecting(false);
+            setConnectionError(null);
+            Toast.show({ type: "info", text1: "Reconnecting call..." });
           }
         });
         room.on(RoomEvent.LocalTrackPublished, (pub) => {
@@ -606,6 +633,7 @@ export default function CallScreen() {
         // During RINGING pre-join (caller side), defer publishing so the
         // AVAudioSession stays in Playback mode and the ringtone plays cleanly.
         if (!skipTracks) {
+          await configureActiveCallAudio(speakerOn);
           tracksEnabledRef.current = true;
           await room.localParticipant.enableCameraAndMicrophone();
 
@@ -652,6 +680,7 @@ export default function CallScreen() {
       roomId,
       connected,
       session?.mode,
+      speakerOn,
       clearRemoteVideoTrackForSource,
       setRemoteVideoTrackForSource,
     ],
@@ -693,6 +722,7 @@ export default function CallScreen() {
     const isVideo = session.mode === "VIDEO";
     (async () => {
       try {
+        await configureActiveCallAudio(speakerOn);
         await room.localParticipant.enableCameraAndMicrophone();
         if (!isVideo) {
           await room.localParticipant.setCameraEnabled(false);
@@ -709,7 +739,7 @@ export default function CallScreen() {
         );
       }
     })();
-  }, [session?.status, session?.mode, connected]);
+  }, [session?.status, session?.mode, connected, speakerOn]);
 
   // ── Outgoing ringtone: play while RINGING for the caller ───────────────
   useEffect(() => {
@@ -774,6 +804,7 @@ export default function CallScreen() {
   // ── Cleanup room on unmount ───────────────────────────────────────────────
   useEffect(() => {
     return () => {
+      stopOngoingCallService();
       stopOutgoingRingtone();
       // Also stop the singleton in case it was never consumed by the ringtone
       // effect (e.g. screen exited before the effect fired).
@@ -981,6 +1012,7 @@ export default function CallScreen() {
   const handleEnd = async () => {
     if (!session || endingRef.current) return;
     stopOutgoingRingtone();
+    stopOngoingCallService();
     endingRef.current = true;
     setIsEnding(true);
 
