@@ -435,8 +435,8 @@ export default function NotesScreen() {
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editSubject, setEditSubject] = useState(SUBJECTS[0]);
-  const [editGrade, setEditGrade] = useState(GRADES[0]);
+  const [editSubject, setEditSubject] = useState<string>(SUBJECTS[0]);
+  const [editGrade, setEditGrade] = useState<string>(GRADES[0]);
   const [editFileType, setEditFileType] = useState<FileType>("PDF");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const { mutedIconColor, cardColor } = useAppTheme();

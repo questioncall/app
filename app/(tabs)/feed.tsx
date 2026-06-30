@@ -29,6 +29,7 @@ import { useImageViewer } from "@/components/image-viewer/image-viewer-context";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { api, publicApi } from "@/lib/api";
+import { QUESTIONS_FEED_PAGE_SIZE } from "@/lib/feed-config";
 import { scheduleAnswerDeadlineReminder } from "@/lib/local-notifications";
 import {
   getPusherClient,
@@ -297,8 +298,6 @@ export default function FeedScreen() {
     setActiveSort(defaultSort);
   }, [defaultSort]);
 
-  const FEED_PAGE_SIZE = 20;
-
   const loadFeed = useCallback(
     async (force = false) => {
       const currentFeedState = store.getState().feed;
@@ -313,11 +312,11 @@ export default function FeedScreen() {
       dispatch(clearFeedError());
       try {
         const client = userId ? api : publicApi;
-        const res = await client.get(`/questions/feed?limit=${FEED_PAGE_SIZE}`);
+        const res = await client.get(`/questions/feed?limit=${QUESTIONS_FEED_PAGE_SIZE}`);
         const raw = Array.isArray(res.data) ? res.data : [];
         const normalized = normalizeFeedQuestions(raw);
         dispatch(setQuestions({ questions: normalized, role: roleKey, userId }));
-        dispatch(setHasMore(raw.length >= FEED_PAGE_SIZE));
+        dispatch(setHasMore(raw.length >= QUESTIONS_FEED_PAGE_SIZE));
         dispatch(
           setMyQuestions(userId ? normalized.filter((q) => q.askerId === userId) : []),
         );
@@ -455,7 +454,7 @@ export default function FeedScreen() {
     try {
       const client = userId ? api : publicApi;
       const res = await client.get(
-        `/questions/feed?cursor=${encodeURIComponent(cursor)}&limit=${FEED_PAGE_SIZE}`,
+        `/questions/feed?cursor=${encodeURIComponent(cursor)}&limit=${QUESTIONS_FEED_PAGE_SIZE}`,
       );
       const raw = Array.isArray(res.data) ? res.data : [];
       const normalized = normalizeFeedQuestions(raw);
@@ -466,7 +465,7 @@ export default function FeedScreen() {
           for (const q of myNew) dispatch(addMyQuestion(q));
         }
       }
-      dispatch(setHasMore(raw.length >= FEED_PAGE_SIZE));
+      dispatch(setHasMore(raw.length >= QUESTIONS_FEED_PAGE_SIZE));
     } catch {
       // silent — user can pull-to-refresh
     } finally {

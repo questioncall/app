@@ -1,0 +1,1 @@
+export const QUESTIONS_FEED_PAGE_SIZE = 50;

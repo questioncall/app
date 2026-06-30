@@ -75,6 +75,7 @@ type CourseDetail = Course & {
   isFavourite?: boolean;
   isFollowingInstructor?: boolean;
   instructorFollowerCount?: number;
+  [key: string]: unknown;
 };
 
 function formatDuration(minutes?: number | null) {
@@ -110,12 +111,12 @@ function normalizeCourseDetail(
 ): CourseDetail | null {
   if (!isRecord(data)) return null;
 
-  const rawSections = Array.isArray(data.sections) ? data.sections : [];
+  const rawSections: unknown[] = Array.isArray(data.sections) ? data.sections : [];
   const sections = rawSections.map((rawSection, index) => {
-    const section = isRecord(rawSection) ? rawSection : {};
-    const rawVideos = Array.isArray(section.videos) ? section.videos : [];
+    const section: Record<string, unknown> = isRecord(rawSection) ? rawSection : {};
+    const rawVideos: unknown[] = Array.isArray(section.videos) ? section.videos : [];
     const videos = rawVideos.map((rawVideo, videoIndex) => {
-      const video = isRecord(rawVideo) ? rawVideo : {};
+      const video: Record<string, unknown> = isRecord(rawVideo) ? rawVideo : {};
 
       return {
         ...(video as object),

@@ -155,12 +155,31 @@ export default function CallScreen() {
   const [connecting, setConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<LKVideoTrack | null>(null);
-  const [remoteVideoTrack, setRemoteVideoTrack] = useState<LKVideoTrack | null>(null);
+  const [remoteCameraTrack, setRemoteCameraTrack] = useState<LKVideoTrack | null>(null);
+  const [remoteScreenTrack, setRemoteScreenTrack] = useState<LKVideoTrack | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(true);
   // Whether the local PiP is the fullscreen view (and remote sits in the corner)
   const [pipSwapped, setPipSwapped] = useState(false);
+  const remoteVideoTrack = remoteScreenTrack ?? remoteCameraTrack;
+  const isViewingRemoteScreen = Boolean(remoteScreenTrack);
+
+  const setRemoteVideoTrackForSource = useCallback((track: LKVideoTrack) => {
+    if (track.source === Track.Source.ScreenShare) {
+      setRemoteScreenTrack(track);
+      return;
+    }
+    setRemoteCameraTrack(track);
+  }, []);
+
+  const clearRemoteVideoTrackForSource = useCallback((track: LKVideoTrack) => {
+    if (track.source === Track.Source.ScreenShare) {
+      setRemoteScreenTrack(null);
+      return;
+    }
+    setRemoteCameraTrack(null);
+  }, []);
 
   // ── PiP drag ──────────────────────────────────────────────────────────────
   // The PiP is absolutely positioned anchored at bottom-right; the user can
@@ -516,17 +535,22 @@ export default function CallScreen() {
         roomRef.current = room;
 
         room.on(RoomEvent.TrackSubscribed, (track) => {
-          if (track.kind === Track.Kind.Video) setRemoteVideoTrack(track as LKVideoTrack);
+          if (track.kind === Track.Kind.Video) {
+            setRemoteVideoTrackForSource(track as LKVideoTrack);
+          }
         });
         room.on(RoomEvent.TrackUnsubscribed, (track) => {
-          if (track.kind === Track.Kind.Video) setRemoteVideoTrack(null);
+          if (track.kind === Track.Kind.Video) {
+            clearRemoteVideoTrackForSource(track as LKVideoTrack);
+          }
         });
         room.on(RoomEvent.Disconnected, () => {
           // Immediately null out the ref so no further operations touch this room
           roomRef.current = null;
           setConnected(false);
           setLocalVideoTrack(null);
-          setRemoteVideoTrack(null);
+          setRemoteCameraTrack(null);
+          setRemoteScreenTrack(null);
           if (!endingRef.current) {
             endingRef.current = true;
             goBack();
@@ -573,7 +597,7 @@ export default function CallScreen() {
         for (const participant of room.remoteParticipants.values()) {
           for (const pub of participant.trackPublications.values()) {
             if (pub.track && pub.track.kind === Track.Kind.Video) {
-              setRemoteVideoTrack(pub.track as LKVideoTrack);
+              setRemoteVideoTrackForSource(pub.track as LKVideoTrack);
             }
           }
         }
@@ -624,7 +648,13 @@ export default function CallScreen() {
         }
       }
     },
-    [roomId, connected, session?.mode],
+    [
+      roomId,
+      connected,
+      session?.mode,
+      clearRemoteVideoTrackForSource,
+      setRemoteVideoTrackForSource,
+    ],
   );
 
   // OPT-3: Caller can connect during RINGING; callee auto-accepts on RINGING
@@ -1264,7 +1294,7 @@ export default function CallScreen() {
           <VideoView
             videoTrack={mainTrack}
             style={StyleSheet.absoluteFillObject}
-            objectFit="cover"
+            objectFit={isViewingRemoteScreen && !mainIsLocal ? "contain" : "cover"}
             mirror={mainIsLocal}
           />
         ) : (
@@ -1301,7 +1331,7 @@ export default function CallScreen() {
                   <VideoView
                     videoTrack={pipTrack}
                     style={styles.pipVideo}
-                    objectFit="cover"
+                    objectFit={!pipIsLocal && isViewingRemoteScreen ? "contain" : "cover"}
                     mirror={pipIsLocal}
                   />
                 ) : (

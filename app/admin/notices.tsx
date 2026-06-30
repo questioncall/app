@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -181,14 +182,9 @@ export default function AdminNoticesScreen() {
   }, []);
 
   const pickVideo = useCallback(async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Toast.show({ type: "error", text1: "Media permission needed", position: "bottom" });
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      quality: 1,
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "video/*",
+      copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
@@ -203,9 +199,9 @@ export default function AdminNoticesScreen() {
       title: title.trim() || "Notice video",
       file: {
         uri: asset.uri,
-        name: asset.fileName || `notice-${Date.now()}.mp4`,
+        name: asset.name || `notice-${Date.now()}.mp4`,
         mimeType: asset.mimeType || "video/mp4",
-        size: asset.fileSize,
+        size: asset.size,
       },
       onReady: (playbackUrl: string) => {
         setVideoUrl(playbackUrl);
@@ -279,7 +275,19 @@ export default function AdminNoticesScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [title, body, type, audience, emails, isActive, sendPush]);
+  }, [
+    title,
+    body,
+    type,
+    audience,
+    emails,
+    imageUrl,
+    videoUrl,
+    imageUploading,
+    videoUploading,
+    isActive,
+    sendPush,
+  ]);
 
   const toggleActive = useCallback(async (notice: Notice) => {
     const next = !notice.isActive;
